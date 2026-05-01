@@ -1,0 +1,125 @@
+@model IEnumerable<GestionQ.Domain.Entities.Product>
+
+@{
+    ViewData["Title"] = "Stock de Productos";
+}
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; gap: 1rem; flex-wrap: wrap;">
+    <h1 class="page-title" style="margin-bottom: 0;">Stock de Productos</h1>
+    
+    <div style="display: flex; gap: 1rem; flex-grow: 1; justify-content: flex-end; align-items: center;">
+        <form asp-action="Index" method="get" style="display: flex; gap: 0.5rem; max-width: 400px; width: 100%;">
+            <input type="text" name="q" value="@ViewBag.SearchQuery" class="form-control" placeholder="Buscar por nombre, código o barra..." style="background: rgba(255,255,255,0.05);" />
+            <button type="submit" class="btn-secondary">Buscar</button>
+            @if (!string.IsNullOrEmpty(ViewBag.SearchQuery as string))
+            {
+                <a asp-action="Index" class="btn-secondary" style="color: #ef4444; text-decoration: none; padding-top: 0.5rem;">&times;</a>
+            }
+        </form>
+        <a asp-action="PurchaseSuggestions" class="btn-secondary" style="border-color: var(--accent); color: var(--accent);">📊 Sugerencias de Pedido</a>
+        <a asp-controller="Purchases" asp-action="Create" class="btn-primary" style="background: var(--accent);">+ Ingresar Compra</a>
+        <a asp-action="Create" class="btn-primary">+ Nuevo Producto</a>
+    </div>
+</div>
+
+<div class="glass-panel">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Cód. Int</th>
+                <th>Cód. Barras</th>
+                <th>Nombre</th>
+                <th>Rubro / Subrubro</th>
+                <th>Alta</th>
+                <th>Precio</th>
+                <th>Stock</th>
+                <th>Tipo</th>
+                <th>A Balanza</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td style="color: var(--accent); font-weight: 600;">@item.InternalCode.ToString("D5")</td>
+                    <td>@(item.Barcode ?? "-")</td>
+                    <td style="display: flex; align-items: center; gap: 0.75rem;">
+                        <div style="width: 40px; height: 40px; border-radius: 8px; overflow: hidden; background: rgba(255,255,255,0.05); flex-shrink: 0; display: flex; align-items: center; justify-content: center;">
+                            @if (!string.IsNullOrEmpty(item.ImageUrl))
+                            {
+                                <img src="@item.ImageUrl" style="width: 100%; height: 100%; object-fit: cover;" alt="@item.Name" />
+                            }
+                            else
+                            {
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.3;">
+                                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                                </svg>
+                            }
+                        </div>
+                        <div>
+                            @item.Name
+                            @if (!item.IsActive)
+                            {
+                                <span style="font-size: 0.7rem; background: #ef4444; color: white; padding: 0.1rem 0.4rem; border-radius: 4px; margin-left: 0.5rem;">Inactivo</span>
+                            }
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge" style="background: rgba(var(--primary-rgb), 0.1); color: var(--primary);">@item.SubCategory?.Category?.Name</span>
+                        <br />
+                        <small style="color: var(--text-muted);">@item.SubCategory?.Name</small>
+                    </td>
+                    <td style="font-size: 0.9rem; color: var(--text-muted);">@item.CreationDate.ToString("dd/MM/yyyy")</td>
+                    <td style="font-weight: 600;">$@item.Price.ToString("N2")</td>
+                    <td style="font-weight: 600;">
+                        <div style="display: flex; flex-direction: column;">
+                            <span style="color: @(item.Stock <= item.MinimumStock ? "#ef4444" : "#10b981")">@item.Stock un.</span>
+                            @if (item.Stock <= item.MinimumStock)
+                            {
+                                <span style="font-size: 0.6rem; color: #ef4444; font-weight: 400; background: rgba(239, 68, 68, 0.1); padding: 0.1rem 0.3rem; border-radius: 4px; text-align: center;">MIN: @item.MinimumStock</span>
+                            }
+                            else if (item.MinimumStock > 0)
+                            {
+                                <span style="font-size: 0.6rem; color: var(--text-muted); font-weight: 400;">Min: @item.MinimumStock</span>
+                            }
+                        </div>
+                    </td>
+                    <td>
+                        @if (item.IsPesable)
+                        {
+                            <span class="badge" style="background: rgba(167, 139, 250, 0.1); color: #a78bfa;">Pesable</span>
+                        }
+                        else
+                        {
+                            <span class="badge" style="background: rgba(255, 255, 255, 0.05); color: var(--text-muted);">Unidad</span>
+                        }
+                    </td>
+                    <td>
+                        @if (item.SendToScale)
+                        {
+                            <span style="color: #10b981; font-weight: 600;">SI</span>
+                        }
+                        else
+                        {
+                            <span style="color: var(--text-muted);">NO</span>
+                        }
+                    </td>
+                    <td>
+                        <div style="display: flex; gap: 0.4rem;">
+                            <a asp-action="Movements" asp-route-id="@item.Id" class="btn-secondary" style="padding: 0.3rem 0.5rem;" title="Ficha de Stock">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                            </a>
+                            <a asp-action="Adjustment" asp-route-id="@item.Id" class="btn-secondary" style="padding: 0.3rem 0.5rem;" title="Ajuste de Stock">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                            </a>
+                            <a asp-action="Edit" asp-route-id="@item.Id" class="btn-secondary" style="padding: 0.3rem 0.5rem;">Editar</a>
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

@@ -1,0 +1,78 @@
+@model GestionQ.Domain.Entities.CashRegister
+
+@{
+    ViewData["Title"] = "Detalle de Caja";
+    var summary = ViewBag.PaymentSummary as IEnumerable<dynamic>;
+}
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <h1 class="page-title">Resumen de Turno / Caja</h1>
+    <a asp-action="Index" class="btn-secondary">Volver al Historial</a>
+</div>
+
+<div style="display: flex; gap: 2rem; align-items: flex-start; flex-wrap: wrap;">
+    <!-- Info General -->
+    <div class="glass-panel" style="flex: 1; min-width: 300px;">
+        <h3>Datos de la Operación</h3>
+        <p><strong>Operador:</strong> @Model.User?.UserName</p>
+        <p><strong>Apertura:</strong> @Model.OpeningDate.ToString("dd/MM/yyyy HH:mm:ss")</p>
+        <p><strong>Cierre:</strong> @(Model.ClosingDate.HasValue ? Model.ClosingDate.Value.ToString("dd/MM/yyyy HH:mm:ss") : "Aún Abierta")</p>
+        <p><strong>Estado:</strong> 
+            @if(Model.IsOpen) { <span style="color: #10b981; font-weight:600;">ABIERTA</span> } 
+            else { <span style="color: #ef4444; font-weight:600;">CERRADA</span> }
+        </p>
+
+        <hr style="border-color: var(--border); margin: 1.5rem 0;"/>
+
+        <h4 style="margin-bottom: 1rem;">Cuadre de Efectivo</h4>
+        <div style="display:flex; justify-content: space-between;">
+            <span>Saldo Fijo (Base):</span>
+            <strong>$@Model.InitialBalance.ToString("N2")</strong>
+        </div>
+        <div style="display:flex; justify-content: space-between; margin-top: 0.5rem;">
+            <span>Efectivo Calculado (Ventas):</span>
+            <strong style="color: #10b981;">$@((Model.ExpectedCashBalance - Model.InitialBalance)?.ToString("N2") ?? "0.00")</strong>
+        </div>
+        @if (!Model.IsOpen)
+        {
+            <div style="display:flex; justify-content: space-between; margin-top: 1rem; padding-top: 1rem; border-top: 1px dotted rgba(255,255,255,0.3);">
+                <span>Declarado (Conteos Cierre):</span>
+                <strong style="color: #fbbf24; font-size: 1.2rem;">$@Model.FinalCashBalance?.ToString("N2")</strong>
+            </div>
+            
+            <div style="display:flex; justify-content: space-between; margin-top: 1rem; padding: 1rem; border-radius: 8px; background: @(Model.Difference < 0 ? "rgba(239, 68, 68, 0.2)" : (Model.Difference > 0 ? "rgba(16, 185, 129, 0.2)" : "rgba(255,255,255,0.05)")) ;">
+                <span style="font-weight: 600;">Diferencia (Sobrante/Faltante):</span>
+                <strong style="font-size: 1.3rem; color: @(Model.Difference < 0 ? "#ef4444" : (Model.Difference > 0 ? "#10b981" : "var(--text-main)"))">
+                    $@Model.Difference?.ToString("N2")
+                </strong>
+            </div>
+        }
+    </div>
+
+    <!-- Metodos de Cobro Consolidados -->
+    <div class="glass-panel" style="flex: 1; min-width: 300px;">
+        <h3>Recaudación (Por Medios de Pago)</h3>
+        
+        @if (summary != null && summary.Any())
+        {
+            <ul style="list-style: none; padding: 0;">
+                @foreach(var item in summary)
+                {
+                    <li style="display: flex; justify-content: space-between; padding: 0.75rem 0; border-bottom: 1px solid var(--border);">
+                        <span>@item.Method</span>
+                        <strong style="color: var(--accent); font-size: 1.1rem;">$@Convert.ToDecimal(item.Total).ToString("N2")</strong>
+                    </li>
+                }
+                
+                <li style="display: flex; justify-content: space-between; padding: 1rem 0; font-size: 1.2rem; margin-top: 1rem; border-top: 2px solid var(--border);">
+                    <strong>TOTAL SISTEMA</strong>
+                    <strong style="color: #10b981;">$@Model.Sales.SelectMany(s => s.Payments).Sum(p => p.Amount).ToString("N2")</strong>
+                </li>
+            </ul>
+        }
+        else
+        {
+            <p style="color: var(--text-muted); font-style: italic;">No hubo recaudaciones ni ventas en este turno.</p>
+        }
+    </div>
+</div>

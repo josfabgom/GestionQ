@@ -1,0 +1,271 @@
+@{
+    ViewData["Title"] = "Nueva Venta (Punto de Venta)";
+}
+
+<h1 class="page-title">Punto de Venta</h1>
+
+<div style="display: flex; gap: 2rem; align-items: flex-start;">
+    <!-- Productos Disponibles -->
+    <div class="glass-panel" style="flex: 2;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h2 style="margin: 0;">Seleccionar Productos</h2>
+            <input type="text" id="searchProduct" onkeyup="filterProducts()" class="form-control"
+                placeholder="🔍 Buscar por nombre, cód interno o barras..."
+                style="max-width: 300px; padding: 0.5rem; border-radius: 8px;" />
+        </div>
+
+        <div id="productGrid"
+            style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;">
+            @foreach (var product in ViewBag.Products as IEnumerable<GestionQ.Domain.Entities.Product>)
+            {
+                <div class="product-card"
+                    data-search="@product.Name.ToLower() @product.InternalCode.ToString("D5") @(product.Barcode?.ToLower() ?? "")"
+                    style="background: rgba(15, 23, 42, 0.5); padding: 1rem; border-radius: 8px; border: 1px solid var(--border); transition: 0.2s; cursor: pointer;"
+                    onclick="addToCart(@product.Id, '@product.Name', @product.Price, @product.Stock)">
+                    <div style="font-size: 0.8rem; color: var(--accent); font-weight: 600; margin-bottom: 0.25rem;">Cód.
+                        @product.InternalCode.ToString("D5")</div>
+                    <div style="font-weight: 600; font-size: 1.1rem; margin-bottom: 0.5rem;">@product.Name</div>
+                    <div style="color: #10b981; font-weight: 600;">$@product.Price.ToString("N2")</div>
+                    <div style="color: var(--text-muted); font-size: 0.9rem;">Stock: @product.Stock un.</div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Carrito y Cobro -->
+    <div class="glass-panel" style="flex: 1; position: sticky; top: 2rem;">
+        <h2>Resumen de Venta</h2>
+
+        <div class="form-group">
+            <label>Cliente (Para Cta. Cte.)</label>
+            <select id="customerId" class="form-control">
+                <option value="">Consumidor Final</option>
+                @foreach (var cus in ViewBag.Customers as IEnumerable<GestionQ.Domain.Entities.Customer>)
+                {
+                    <option value="@cus.Id">[@cus.InternalCode] @cus.Name (@cus.Dni) - Saldo: $@cus.Balance.ToString("N2")</option>
+                }
+            </select>
+            <small style="color: var(--text-muted);">Si es Consumidor Final no se afecta la cuenta corriente.</small>
+            <div class="form-group" style="margin-top: 1rem;">
+                <label>Medios de Pago</label>
+                <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
+                    <select id="paymentMethod1" class="form-control" style="flex: 2;">
+                        @foreach (var pm in ViewBag.PaymentMethods as IEnumerable<GestionQ.Domain.Entities.PaymentMethod>)
+                        {
+                            if (pm.Name == "Efectivo")
+                            {
+                                <option value="@pm.Id" selected>@pm.Name</option>
+                            }
+                            else
+                            {
+                                <option value="@pm.Id">@pm.Name</option>
+                            }
+                        }
+                    </select>
+                    <input type="number" id="paymentAmount1" oninput="calculateDifference()" class="form-control"
+                        style="flex: 1;" placeholder="Monto" />
+                </div>
+
+                <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
+                    <select id="paymentMethod2" class="form-control" style="flex: 2;">
+                        <option value="">-- Opcional (2do Pago) --</option>
+                        @foreach (var pm in ViewBag.PaymentMethods as IEnumerable<GestionQ.Domain.Entities.PaymentMethod>)
+                        {
+                            <option value="@pm.Id">@pm.Name</option>
+                        }
+                    </select>
+                    <input type="number" id="paymentAmount2" oninput="calculateDifference()" class="form-control"
+                        style="flex: 1;" placeholder="Monto" />
+                </div>
+                <small style="color: var(--text-muted); cursor: pointer;"
+                    onclick="document.getElementById('paymentAmount1').value = document.getElementById('cartTotalRaw').value; calculateDifference();">Doble
+                    click aquí para poner monto total al Medio 1.</small>
+                <input type="hidden" id="cartTotalRaw" value="0" />
+            </div>
+
+            <ul id="cartItems"
+                style="list-style: none; padding: 0; margin-bottom: 1rem; max-height: 300px; overflow-y: auto;">
+                <!-- Renderizado desde JS -->
+            </ul>
+
+            <div
+                style="display: flex; justify-content: space-between; font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5rem; border-top: 1px solid var(--border); padding-top: 1rem;">
+                <span>TOTAL</span>
+                <span id="cartTotal" style="color: #10b981;">$0.00</span>
+            </div>
+            <div
+                style="display: flex; justify-content: space-between; font-size: 1.1rem; font-weight: 600; margin-bottom: 1.5rem; color: var(--text-muted);">
+                <span>Diferencia</span>
+                <span id="paymentDifference">$0.00</span>
+            </div>
+
+            <button id="btnCompleteSale" class="btn-primary" style="width: 100%; font-size: 1.1rem; padding: 1rem;"
+                onclick="completeSale()">Completar Venta</button>
+        </div>
+    </div>
+
+    @section Scripts {
+        <script>
+            let cart = [];
+
+            function calculateDifference() {
+                const total = parseFloat(document.getElementById('cartTotalRaw').value) || 0;
+                const amt1 = parseFloat(document.getElementById('paymentAmount1').value) || 0;
+                const amt2 = parseFloat(document.getElementById('paymentAmount2').value) || 0;
+                const paid = amt1 + amt2;
+
+                const diff = paid - total;
+                const diffEl = document.getElementById('paymentDifference');
+                if (total === 0) {
+                    diffEl.textContent = "$0.00";
+                    diffEl.style.color = "var(--text-muted)";
+                } else if (diff === 0) {
+                    diffEl.textContent = "Exacto ($0.00)";
+                    diffEl.style.color = "var(--text-muted)";
+                } else if (diff > 0) {
+                    diffEl.textContent = `Vuelto: $${diff.toFixed(2)}`;
+                    diffEl.style.color = "#10b981";
+                } else {
+                    diffEl.textContent = `Falta Pagar: -$${Math.abs(diff).toFixed(2)}`;
+                    diffEl.style.color = "#ef4444";
+                }
+            }
+
+            function filterProducts() {
+                const query = document.getElementById('searchProduct').value.toLowerCase();
+                const cards = document.querySelectorAll('.product-card');
+                cards.forEach(card => {
+                    const searchData = card.getAttribute('data-search');
+                    if (searchData.includes(query)) {
+                        card.style.display = 'block';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+            }
+
+            function addToCart(id, name, price, stock) {
+                const existing = cart.find(i => i.productId === id);
+                if (existing) {
+                    if (existing.quantity >= stock) {
+                        Swal.fire('Stock Insuficiente', 'No hay más stock disponible de este producto.', 'warning');
+                        return;
+                    }
+                    existing.quantity++;
+                } else {
+                    cart.push({ productId: id, name, price, quantity: 1, stock });
+                }
+                renderCart();
+            }
+
+            function decrementQuantity(id) {
+                const existing = cart.find(i => i.productId === id);
+                if (existing) {
+                    existing.quantity--;
+                    if (existing.quantity <= 0) {
+                        cart = cart.filter(x => x.productId !== id);
+                    }
+                }
+                renderCart();
+            }
+
+            function renderCart() {
+                const list = document.getElementById('cartItems');
+                list.innerHTML = '';
+                let total = 0;
+
+                cart.forEach(item => {
+                    const subtotal = item.price * item.quantity;
+                    total += subtotal;
+
+                    const li = document.createElement('li');
+                    li.style.cssText = "display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.05);";
+                    li.innerHTML = `
+                            <div>
+                                <div>${item.name}</div>
+                                <div style="font-size: 0.85rem; color: var(--text-muted);">$${item.price.toFixed(2)} x ${item.quantity}</div>
+                            </div>
+                            <div style="display: flex; gap: 1rem; align-items: center;">
+                                <span style="font-weight: 600;">$${subtotal.toFixed(2)}</span>
+                                <button class="btn-secondary" style="padding: 0.2rem 0.5rem;" onclick="decrementQuantity(${item.productId})">-</button>
+                            </div>
+                        `;
+                    list.appendChild(li);
+                });
+
+                document.getElementById('cartTotal').textContent = `$${total.toFixed(2)}`;
+                document.getElementById('cartTotalRaw').value = total.toFixed(2);
+                document.getElementById('btnCompleteSale').disabled = cart.length === 0;
+                calculateDifference();
+            }
+
+            async function completeSale() {
+                if (cart.length === 0) return;
+
+                const customerId = document.getElementById('customerId').value;
+
+                const pm1 = document.getElementById('paymentMethod1').value;
+                const amt1 = parseFloat(document.getElementById('paymentAmount1').value || 0);
+
+                const pm2 = document.getElementById('paymentMethod2').value;
+                const amt2 = parseFloat(document.getElementById('paymentAmount2').value || 0);
+
+                const totalCart = parseFloat(document.getElementById('cartTotalRaw').value);
+
+                if (amt1 + amt2 < totalCart) {
+                    if (!customerId) {
+                        await Swal.fire({
+                            title: 'Pago Insuficiente',
+                            text: `Faltan $${(totalCart - (amt1 + amt2)).toFixed(2)}. Para registrar una venta con saldo deudor, debe seleccionar un cliente registrado (Cuenta Corriente).`,
+                            icon: 'error',
+                            confirmButtonText: 'Entendido'
+                        });
+                        return;
+                    } else {
+                        const result = await Swal.fire({
+                            title: 'Diferencia de Saldo',
+                            text: `El pago es menor al total. ¿Deseas cargar el resto ($${(totalCart - (amt1 + amt2)).toFixed(2)}) a la cuenta corriente del cliente?`,
+                            icon: 'question',
+                            showCancelButton: true,
+                            confirmButtonText: 'Sí, cargar saldo',
+                            cancelButtonText: 'Cancelar'
+                        });
+                        if (!result.isConfirmed) return;
+                    }
+                }
+
+                const payments = [];
+                if (pm1 && amt1 > 0) payments.push({ paymentMethodId: parseInt(pm1), amount: amt1 });
+                if (pm2 && amt2 > 0) payments.push({ paymentMethodId: parseInt(pm2), amount: amt2 });
+
+                const payload = {
+                    customerId: customerId ? parseInt(customerId) : null,
+                    items: cart.map(i => ({ productId: i.productId, quantity: i.quantity })),
+                    payments: payments
+                };
+
+                document.getElementById('btnCompleteSale').disabled = true;
+
+                try {
+                    const response = await fetch('/Sales/CreateSale', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (response.ok) {
+                        await Swal.fire('Completado', 'La venta fue registrada con éxito.', 'success');
+                        window.location.href = '/Sales/Index';
+                    } else {
+                        const err = await response.text();
+                        Swal.fire('Error al procesar', err, 'error');
+                        document.getElementById('btnCompleteSale').disabled = false;
+                    }
+                } catch (e) {
+                    Swal.fire('Fallo de Red', 'Error de conexión con el servidor.', 'error');
+                    console.error(e);
+                    document.getElementById('btnCompleteSale').disabled = false;
+                }
+            }
+        </script>
+    }

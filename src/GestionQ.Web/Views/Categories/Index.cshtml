@@ -1,0 +1,51 @@
+@model IEnumerable<GestionQ.Domain.Entities.Category>
+
+@{
+    ViewData["Title"] = "Gestión de Rubros";
+}
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <h1 class="page-title" style="margin: 0;">Gestión de Rubros</h1>
+    <a asp-action="Create" class="btn-primary">Nuevo Rubro</a>
+</div>
+
+@if (TempData["Error"] != null)
+{
+    <div class="glass-panel" style="background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.2); color: #ef4444; margin-bottom: 1rem;">
+        @TempData["Error"]
+    </div>
+}
+
+<div class="glass-panel">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Subrubros Asociados</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td style="font-weight: 600;">@item.Name</td>
+                    <td>
+                        @foreach (var sub in item.SubCategories)
+                        {
+                            <span class="badge" style="background: rgba(var(--primary-rgb), 0.1); color: var(--primary); margin-right: 0.25rem;">@sub.Name</span>
+                        }
+                    </td>
+                    <td>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <a asp-action="Edit" asp-route-id="@item.Id" class="btn-secondary" style="padding: 0.25rem 0.75rem; font-size: 0.85rem;">Editar</a>
+                            <form asp-action="Delete" asp-route-id="@item.Id" method="post" onsubmit="return confirm('¿Está seguro de eliminar este rubro?');">
+                                <button type="submit" class="btn-secondary" style="padding: 0.25rem 0.75rem; font-size: 0.85rem; color: #ef4444;">Eliminar</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

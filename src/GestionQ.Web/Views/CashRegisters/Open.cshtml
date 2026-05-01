@@ -1,0 +1,26 @@
+@model GestionQ.Domain.Entities.CashRegister
+
+@{
+    ViewData["Title"] = "Abrir Caja";
+}
+
+<h1 class="page-title">Apertura de Caja</h1>
+
+<div class="glass-panel" style="max-width: 500px;">
+    <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Por favor, ingresa el dinero inicial con el que cuenta
+        la caja en este momento (Ej. Billetes de cambio).</p>
+
+    <form asp-action="Open">
+        <div class="form-group">
+            <label asp-for="InitialBalance" class="control-label">Saldo Inicial (Cambio/Efectivo) $</label>
+            <input asp-for="InitialBalance" type="number" step="0.01" class="form-control"
+                style="font-size: 1.25rem; font-weight: 600; color: #10b981;" required />
+            <span asp-validation-for="InitialBalance" class="text-danger"></span>
+        </div>
+
+        <div class="form-group" style="margin-top: 1.5rem; display: flex; gap: 1rem;">
+            <input type="submit" value="Aperturar Caja" class="btn-primary" style="background: #10b981;" />
+            <a asp-action="Index" class="btn-secondary">Cancelar</a>
+        </div>
+    </form>
+</div>

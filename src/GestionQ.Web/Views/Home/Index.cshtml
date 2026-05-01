@@ -1,0 +1,32 @@
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<h1 class="page-title">Bienvenido a GestionQ</h1>
+
+<div class="glass-panel">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem;">
+        <div>
+            <h3 style="color: var(--text-muted); font-size: 1rem;">Ventas Totales</h3>
+            <div style="font-size: 2.5rem; font-weight: 600; color: #10b981;">$@ViewBag.TotalSales.ToString("N2")</div>
+        </div>
+        <div>
+            <h3 style="color: var(--text-muted); font-size: 1rem;">Clientes Activos</h3>
+            <div style="font-size: 2.5rem; font-weight: 600; color: #3b82f6;">@ViewBag.TotalClients</div>
+        </div>
+        <div>
+            <h3 style="color: var(--text-muted); font-size: 1rem;">Valor en Stock</h3>
+            <div style="font-size: 2.5rem; font-weight: 600; color: #f59e0b;">$@ViewBag.TotalStockValue.ToString("N2")
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="glass-panel" style="margin-top: 2rem;">
+    <h2>Acciones Rápidas</h2>
+    <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+        <a asp-controller="Sales" asp-action="Create" class="btn-primary" style="background: #10b981;">+ Nueva Venta</a>
+        <a asp-controller="Products" asp-action="Create" class="btn-primary">+ Nuevo Producto</a>
+        <a asp-controller="Customers" asp-action="Create" class="btn-primary">+ Nuevo Cliente</a>
+    </div>
+</div>

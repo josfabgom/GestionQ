@@ -1,0 +1,53 @@
+@model IEnumerable<GestionQ.Domain.Entities.VatRate>
+
+@{
+    ViewData["Title"] = "Alícuotas de IVA";
+}
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <h1 class="page-title" style="margin-bottom: 0;">Alícuotas de IVA (%)</h1>
+    <a asp-action="Create" class="btn-primary">+ Nueva Alícuota</a>
+</div>
+
+<div class="glass-panel" style="max-width: 600px;">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Porcentaje</th>
+                <th>Estado</th>
+                <th style="text-align: right;">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td style="font-weight: 600;">@item.Name</td>
+                    <td style="font-weight: 700; color: var(--accent);">@item.Rate%</td>
+                    <td>
+                        @if (item.IsActive)
+                        {
+                            <span class="badge" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">Activo</span>
+                        }
+                        else
+                        {
+                            <span class="badge" style="background: rgba(239, 68, 68, 0.1); color: #ef4444;">Inactivo</span>
+                        }
+                    </td>
+                    <td style="text-align: right;">
+                        <a asp-action="Edit" asp-route-id="@item.Id" class="btn-secondary" style="padding: 0.4rem 0.75rem;">Editar</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<div style="margin-top: 1.5rem;">
+    <a asp-controller="Products" asp-action="Index" class="btn-secondary">Volver a Productos</a>
+</div>
+
+<style>
+    .badge { padding: 0.2rem 0.5rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600; }
+</style>

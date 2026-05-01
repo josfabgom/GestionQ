@@ -1,0 +1,242 @@
+﻿Usando la configuración de inicio de D:\Antigravity Proyectos\GestionQ\Properties\launchSettings.json...
+Compilando...
+warn: Microsoft.EntityFrameworkCore.Model.Validation[30000]
+      No store type was specified for the decimal property 'Difference' on entity type 'CashRegister'. This will cause values to be silently truncated if they do not fit in the default precision and scale. Explicitly specify the SQL server column type that can accommodate all the values in 'OnModelCreating' using 'HasColumnType', specify precision and scale using 'HasPrecision', or configure a value converter using 'HasConversion'.
+warn: Microsoft.EntityFrameworkCore.Model.Validation[30000]
+      No store type was specified for the decimal property 'ExpectedCashBalance' on entity type 'CashRegister'. This will cause values to be silently truncated if they do not fit in the default precision and scale. Explicitly specify the SQL server column type that can accommodate all the values in 'OnModelCreating' using 'HasColumnType', specify precision and scale using 'HasPrecision', or configure a value converter using 'HasConversion'.
+warn: Microsoft.EntityFrameworkCore.Model.Validation[30000]
+      No store type was specified for the decimal property 'FinalCashBalance' on entity type 'CashRegister'. This will cause values to be silently truncated if they do not fit in the default precision and scale. Explicitly specify the SQL server column type that can accommodate all the values in 'OnModelCreating' using 'HasColumnType', specify precision and scale using 'HasPrecision', or configure a value converter using 'HasConversion'.
+warn: Microsoft.EntityFrameworkCore.Model.Validation[30000]
+      No store type was specified for the decimal property 'InitialBalance' on entity type 'CashRegister'. This will cause values to be silently truncated if they do not fit in the default precision and scale. Explicitly specify the SQL server column type that can accommodate all the values in 'OnModelCreating' using 'HasColumnType', specify precision and scale using 'HasPrecision', or configure a value converter using 'HasConversion'.
+warn: Microsoft.EntityFrameworkCore.Model.Validation[30000]
+      No store type was specified for the decimal property 'Balance' on entity type 'Customer'. This will cause values to be silently truncated if they do not fit in the default precision and scale. Explicitly specify the SQL server column type that can accommodate all the values in 'OnModelCreating' using 'HasColumnType', specify precision and scale using 'HasPrecision', or configure a value converter using 'HasConversion'.
+warn: Microsoft.EntityFrameworkCore.Model.Validation[30000]
+      No store type was specified for the decimal property 'Price' on entity type 'Product'. This will cause values to be silently truncated if they do not fit in the default precision and scale. Explicitly specify the SQL server column type that can accommodate all the values in 'OnModelCreating' using 'HasColumnType', specify precision and scale using 'HasPrecision', or configure a value converter using 'HasConversion'.
+warn: Microsoft.EntityFrameworkCore.Model.Validation[30000]
+      No store type was specified for the decimal property 'TotalAmount' on entity type 'Sale'. This will cause values to be silently truncated if they do not fit in the default precision and scale. Explicitly specify the SQL server column type that can accommodate all the values in 'OnModelCreating' using 'HasColumnType', specify precision and scale using 'HasPrecision', or configure a value converter using 'HasConversion'.
+warn: Microsoft.EntityFrameworkCore.Model.Validation[30000]
+      No store type was specified for the decimal property 'UnitPrice' on entity type 'SaleItem'. This will cause values to be silently truncated if they do not fit in the default precision and scale. Explicitly specify the SQL server column type that can accommodate all the values in 'OnModelCreating' using 'HasColumnType', specify precision and scale using 'HasPrecision', or configure a value converter using 'HasConversion'.
+warn: Microsoft.EntityFrameworkCore.Model.Validation[30000]
+      No store type was specified for the decimal property 'Amount' on entity type 'SalePayment'. This will cause values to be silently truncated if they do not fit in the default precision and scale. Explicitly specify the SQL server column type that can accommodate all the values in 'OnModelCreating' using 'HasColumnType', specify precision and scale using 'HasPrecision', or configure a value converter using 'HasConversion'.
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (42ms) [Parameters=[@__normalizedName_0='?' (Size = 256)], CommandType='Text', CommandTimeout='30']
+      SELECT TOP(1) [a].[Id], [a].[ConcurrencyStamp], [a].[Name], [a].[NormalizedName]
+      FROM [AspNetRoles] AS [a]
+      WHERE [a].[NormalizedName] = @__normalizedName_0
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[@__normalizedName_0='?' (Size = 256)], CommandType='Text', CommandTimeout='30']
+      SELECT TOP(1) [a].[Id], [a].[ConcurrencyStamp], [a].[Name], [a].[NormalizedName]
+      FROM [AspNetRoles] AS [a]
+      WHERE [a].[NormalizedName] = @__normalizedName_0
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@__normalizedEmail_0='?' (Size = 256)], CommandType='Text', CommandTimeout='30']
+      SELECT TOP(2) [a].[Id], [a].[AccessFailedCount], [a].[ConcurrencyStamp], [a].[Email], [a].[EmailConfirmed], [a].[LockoutEnabled], [a].[LockoutEnd], [a].[NormalizedEmail], [a].[NormalizedUserName], [a].[PasswordHash], [a].[PhoneNumber], [a].[PhoneNumberConfirmed], [a].[SecurityStamp], [a].[TwoFactorEnabled], [a].[UserName]
+      FROM [AspNetUsers] AS [a]
+      WHERE [a].[NormalizedEmail] = @__normalizedEmail_0
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SELECT CASE
+          WHEN EXISTS (
+              SELECT 1
+              FROM [Customers] AS [c]) THEN CAST(1 AS bit)
+          ELSE CAST(0 AS bit)
+      END
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SELECT CASE
+          WHEN EXISTS (
+              SELECT 1
+              FROM [Products] AS [p]) THEN CAST(1 AS bit)
+          ELSE CAST(0 AS bit)
+      END
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SELECT CASE
+          WHEN EXISTS (
+              SELECT 1
+              FROM [PaymentMethods] AS [p]) THEN CAST(1 AS bit)
+          ELSE CAST(0 AS bit)
+      END
+fail: Microsoft.Extensions.Hosting.Internal.Host[11]
+      Hosting failed to start
+      System.IO.IOException: Failed to bind to address http://127.0.0.1:5144: address already in use.
+       ---> Microsoft.AspNetCore.Connections.AddressInUseException: Solo se permite un uso de cada dirección de socket (protocolo/dirección de red/puerto)
+       ---> System.Net.Sockets.SocketException (10048): Solo se permite un uso de cada dirección de socket (protocolo/dirección de red/puerto)
+         at System.Net.Sockets.Socket.UpdateStatusAfterSocketErrorAndThrowException(SocketError error, Boolean disconnectOnFailure, String callerName)
+         at System.Net.Sockets.Socket.DoBind(EndPoint endPointSnapshot, SocketAddress socketAddress)
+         at System.Net.Sockets.Socket.Bind(EndPoint localEP)
+         at Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets.SocketTransportOptions.CreateDefaultBoundListenSocket(EndPoint endpoint)
+         at Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets.SocketConnectionListener.Bind()
+         --- End of inner exception stack trace ---
+         at Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets.SocketConnectionListener.Bind()
+         at Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets.SocketTransportFactory.BindAsync(EndPoint endpoint, CancellationToken cancellationToken)
+         at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.TransportManager.BindAsync(EndPoint endPoint, ConnectionDelegate connectionDelegate, EndpointConfig endpointConfig, CancellationToken cancellationToken)
+         at Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServerImpl.<>c__DisplayClass28_0`1.<<StartAsync>g__OnBind|0>d.MoveNext()
+      --- End of stack trace from previous location ---
+         at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.AddressBinder.BindEndpointAsync(ListenOptions endpoint, AddressBindContext context, CancellationToken cancellationToken)
+         --- End of inner exception stack trace ---
+         at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.AddressBinder.BindEndpointAsync(ListenOptions endpoint, AddressBindContext context, CancellationToken cancellationToken)
+         at Microsoft.AspNetCore.Server.Kestrel.Core.LocalhostListenOptions.BindAsync(AddressBindContext context, CancellationToken cancellationToken)
+         at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.AddressBinder.AddressesStrategy.BindAsync(AddressBindContext context, CancellationToken cancellationToken)
+         at Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServerImpl.BindAsync(CancellationToken cancellationToken)
+         at Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServerImpl.StartAsync[TContext](IHttpApplication`1 application, CancellationToken cancellationToken)
+         at Microsoft.AspNetCore.Hosting.GenericWebHostService.StartAsync(CancellationToken cancellationToken)
+         at Microsoft.Extensions.Hosting.Internal.Host.<StartAsync>b__14_1(IHostedService service, CancellationToken token)
+         at Microsoft.Extensions.Hosting.Internal.Host.ForeachService[T](IEnumerable`1 services, CancellationToken token, Boolean concurrent, Boolean abortOnFirstException, List`1 exceptions, Func`3 operation)
+dotnet : Unhandled exception. 
+System.IO.IOException: Failed 
+to bind to address 
+http://127.0.0.1:5144: 
+address already in use.
+En línea: 1 Carácter: 1
++ dotnet run > 
+start_error.txt 2>&1
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~
+    + CategoryInfo          : 
+    NotSpecified: (Unhandled  
+   excep...already in use.:   
+ String) [], RemoteExcepti    
+on
+    + FullyQualifiedErrorId : 
+    NativeCommandError
+ 
+ ---> Microsoft.AspNetCore.Con
+nections.AddressInUseException
+: Solo se permite un uso de 
+cada dirección de socket 
+(protocolo/dirección de 
+red/puerto)
+ ---> System.Net.Sockets.Socke
+tException (10048): Solo se 
+permite un uso de cada 
+dirección de socket 
+(protocolo/dirección de 
+red/puerto)
+   at System.Net.Sockets.Socke
+t.UpdateStatusAfterSocketError
+AndThrowException(SocketError 
+error, Boolean 
+disconnectOnFailure, String 
+callerName)
+   at System.Net.Sockets.Socke
+t.DoBind(EndPoint 
+endPointSnapshot, 
+SocketAddress socketAddress)
+   at System.Net.Sockets.Socke
+t.Bind(EndPoint localEP)
+   at Microsoft.AspNetCore.Ser
+ver.Kestrel.Transport.Sockets.
+SocketTransportOptions.CreateD
+efaultBoundListenSocket(EndPoi
+nt endpoint)
+   at Microsoft.AspNetCore.Ser
+ver.Kestrel.Transport.Sockets.
+SocketConnectionListener.Bind(
+)
+   --- End of inner exception 
+stack trace ---
+   at Microsoft.AspNetCore.Ser
+ver.Kestrel.Transport.Sockets.
+SocketConnectionListener.Bind(
+)
+   at Microsoft.AspNetCore.Ser
+ver.Kestrel.Transport.Sockets.
+SocketTransportFactory.BindAsy
+nc(EndPoint endpoint, 
+CancellationToken 
+cancellationToken)
+   at Microsoft.AspNetCore.Ser
+ver.Kestrel.Core.Internal.Infr
+astructure.TransportManager.Bi
+ndAsync(EndPoint endPoint, 
+ConnectionDelegate 
+connectionDelegate, 
+EndpointConfig 
+endpointConfig, 
+CancellationToken 
+cancellationToken)
+   at Microsoft.AspNetCore.Ser
+ver.Kestrel.Core.KestrelServer
+Impl.<>c__DisplayClass28_0`1.<
+<StartAsync>g__OnBind|0>d.Move
+Next()
+--- End of stack trace from 
+previous location ---
+   at Microsoft.AspNetCore.Ser
+ver.Kestrel.Core.Internal.Addr
+essBinder.BindEndpointAsync(Li
+stenOptions endpoint, 
+AddressBindContext context, 
+CancellationToken 
+cancellationToken)
+   --- End of inner exception 
+stack trace ---
+   at Microsoft.AspNetCore.Ser
+ver.Kestrel.Core.Internal.Addr
+essBinder.BindEndpointAsync(Li
+stenOptions endpoint, 
+AddressBindContext context, 
+CancellationToken 
+cancellationToken)
+   at Microsoft.AspNetCore.Ser
+ver.Kestrel.Core.LocalhostList
+enOptions.BindAsync(AddressBin
+dContext context, 
+CancellationToken 
+cancellationToken)
+   at Microsoft.AspNetCore.Ser
+ver.Kestrel.Core.Internal.Addr
+essBinder.AddressesStrategy.Bi
+ndAsync(AddressBindContext 
+context, CancellationToken 
+cancellationToken)
+   at Microsoft.AspNetCore.Ser
+ver.Kestrel.Core.KestrelServer
+Impl.BindAsync(CancellationTok
+en cancellationToken)
+   at Microsoft.AspNetCore.Ser
+ver.Kestrel.Core.KestrelServer
+Impl.StartAsync[TContext](IHtt
+pApplication`1 application, 
+CancellationToken 
+cancellationToken)
+   at Microsoft.AspNetCore.Hos
+ting.GenericWebHostService.Sta
+rtAsync(CancellationToken 
+cancellationToken)
+   at Microsoft.Extensions.Hos
+ting.Internal.Host.<StartAsync
+>b__14_1(IHostedService 
+service, CancellationToken 
+token)
+   at Microsoft.Extensions.Hos
+ting.Internal.Host.ForeachServ
+ice[T](IEnumerable`1 
+services, CancellationToken 
+token, Boolean concurrent, 
+Boolean 
+abortOnFirstException, List`1 
+exceptions, Func`3 operation)
+   at Microsoft.Extensions.Hos
+ting.Internal.Host.StartAsync(
+CancellationToken 
+cancellationToken)
+   at Microsoft.Extensions.Hos
+ting.HostingAbstractionsHostEx
+tensions.RunAsync(IHost host, 
+CancellationToken token)
+   at Microsoft.Extensions.Hos
+ting.HostingAbstractionsHostEx
+tensions.RunAsync(IHost host, 
+CancellationToken token)
+   at Microsoft.Extensions.Hos
+ting.HostingAbstractionsHostEx
+tensions.Run(IHost host)
+   at 
+Program.<Main>$(String[] 
+args) in D:\Antigravity Proyec
+tos\GestionQ\Program.cs:line 
+91
+   at Program.<Main>(String[] 
+args)

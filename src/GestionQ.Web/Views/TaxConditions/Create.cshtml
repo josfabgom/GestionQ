@@ -1,0 +1,28 @@
+@model GestionQ.Domain.Entities.TaxCondition
+
+@{
+    ViewData["Title"] = "Nueva Condición de IVA";
+}
+
+<h1 class="page-title">Nueva Condición ante el IVA</h1>
+
+<div class="glass-panel" style="max-width: 500px;">
+    <form asp-action="Create">
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+        <div class="form-group">
+            <label asp-for="Name" class="control-label"></label>
+            <input asp-for="Name" class="form-control" placeholder="Ej: Responsable Inscripto" />
+            <span asp-validation-for="Name" class="text-danger"></span>
+        </div>
+
+        <div class="form-group" style="margin-top: 2rem; display: flex; gap: 1rem;">
+            <button type="submit" class="btn-primary">Guardar</button>
+            <a asp-action="Index" class="btn-secondary">Cancelar</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

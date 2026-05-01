@@ -1,0 +1,74 @@
+@model IEnumerable<GestionQ.Domain.Entities.Supplier>
+
+@{
+    ViewData["Title"] = "Proveedores";
+}
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; gap: 1rem; flex-wrap: wrap;">
+    <h1 class="page-title" style="margin-bottom: 0;">Gestión de Proveedores</h1>
+    
+    <div style="display: flex; gap: 1rem; flex-grow: 1; justify-content: flex-end; align-items: center;">
+        <form asp-action="Index" method="get" style="display: flex; gap: 0.5rem; max-width: 400px; width: 100%;">
+            <input type="text" name="q" value="@ViewBag.SearchQuery" class="form-control" placeholder="Buscar por nombre o CUIT..." style="background: rgba(255,255,255,0.05);" />
+            <button type="submit" class="btn-secondary">Buscar</button>
+            @if (!string.IsNullOrEmpty(ViewBag.SearchQuery as string))
+            {
+                <a asp-action="Index" class="btn-secondary" style="color: #ef4444; text-decoration: none; padding-top: 0.5rem;">&times;</a>
+            }
+        </form>
+        <a asp-action="Create" class="btn-primary">+ Nuevo Proveedor</a>
+    </div>
+</div>
+
+<div class="glass-panel">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Nombre / Razón Social</th>
+                <th>CUIT/CUIL</th>
+                <th>Condición IVA</th>
+                <th>Email</th>
+                <th>Teléfono</th>
+                <th>Estado</th>
+                <th style="text-align: right;">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td style="font-weight: 600; color: var(--accent);">@item.Name</td>
+                    <td style="opacity: 0.8;">@(item.TaxId ?? "-")</td>
+                    <td style="font-size: 0.85rem;">@(item.TaxCondition?.Name ?? "-")</td>
+                    <td>@(item.Email ?? "-")</td>
+                    <td>@(item.Phone ?? "-")</td>
+                    <td>
+                        @if (item.IsActive)
+                        {
+                            <span class="badge" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">Activo</span>
+                        }
+                        else
+                        {
+                            <span class="badge" style="background: rgba(239, 68, 68, 0.1); color: #ef4444;">Inactivo</span>
+                        }
+                    </td>
+                    <td style="text-align: right;">
+                        <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                            <a asp-action="Edit" asp-route-id="@item.Id" class="btn-secondary" style="padding: 0.4rem 0.75rem;">Editar</a>
+                            @if (item.IsActive)
+                            {
+                                <form asp-action="Delete" asp-route-id="@item.Id" method="post" style="display:inline;" onsubmit="return confirm('¿Dar de baja a este proveedor?');">
+                                    <button type="submit" class="btn-secondary" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.2);">Baja</button>
+                                </form>
+                            }
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<style>
+    .badge { padding: 0.2rem 0.5rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600; }
+</style>

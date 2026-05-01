@@ -1,0 +1,169 @@
+@model GestionQ.Web.Models.ConfigurationViewModel
+
+@{
+    ViewData["Title"] = "Configuración General";
+}
+
+<h1 class="page-title">Configuración del Sistema</h1>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div
+        style="background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #6ee7b7; padding: 1rem; border-radius: 8px; margin-bottom: 2rem;">
+        @TempData["SuccessMessage"]
+    </div>
+}
+
+<div style="display: flex; gap: 2rem; flex-wrap: wrap; align-items: stretch;">
+
+    <!-- Formulario de Conexión a BD -->
+    <div class="glass-panel" style="flex: 1; min-width: 320px;">
+        <h3
+            style="margin-top:0; color: #a78bfa; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">
+            Conexión SQL Server</h3>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">Ajuste los parámetros del motor
+            de base de datos. Si la BD conectada aún no tiene las tablas, el sistema las intentará auto-generar al
+            reiniciar.</p>
+
+        <form asp-action="Index" enctype="multipart/form-data">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+            <div class="form-group">
+                <label asp-for="Server" class="control-label"></label>
+                <input asp-for="Server" class="form-control" />
+                <span asp-validation-for="Server" class="text-danger"></span>
+            </div>
+
+            <div class="form-group" style="margin-top: 1rem;">
+                <label asp-for="Database" class="control-label"></label>
+                <input asp-for="Database" class="form-control" />
+                <span asp-validation-for="Database" class="text-danger"></span>
+            </div>
+
+            <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                <div class="form-group" style="flex: 1;">
+                    <label asp-for="User" class="control-label"></label>
+                    <input asp-for="User" class="form-control" />
+                    <span asp-validation-for="User" class="text-danger"></span>
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label asp-for="Password" class="control-label"></label>
+                    <input asp-for="Password" type="password" class="form-control" id="Password" />
+                    <span asp-validation-for="Password" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 1.5rem; display: flex; gap: 1rem;">
+                <button type="button" class="btn-secondary" style="flex: 1;" onclick="testConnection()">
+                    Probar Conexión
+                </button>
+            </div>
+
+            <h3
+                style="margin-top: 2rem; color: #3b82f6; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">
+                Identidad de la Empresa</h3>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">Información general que se utilizará en tickets, reportes y pantalla general.</p>
+
+            <div class="form-group" style="margin-top: 1rem;">
+                <label asp-for="CompanyName" class="control-label"></label>
+                <input asp-for="CompanyName" class="form-control" />
+                <span asp-validation-for="CompanyName" class="text-danger"></span>
+            </div>
+
+            <div class="form-group" style="margin-top: 1rem;">
+                <label asp-for="CompanyAddress" class="control-label"></label>
+                <input asp-for="CompanyAddress" class="form-control" />
+                <span asp-validation-for="CompanyAddress" class="text-danger"></span>
+            </div>
+
+            <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+            <div class="form-group" style="flex: 1;">
+            <label asp-for="CompanyPhone" class="control-label"></label>
+                <input asp-for="CompanyPhone" class="form-control" />
+                    <span asp-validation-for="CompanyPhone" class="text-danger"></span>
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label asp-for="CompanyEmail" class="control-label"></label>
+                    <input asp-for="CompanyEmail" type="email" class="form-control" />
+                    <span asp-validation-for="CompanyEmail" class="text-danger"></span>
+                </div>
+            </div>
+
+            <h3
+                style="margin-top: 2rem; color: #10b981; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">
+                Configuración de Compras</h3>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">Parámetros para la gestión de ingresos de proveedores.</p>
+
+            <div class="form-group" style="margin-top: 1rem;">
+                <label asp-for="NextInternalSupplierNumber" class="control-label"></label>
+                <input asp-for="NextInternalSupplierNumber" type="number" class="form-control" style="max-width: 200px;" />
+                <p style="font-size: 0.8rem; opacity: 0.7; margin-top: 0.3rem;">Este número se utilizará automáticamente si el ingreso no tiene número de factura propio.</p>
+                <span asp-validation-for="NextInternalSupplierNumber" class="text-danger"></span>
+            </div>
+
+            <h3
+                style="margin-top: 2rem; color: #3b82f6; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">
+                Logotipo Empresa</h3>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">Sube un archivo de imagen transparente (.png) para
+                reemplazar el diseño de menú lateral y pantalla de login.</p>
+
+            <div class="form-group" style="margin-top: 1rem;">
+                <label asp-for="LogoFile" class="control-label"></label>
+                <input asp-for="LogoFile" type="file" accept="image/png, image/jpeg" class="form-control"
+                    style="background: rgba(0,0,0,0.2); padding: 0.5rem;" />
+                <span asp-validation-for="LogoFile" class="text-danger"></span>
+            </div>
+
+            <div class="form-group" style="margin-top: 2.5rem;">
+                <button type="submit" class="btn-primary" style="width: 100%; font-size: 1.1rem; padding: 0.8rem;"
+                    onclick="return confirm('Al aplicar cambios de base de datos el sistema intentará reiniciar momentáneamente. ¿Deseas aplicar los ajustes?')">
+                    Guardar y Aplicar Todo</button>
+            </div>
+        </form>
+    </div>
+
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+        <script>
+            function testConnection() {
+                var data = {
+                    Server: document.getElementById('Server').value,
+                    Database: document.getElementById('Database').value,
+                    User: document.getElementById('User').value,
+                    Password: document.getElementById('Password').value
+                };
+
+                Swal.fire({
+                    title: 'Probando Conexión...',
+                    text: 'Por favor espera',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                fetch('/Configuration/TestConnection', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                })
+                .then(res => res.json())
+                .then(res => {
+                    if (res.success) {
+                        Swal.fire('¡Éxito!', res.message, 'success');
+                    } else {
+                        Swal.fire('Falló', res.message, 'error');
+                    }
+                })
+                .catch(err => {
+                    Swal.fire('Error', 'No se pudo contactar al servidor para verificar.', 'error');
+                });
+            }
+        </script>
+}

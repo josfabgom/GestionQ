@@ -1,0 +1,38 @@
+@model IEnumerable<GestionQ.Web.Controllers.UserRoleViewModel>
+@{
+    ViewData["Title"] = "Gestión de Usuarios";
+}
+<div style="display: flex; justify-content: space-between; align-items: center;">
+    <h1 class="page-title">Usuarios del Sistema</h1>
+    <a asp-action="Create" class="btn-primary">+ Nuevo Usuario</a>
+</div>
+
+<div class="glass-panel">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Email / Usuario</th>
+                <th>Rol Asignado</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var user in Model)
+            {
+                <tr>
+                    <td style="font-weight: 600;">@user.Email</td>
+                    <td style="color: var(--accent);">
+                        @(string.IsNullOrEmpty(user.Roles) ? "Sin Rol" : user.Roles)
+                    </td>
+                    <td style="display: flex; gap: 0.5rem;">
+                        <a asp-action="EditRole" asp-route-id="@user.UserId" class="btn-secondary">Editar Rol</a>
+                        <form asp-action="Delete" asp-route-id="@user.UserId" method="post"
+                            onsubmit="return confirm('¿Eliminar usuario del sistema?');">
+                            <button type="submit" class="btn-danger">Eliminar</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

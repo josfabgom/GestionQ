@@ -1,0 +1,79 @@
+@model IEnumerable<GestionQ.Domain.Entities.Purchase>
+
+@{
+    ViewData["Title"] = "Listado de Compras";
+}
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <h1 class="page-title" style="margin-bottom: 0;">Ingresos de Compras</h1>
+    <a asp-action="Create" class="btn-primary">+ Ingresar Compra</a>
+</div>
+
+<div class="glass-panel">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Fecha</th>
+                <th>Comprobante</th>
+                <th>Proveedor</th>
+                <th style="text-align: center;">Estado</th>
+                <th style="text-align: right;">Total</th>
+                <th style="text-align: center;">Imagen</th>
+                <th style="text-align: right;">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td>@item.Date.ToString("dd/MM/yyyy HH:mm")</td>
+                    <td style="font-family: monospace; font-weight: 600;">
+                        @item.VoucherLetter - @item.ReferenceNumber
+                    </td>
+                    <td>@item.Supplier?.Name</td>
+                    <td style="text-align: center;">
+                        @if (item.Status == GestionQ.Domain.Entities.PurchaseStatus.Pending)
+                        {
+                            <span class="badge" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b;">Pendiente</span>
+                        }
+                        else if (item.Status == GestionQ.Domain.Entities.PurchaseStatus.Received)
+                        {
+                            <span class="badge" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">Recibido</span>
+                        }
+                        else
+                        {
+                            <span class="badge" style="background: rgba(255, 255, 255, 0.05); color: var(--text-muted);">@item.Status</span>
+                        }
+                    </td>
+                    <td style="text-align: right; font-weight: 700; color: var(--accent);">
+                        $@item.TotalAmount.ToString("N2")
+                    </td>
+                    <td style="text-align: center;">
+                        @if (!string.IsNullOrEmpty(item.ImageUrl))
+                        {
+                            <a href="@item.ImageUrl" target="_blank" style="color: var(--accent); font-size: 1.2rem;">
+                                🖼️
+                            </a>
+                        }
+                        else
+                        {
+                            <span style="opacity: 0.3;">-</span>
+                        }
+                    </td>
+                    <td style="text-align: right; display: flex; gap: 0.5rem; justify-content: flex-end;">
+                        @if (item.Status == GestionQ.Domain.Entities.PurchaseStatus.Pending)
+                        {
+                            <a asp-action="Receive" asp-route-id="@item.Id" class="btn-primary" style="padding: 0.4rem 0.75rem; background: var(--accent);">Recibir</a>
+                        }
+                        <a asp-action="Details" asp-route-id="@item.Id" class="btn-secondary" style="padding: 0.4rem 0.75rem;">Detalles</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<style>
+    .table th { border-top: none; opacity: 0.6; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; }
+    .table td { vertical-align: middle; }
+</style>

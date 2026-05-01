@@ -1,0 +1,67 @@
+@model GestionQ.Domain.Entities.Product
+
+@{
+    ViewData["Title"] = "Historial de Precios";
+}
+
+<div style="margin-bottom: 2rem;">
+    <a asp-action="Index" class="btn-secondary" style="margin-bottom: 1rem; display: inline-block;">&larr; Volver a Gestión</a>
+    <h1 class="page-title">Historial de Precios: @Model.Name</h1>
+    <p style="opacity: 0.7;">Código: @Model.InternalCode | Alícuota: @(Model.VatRate?.Name ?? "0%")</p>
+</div>
+
+<div class="glass-panel">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Fecha</th>
+                <th style="text-align: center;">Costo / Margen</th>
+                <th style="text-align: right;">Precio Anterior</th>
+                <th style="text-align: right; color: var(--accent);">Precio Nuevo</th>
+                <th style="text-align: center;">Variación %</th>
+            </tr>
+        </thead>
+        <tbody>
+            @{
+                var sortedHistory = Model.PriceHistory.OrderByDescending(p => p.UpdateDate).ToList();
+            }
+            @for (int i = 0; i < sortedHistory.Count; i++)
+            {
+                var price = sortedHistory[i];
+                decimal previousPrice = i + 1 < sortedHistory.Count ? sortedHistory[i + 1].FinalPrice : 0;
+                decimal variation = previousPrice > 0 ? ((price.FinalPrice - previousPrice) / previousPrice) * 100 : 0;
+                
+                <tr>
+                    <td>
+                        <div style="font-weight: 600;">@price.UpdateDate.ToString("dd/MM/yyyy")</div>
+                        <div style="font-size: 0.8rem; opacity: 0.6;">@price.UpdateDate.ToString("HH:mm") hs</div>
+                    </td>
+                    <td style="text-align: center; font-size: 0.9rem;">
+                        <span title="Costo Base">$@price.BaseCost.ToString("N2")</span> / 
+                        <span title="Margen">@price.ProfitMargin.ToString("F1")%</span>
+                    </td>
+                    <td style="text-align: right; opacity: 0.7;">
+                        @(previousPrice > 0 ? $"${previousPrice:N2}" : "-")
+                    </td>
+                    <td style="text-align: right; font-weight: 700; color: var(--accent);">
+                        $@price.FinalPrice.ToString("N2")
+                    </td>
+                    <td style="text-align: center;">
+                        @if (previousPrice > 0)
+                        {
+                            var color = variation > 0 ? "#10b981" : (variation < 0 ? "#ef4444" : "var(--text-muted)");
+                            var icon = variation > 0 ? "↑" : (variation < 0 ? "↓" : "=");
+                            <span style="color: @color; font-weight: 700; background: rgba(0,0,0,0.2); padding: 0.2rem 0.5rem; border-radius: 4px;">
+                                @icon @Math.Abs(variation).ToString("F1")%
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="badge" style="background: rgba(255,255,255,0.1);">Inicial</span>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

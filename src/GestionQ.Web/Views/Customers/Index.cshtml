@@ -1,0 +1,90 @@
+@model IEnumerable<GestionQ.Domain.Entities.Customer>
+
+@{
+    ViewData["Title"] = "Cuentas Corrientes";
+}
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; gap: 1rem; flex-wrap: wrap;">
+    <h1 class="page-title" style="margin-bottom: 0;">Cuentas Corrientes de Clientes</h1>
+    
+    <div style="display: flex; gap: 1rem; flex-grow: 1; justify-content: flex-end; align-items: center;">
+        <form asp-action="Index" method="get" style="display: flex; gap: 0.5rem; max-width: 400px; width: 100%;">
+            <input type="text" name="q" value="@ViewBag.SearchQuery" class="form-control" placeholder="Buscar por nombre, código o DNI..." style="background: rgba(255,255,255,0.05);" />
+            <button type="submit" class="btn-secondary">Buscar</button>
+            @if (!string.IsNullOrEmpty(ViewBag.SearchQuery as string))
+            {
+                <a asp-action="Index" class="btn-secondary" style="color: #ef4444; text-decoration: none; padding-top: 0.5rem;">&times;</a>
+            }
+        </form>
+        <a asp-action="Create" class="btn-primary">+ Nuevo Cliente</a>
+    </div>
+</div>
+
+<div class="glass-panel">
+    <table class="table">
+        <thead>
+            <tr>
+                <th></th>
+                <th>Cód.</th>
+                <th>Nombre</th>
+                <th>DNI</th>
+                <th>CUIT</th>
+                <th>IVA</th>
+                <th>Teléfono</th>
+                <th>Estado</th>
+                <th>Balance</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td style="width: 50px;">
+                        @if (!string.IsNullOrEmpty(item.ImageUrl))
+                        {
+                            <img src="@item.ImageUrl" alt="@item.Name" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255,255,255,0.1);" />
+                        }
+                        else
+                        {
+                            <div style="width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: rgba(255,255,255,0.3);">
+                                <i class="fas fa-user"></i>
+                            </div>
+                        }
+                    </td>
+                    <td><span style="font-size: 0.8rem; opacity: 0.7;">@item.InternalCode</span></td>
+                    <td>
+                        <div style="display: flex; flex-direction: column;">
+                            <span style="font-weight: 600;">@item.Name</span>
+                            <span style="font-size: 0.75rem; opacity: 0.6;">@item.Email</span>
+                        </div>
+                    </td>
+                    <td>@item.Dni</td>
+                    <td>@item.Cuit</td>
+                    <td><span style="font-size: 0.8rem;">@(item.TaxCondition?.Name ?? "-")</span></td>
+                    <td>@item.Phone</td>
+                    <td>
+                        @if (item.IsActive)
+                        {
+                            <span style="padding: 0.25rem 0.5rem; border-radius: 1rem; background: rgba(16, 185, 129, 0.1); color: #10b981; font-size: 0.7rem;">Activo</span>
+                        }
+                        else
+                        {
+                            <span style="padding: 0.25rem 0.5rem; border-radius: 1rem; background: rgba(239, 68, 68, 0.1); color: #ef4444; font-size: 0.7rem;">Inactivo</span>
+                        }
+                    </td>
+                    <td style="font-weight: 600; color: @(item.Balance < 0 ? "#ef4444" : "#10b981")">
+                        $@item.Balance.ToString("N2")
+                    </td>
+                    <td style="display: flex; gap: 0.5rem;">
+                        <a asp-action="Edit" asp-route-id="@item.Id" class="btn-secondary" title="Editar"><i class="fas fa-edit"></i></a>
+                        <form asp-action="Delete" asp-route-id="@item.Id" method="post" style="display:inline;"
+                            onsubmit="return confirm('¿Eliminar cliente?');">
+                            <button type="submit" class="btn-danger" title="Eliminar"><i class="fas fa-trash"></i></button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

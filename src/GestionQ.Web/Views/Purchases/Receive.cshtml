@@ -1,0 +1,115 @@
+@model GestionQ.Domain.Entities.Purchase
+
+@{
+    ViewData["Title"] = "Recibir Pedido";
+}
+
+<h1 class="page-title">Recibir Pedido #@Model.Id</h1>
+
+<div class="glass-panel" style="max-width: 900px;">
+    <div style="display: flex; justify-content: space-between; margin-bottom: 2rem; opacity: 0.8;">
+        <div>
+            <strong>Proveedor:</strong> @Model.Supplier?.Name<br />
+            <strong>Referencia:</strong> @Model.ReferenceNumber
+        </div>
+        <div style="text-align: right;">
+            <strong>Fecha Pedido:</strong> @Model.Date.ToString("dd/MM/yyyy HH:mm")
+        </div>
+    </div>
+
+    <form asp-action="Receive" method="post">
+        <input type="hidden" name="id" value="@Model.Id" />
+        
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Producto</th>
+                    <th>Costo Unit.</th>
+                    <th style="text-align: center;">Cant. Pedida</th>
+                    <th style="text-align: center; width: 150px;">Cant. Recibida</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (int i = 0; i < Model.Items.Count; i++)
+                {
+                    var item = Model.Items.ElementAt(i);
+                    <tr>
+                        <td>
+                            <div style="font-weight: 600;">@item.Product?.Name</div>
+                            <small style="opacity: 0.6;">@item.Product?.InternalCode.ToString("D5")</small>
+                            <input type="hidden" name="receivedItems[@i].Id" value="@item.Id" />
+                        </td>
+                        <td>$@item.UnitCost.ToString("N2")</td>
+                        <td style="text-align: center;">@item.Quantity</td>
+                        <td style="text-align: center;">
+                            <input type="number" name="receivedItems[@i].ReceivedQuantity" 
+                                   value="@item.Quantity.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)" 
+                                   data-ordered="@item.Quantity.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)"
+                                   class="form-control receive-input" step="0.01" 
+                                   style="text-align: center; background: rgba(var(--accent-rgb), 0.1); border-color: var(--accent);" />
+                            <div class="diff-indicator" style="font-size: 0.75rem; margin-top: 0.25rem; font-weight: 600;"></div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <div id="diffSummary" class="glass-panel" style="margin-top: 1rem; border-color: #f59e0b; display: none; background: rgba(245, 158, 11, 0.05);">
+            <h4 style="margin-top: 0; color: #f59e0b;">⚠️ Resumen de Diferencias</h4>
+            <ul id="diffList" style="margin-bottom: 0; padding-left: 1.5rem; font-size: 0.9rem;"></ul>
+        </div>
+
+        <div style="margin-top: 2rem; border-top: 1px solid var(--border); padding-top: 1.5rem; display: flex; gap: 1rem;">
+            <button type="submit" class="btn-primary">Confirmar Recepción y Actualizar Stock</button>
+            <a asp-action="Index" class="btn-secondary">Cancelar</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        document.querySelectorAll('.receive-input').forEach(input => {
+            input.addEventListener('input', function() {
+                const ordered = parseFloat(this.dataset.ordered);
+                const received = parseFloat(this.value) || 0;
+                const diff = received - ordered;
+                const indicator = this.parentElement.querySelector('.diff-indicator');
+                
+                if (diff === 0) {
+                    indicator.innerText = '';
+                    indicator.style.color = 'inherit';
+                } else if (diff < 0) {
+                    indicator.innerText = `Faltan: ${Math.abs(diff).toFixed(2)}`;
+                    indicator.style.color = '#ef4444';
+                } else {
+                    indicator.innerText = `Sobra: ${diff.toFixed(2)}`;
+                    indicator.style.color = '#10b981';
+                }
+                updateSummary();
+            });
+        });
+
+        function updateSummary() {
+            const summaryDiv = document.getElementById('diffSummary');
+            const diffList = document.getElementById('diffList');
+            diffList.innerHTML = '';
+            let hasDiff = false;
+
+            document.querySelectorAll('.receive-input').forEach(input => {
+                const ordered = parseFloat(input.dataset.ordered);
+                const received = parseFloat(input.value) || 0;
+                const diff = received - ordered;
+
+                if (diff !== 0) {
+                    hasDiff = true;
+                    const productName = input.closest('tr').querySelector('div').innerText;
+                    const li = document.createElement('li');
+                    li.innerHTML = `<strong>${productName}</strong>: ${diff < 0 ? 'Faltan' : 'Sobran'} ${Math.abs(diff).toFixed(2)} unidades (Pedido: ${ordered}, Recibido: ${received})`;
+                    diffList.appendChild(li);
+                }
+            });
+
+            summaryDiv.style.display = hasDiff ? 'block' : 'none';
+        }
+    </script>
+}

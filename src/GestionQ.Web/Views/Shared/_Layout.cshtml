@@ -1,0 +1,128 @@
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Hosting
+@inject SignInManager<IdentityUser> SignInManager
+@inject UserManager<IdentityUser> UserManager
+@inject IWebHostEnvironment Env
+
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - GestionQ Web</title>
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@@sweetalert2/theme-dark@5/dark.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@@11/dist/sweetalert2.min.js"></script>
+</head>
+
+<body>
+    @if (SignInManager.IsSignedIn(User))
+    {
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <a asp-controller="Home" asp-action="Index" class="brand">
+                @{
+                    var logoPath = System.IO.Path.Combine(Env.WebRootPath, "images", "logo.png");
+                    var hasLogo = System.IO.File.Exists(logoPath);
+                }
+                @if (hasLogo)
+                {
+                    <img src="~/images/logo.png?v=@DateTime.Now.Ticks" style="max-height: 45px; margin-right: 10px;"
+                        alt="Logo" />
+                }
+                else
+                {
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                        <path d="M2 17l10 5 10-5"></path>
+                        <path d="M2 12l10 5 10-5"></path>
+                    </svg>
+                    <span>GestionQ</span>
+                }
+            </a>
+
+            <div
+                style="font-size: 0.85rem; color: var(--text-muted); padding: 0.5rem 1rem; margin-top: -1rem; margin-bottom: 2rem; border-bottom: 1px solid var(--border); padding-bottom: 1rem;">
+                Usuario: <br /><strong style="color: white;">@UserManager.GetUserName(User)</strong>
+                <form asp-controller="Account" asp-action="Logout" method="post" style="margin-top: 0.5rem;">
+                    <button type="submit"
+                        style="background:none; border:none; color:#ef4444; padding:0; cursor:pointer; font-size: 0.8rem; text-decoration: underline;">
+                        Cerrar Sesión
+                    </button>
+                </form>
+            </div>
+
+            <ul class="nav-links">
+                <li>
+                    <a asp-controller="Home" asp-action="Index">Dashboard</a>
+                </li>
+                <li>
+                    <a asp-controller="Customers" asp-action="Index">Cuentas Corrientes</a>
+                </li>
+                <li>
+                    <a asp-controller="Products" asp-action="Index">Stock (Productos)</a>
+                </li>
+                <li>
+                    <a asp-controller="Prices" asp-action="Index" style="color: #60a5fa;">Gestión de Precios</a>
+                </li>
+                <li>
+                    <a asp-controller="Sales" asp-action="Index">Ventas</a>
+                </li>
+                <li>
+                    <a asp-controller="CashRegisters" asp-action="Index" style="color: #fbbf24;">Caja / Turno</a>
+                </li>
+                @if (User.IsInRole("Admin"))
+                {
+                    <li style="margin-top: 2rem;">
+                        <span
+                            style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); padding-left: 1rem; margin-bottom: 0.5rem; display: block;">Configuración</span>
+                    </li>
+                    <li>
+                        <a asp-controller="Purchases" asp-action="Index" style="color: #60a5fa;">Compras (Ingreso Stock)</a>
+                    </li>
+                    <li>
+                        <a asp-controller="Users" asp-action="Index" style="color: #a78bfa;">ABM Usuarios</a>
+                    </li>
+                    <li>
+                        <a asp-controller="Suppliers" asp-action="Index" style="color: #a78bfa;">Proveedores</a>
+                    </li>
+                    <li>
+                        <a asp-controller="TaxConditions" asp-action="Index" style="color: #a78bfa;">Condiciones ante el IVA</a>
+                    </li>
+                    <li>
+                        <a asp-controller="VatRates" asp-action="Index" style="color: #a78bfa;">Alícuotas de IVA (%)</a>
+                    </li>
+                    <li>
+                        <a asp-controller="Categories" asp-action="Index" style="color: #a78bfa;">Rubros</a>
+                    </li>
+                    <li>
+                        <a asp-controller="SubCategories" asp-action="Index" style="color: #a78bfa;">Subrubros</a>
+                    </li>
+                    <li>
+                        <a asp-controller="PaymentMethods" asp-action="Index" style="color: #a78bfa;">Medios de Pago</a>
+                    </li>
+                    <li>
+                        <a asp-controller="Configuration" asp-action="Index" style="color: #a78bfa;">Ajustes BD y Logo</a>
+                    </li>
+                }
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            @RenderBody()
+        </main>
+    }
+    else
+    {
+        <main style="display: flex; align-items: center; justify-content: center; height: 100vh; width: 100%;">
+            @RenderBody()
+        </main>
+    }
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+
+</html>

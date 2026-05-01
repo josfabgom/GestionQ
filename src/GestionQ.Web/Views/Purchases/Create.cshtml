@@ -1,0 +1,253 @@
+@model GestionQ.Domain.Entities.Purchase
+
+@{
+    ViewData["Title"] = "Ingreso de Stock (Compras)";
+}
+
+<h1 class="page-title">Ingreso de Stock</h1>
+
+<div class="glass-panel">
+    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem;">
+        <!-- Left: Items Selection -->
+        <div>
+            <div class="form-group">
+                <label class="control-label">Buscar Producto (Barra, Nombre o Código)</label>
+                <div style="position: relative;">
+                    <input type="text" id="productSearch" class="form-control" placeholder="Escriba para buscar..." autocomplete="off" />
+                    <div id="searchResults" class="glass-panel" style="position: absolute; width: 100%; z-index: 100; display: none; margin-top: 5px; padding: 0.5rem;">
+                        <!-- Results will appear here -->
+                    </div>
+                </div>
+            </div>
+
+            <table class="table" style="margin-top: 1.5rem;">
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th style="width: 120px;">Cantidad</th>
+                        <th style="width: 150px;">Costo Unit.</th>
+                        <th style="width: 150px;">Subtotal</th>
+                        <th style="width: 50px;"></th>
+                    </tr>
+                </thead>
+                <tbody id="purchaseItems">
+                    <!-- Items will be added here -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Right: Summary & Supplier -->
+        <div>
+            <div class="form-group">
+                <label class="control-label">Proveedor</label>
+                <select id="SupplierId" class="form-control" required>
+                    <option value="">Seleccione Proveedor...</option>
+                    @foreach (var s in ViewBag.Suppliers as IEnumerable<GestionQ.Domain.Entities.Supplier>)
+                    {
+                        <option value="@s.Id">@s.Name</option>
+                    }
+                </select>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 80px 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label class="control-label">Letra</label>
+                    <select id="VoucherLetter" class="form-control">
+                        <option value="A">A</option>
+                        <option value="B">B</option>
+                        <option value="C">C</option>
+                        <option value="M">M</option>
+                        <option value="R">R</option>
+                        <option value="X">X</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="control-label">Nro. Factura / Remito</label>
+                    <input type="text" id="ReferenceNumber" class="form-control" placeholder="Ej: 0001-00001234" onblur="formatInvoice(this)" />
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="control-label">Imagen del Comprobante (Foto/PDF)</label>
+                <input type="file" id="ImageFile" class="form-control" accept="image/*,application/pdf" />
+            </div>
+
+            <div class="form-group">
+                <label class="control-label">Notas</label>
+                <textarea id="Notes" class="form-control" rows="2"></textarea>
+            </div>
+
+            <div style="background: rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 12px; margin-top: 1rem;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; opacity: 0.7;">
+                    <span>Total Items:</span>
+                    <span id="totalItems">0</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 1.5rem; font-weight: 700; color: var(--accent);">
+                    <span>TOTAL:</span>
+                    <span id="totalAmount">$0.00</span>
+                </div>
+            </div>
+
+            <button id="btnSave" onclick="savePurchase()" class="btn-primary" style="width: 100%; margin-top: 1.5rem; padding: 1rem; font-size: 1.1rem;">
+                Confirmar Ingreso de Stock
+            </button>
+            <a asp-action="Index" class="btn-secondary" style="width: 100%; margin-top: 0.5rem; display: block; text-align: center;">Cancelar</a>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let items = [];
+        const productSearch = document.getElementById('productSearch');
+        const searchResults = document.getElementById('searchResults');
+
+        function formatInvoice(input) {
+            let value = input.value.trim();
+            if (!value) return;
+
+            let pos = "00000";
+            let num = "00000000";
+
+            if (value.includes('-')) {
+                const parts = value.split('-');
+                pos = parts[0].padStart(5, '0');
+                num = parts[1].padStart(8, '0');
+            } else if (!isNaN(value) && value !== "") {
+                num = value.padStart(8, '0');
+            } else {
+                return;
+            }
+
+            input.value = `${pos.substring(0, 5)}-${num.substring(0, 8)}`;
+        }
+
+        productSearch.addEventListener('input', function() {
+            const query = this.value;
+            if (query.length < 2) {
+                searchResults.style.display = 'none';
+                return;
+            }
+
+            fetch(`/Products/Search?q=${query}`)
+                .then(res => res.json())
+                .then(data => {
+                    searchResults.innerHTML = '';
+                    if (data.length > 0) {
+                        data.forEach(p => {
+                            const div = document.createElement('div');
+                            div.className = 'search-item';
+                            div.style.padding = '0.75rem';
+                            div.style.cursor = 'pointer';
+                            div.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
+                            div.innerHTML = `
+                                <div style="font-weight: 600;">${p.name}</div>
+                                <div style="font-size: 0.8rem; opacity: 0.6;">Cod: ${p.internalCode.toString().padStart(5, '0')} | Barra: ${p.barcode || '-'} | Stock: ${p.stock}</div>
+                            `;
+                            div.onclick = () => addItem(p);
+                            searchResults.appendChild(div);
+                        });
+                        searchResults.style.display = 'block';
+                    } else {
+                        searchResults.style.display = 'none';
+                    }
+                });
+        });
+
+        function addItem(product) {
+            const existing = items.find(i => i.productId === product.id);
+            if (existing) {
+                existing.quantity++;
+            } else {
+                items.push({
+                    productId: product.id,
+                    name: product.name,
+                    quantity: 1,
+                    unitCost: 0
+                });
+            }
+            productSearch.value = '';
+            searchResults.style.display = 'none';
+            renderItems();
+        }
+
+        function renderItems() {
+            const tbody = document.getElementById('purchaseItems');
+            tbody.innerHTML = '';
+            let total = 0;
+            let totalQty = 0;
+
+            items.forEach((item, index) => {
+                const subtotal = item.quantity * item.unitCost;
+                total += subtotal;
+                totalQty += parseFloat(item.quantity);
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${item.name}</td>
+                    <td><input type="number" step="0.01" class="form-control" value="${item.quantity}" onchange="updateQty(${index}, this.value)" /></td>
+                    <td><input type="number" step="0.01" class="form-control" value="${item.unitCost}" onchange="updateCost(${index}, this.value)" /></td>
+                    <td>$${subtotal.toFixed(2)}</td>
+                    <td><button onclick="removeItem(${index})" class="btn-secondary" style="padding: 0.2rem 0.5rem; color: #ef4444;">&times;</button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('totalItems').innerText = totalQty;
+            document.getElementById('totalAmount').innerText = `$${total.toFixed(2)}`;
+        }
+
+        function updateQty(index, val) { items[index].quantity = parseFloat(val); renderItems(); }
+        function updateCost(index, val) { items[index].unitCost = parseFloat(val); renderItems(); }
+        function removeItem(index) { items.splice(index, 1); renderItems(); }
+
+        function savePurchase() {
+            const supplierId = document.getElementById('SupplierId').value;
+            if (!supplierId) { alert('Seleccione un proveedor'); return; }
+            if (items.length === 0) { alert('Agregue al menos un producto'); return; }
+
+            const btn = document.getElementById('btnSave');
+            btn.disabled = true;
+            btn.innerText = 'Guardando...';
+
+            const formData = new FormData();
+            formData.append('SupplierId', supplierId);
+            formData.append('VoucherLetter', document.getElementById('VoucherLetter').value);
+            formData.append('ReferenceNumber', document.getElementById('ReferenceNumber').value);
+            formData.append('Notes', document.getElementById('Notes').value);
+            formData.append('ItemsJson', JSON.stringify(items));
+            
+            const imageFile = document.getElementById('ImageFile').files[0];
+            if (imageFile) {
+                formData.append('ImageFile', imageFile);
+            }
+
+            fetch('/Purchases/Create', {
+                method: 'POST',
+                headers: { 
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value 
+                },
+                body: formData
+            })
+            .then(res => res.json())
+            .then(res => {
+                if (res.success) {
+                    window.location.href = '/Purchases/Index';
+                } else {
+                    alert('Error al guardar: ' + (res.message || 'Error desconocido'));
+                    btn.disabled = false;
+                    btn.innerText = 'Confirmar Ingreso de Stock';
+                }
+            })
+            .catch(err => {
+                alert('Error de conexión');
+                btn.disabled = false;
+                btn.innerText = 'Confirmar Ingreso de Stock';
+            });
+        }
+    </script>
+    <style>
+        .search-item:hover { background: rgba(var(--primary-rgb), 0.1); }
+    </script>
+    @Html.AntiForgeryToken()
+}

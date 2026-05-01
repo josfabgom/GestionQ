@@ -1,0 +1,80 @@
+@model IEnumerable<GestionQ.Domain.Entities.Product>
+
+@{
+    ViewData["Title"] = "Sugerencias de Compra";
+}
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <div>
+        <h1 class="page-title" style="margin-bottom: 0.5rem;">Sugerencias de Compra</h1>
+        <p style="opacity: 0.6;">Productos con stock igual o inferior al mínimo configurado.</p>
+    </div>
+    <a asp-controller="Purchases" asp-action="Create" class="btn-primary" style="background: var(--accent);">+ Generar Nueva Compra</a>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="glass-panel" style="text-align: center; padding: 4rem;">
+        <div style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.3;">✅</div>
+        <h2 style="opacity: 0.8;">¡Todo en orden!</h2>
+        <p style="opacity: 0.6;">No hay productos por debajo del stock mínimo actualmente.</p>
+        <a asp-action="Index" class="btn-secondary" style="margin-top: 1.5rem; display: inline-block;">Volver al Stock</a>
+    </div>
+}
+else
+{
+    <div class="glass-panel">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Producto</th>
+                    <th>Rubro</th>
+                    <th style="text-align: center;">Stock Actual</th>
+                    <th style="text-align: center;">Stock Mínimo</th>
+                    <th style="text-align: center;">Estado Crítico</th>
+                    <th style="text-align: center;">Sugerencia</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    var percentage = item.MinimumStock > 0 ? (item.Stock / item.MinimumStock) * 100 : 0;
+                    var color = percentage <= 25 ? "#ef4444" : (percentage <= 75 ? "#f59e0b" : "#3b82f6");
+                    
+                    <tr>
+                        <td>
+                            <div style="font-weight: 600;">@item.Name</div>
+                            <small style="opacity: 0.5;">Cód: @item.InternalCode.ToString("D5")</small>
+                        </td>
+                        <td>
+                            <small style="opacity: 0.7;">@item.SubCategory?.Category?.Name</small><br/>
+                            <small style="opacity: 0.5;">@item.SubCategory?.Name</small>
+                        </td>
+                        <td style="text-align: center; font-weight: 700;">@item.Stock un.</td>
+                        <td style="text-align: center; opacity: 0.7;">@item.MinimumStock un.</td>
+                        <td style="text-align: center;">
+                            <div style="width: 100px; height: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; margin: 0 auto; overflow: hidden;">
+                                <div style="width: @(Math.Min(100, percentage))%; height: 100%; background: @color;"></div>
+                            </div>
+                            <small style="color: @color; font-size: 0.7rem;">@(percentage.ToString("N0"))% del mínimo</small>
+                        </td>
+                        <td style="text-align: center;">
+                            <span class="badge" style="background: rgba(var(--accent-rgb), 0.1); color: var(--accent); font-weight: 700; padding: 0.4rem 1rem;">
+                                Pedir @(Math.Max(1, item.MinimumStock * 2 - item.Stock)) un.
+                            </span>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div style="margin-top: 2rem; text-align: right; opacity: 0.5; font-size: 0.85rem;">
+        * La sugerencia se calcula para alcanzar el doble del stock mínimo (reposición de seguridad).
+    </div>
+}
+
+<style>
+    .table th { border-top: none; opacity: 0.5; font-size: 0.75rem; text-transform: uppercase; }
+    .table td { vertical-align: middle; padding: 1.25rem 0.75rem; border-color: rgba(255,255,255,0.05); }
+</style>

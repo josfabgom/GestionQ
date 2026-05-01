@@ -1,0 +1,42 @@
+@model IEnumerable<GestionQ.Domain.Entities.PaymentMethod>
+@{
+    ViewData["Title"] = "Medios de Pago";
+}
+
+<div style="display: flex; justify-content: space-between; align-items: center;">
+    <h1 class="page-title">Medios de Pago</h1>
+    <a asp-action="Create" class="btn-primary">+ Nuevo Medio</a>
+</div>
+
+<div class="glass-panel">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td style="font-weight: 600;">@item.Name</td>
+                    <td>
+                        @if (item.IsActive)
+                        {
+                            <span style="color: #10b981; font-weight: 600;">Habilitado</span>
+                        }
+                        else
+                        {
+                            <span style="color: #ef4444; font-weight: 600;">Inactivo</span>
+                        }
+                    </td>
+                    <td>
+                        <a asp-action="Edit" asp-route-id="@item.Id" class="btn-secondary">Editar</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

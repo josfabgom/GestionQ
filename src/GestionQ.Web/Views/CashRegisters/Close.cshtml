@@ -1,0 +1,50 @@
+@model GestionQ.Domain.Entities.CashRegister
+
+@{
+    ViewData["Title"] = "Cerrar Caja";
+}
+
+<h1 class="page-title">Cierre de Caja Operativa</h1>
+
+<div class="glass-panel" style="max-width: 600px;">
+    <p style="color: var(--text-muted); margin-bottom: 2rem;">
+        Revisa la recaudación del sistema. Por favor, realiza el conteo físico de los billetes y decláralo a
+        continuación.
+    </p>
+
+    <div
+        style="background: rgba(15,23,42, 0.5); padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; border-left: 4px solid var(--accent);">
+        <p style="margin: 0; font-size: 0.9rem; color: var(--text-muted);">Saldo Inicial al Abrir</p>
+        <div style="font-size: 1.2rem; font-weight: 600;">$@Model.InitialBalance.ToString("N2")</div>
+
+        <p style="margin: 1rem 0 0 0; font-size: 0.9rem; color: var(--text-muted);">Total de Ventas Recibidas (Efectivo)
+        </p>
+        <div style="font-size: 1.2rem; font-weight: 600;">$@((Model.ExpectedCashBalance -
+            Model.InitialBalance)?.ToString("N2") ?? "0.00")</div>
+
+        <hr style="border-color: rgba(255,255,255,0.1); margin: 1rem 0;" />
+
+        <p style="margin: 0; font-size: 1rem; color: #10b981; font-weight: 600;">Efectivo Total Calculado (Debería
+            Haber)</p>
+        <div style="font-size: 1.8rem; font-weight: 700; color: #10b981;">$@Model.ExpectedCashBalance?.ToString("N2")
+        </div>
+    </div>
+
+    <form asp-action="Close">
+        <input type="hidden" asp-for="Id" />
+
+        <div class="form-group">
+            <label asp-for="FinalCashBalance" class="control-label" style="font-size: 1.1rem; color: #fbbf24;">Declara
+                el Efectivo Real Encontrado (Conteos de Billetes)</label>
+            <input name="finalCashBalance" id="finalCashBalance" type="number" step="0.01" class="form-control"
+                style="font-size: 1.5rem; font-weight: 700; color: #fbbf24; background: rgba(251, 191, 36, 0.1);"
+                required />
+        </div>
+
+        <div class="form-group" style="margin-top: 2rem; display: flex; gap: 1rem;">
+            <input type="submit" value="Finalizar Cierre de Caja" class="btn-danger" style="background: #ef4444;"
+                onclick="return confirm('¿Estás seguro de cerrar la caja definitivamente? Esta acción cortará el turno.')" />
+            <a asp-action="Index" class="btn-secondary">Cancelar (Volver)</a>
+        </div>
+    </form>
+</div>

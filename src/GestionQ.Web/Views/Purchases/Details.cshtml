@@ -1,0 +1,163 @@
+@model GestionQ.Domain.Entities.Purchase
+
+@{
+    ViewData["Title"] = "Detalle de Compra";
+}
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <h1 class="page-title" style="margin-bottom: 0;">Detalle de Compra #@Model.Id</h1>
+    <div>
+        <a asp-action="Index" class="btn-secondary">Volver al Listado</a>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 2fr; gap: 2rem;">
+    <!-- General Info -->
+    <div>
+        <div class="glass-panel">
+            <h3 style="margin-top: 0; opacity: 0.7; font-size: 1rem;">Información General</h3>
+            <hr style="opacity: 0.1; margin: 1rem 0;" />
+            
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; opacity: 0.5; font-size: 0.8rem;">Fecha:</label>
+                <span style="font-weight: 600;">@Model.Date.ToString("dd/MM/yyyy HH:mm")</span>
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; opacity: 0.5; font-size: 0.8rem;">Estado:</label>
+                @if (Model.Status == GestionQ.Domain.Entities.PurchaseStatus.Pending)
+                {
+                    <span class="badge" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b; padding: 0.25rem 0.75rem; font-size: 0.9rem;">Pendiente de Recepción</span>
+                }
+                else if (Model.Status == GestionQ.Domain.Entities.PurchaseStatus.Received)
+                {
+                    <span class="badge" style="background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 0.25rem 0.75rem; font-size: 0.9rem;">Recibido</span>
+                }
+                else
+                {
+                    <span class="badge" style="background: rgba(255, 255, 255, 0.05); color: var(--text-muted); padding: 0.25rem 0.75rem; font-size: 0.9rem;">@Model.Status</span>
+                }
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; opacity: 0.5; font-size: 0.8rem;">Proveedor:</label>
+                <span style="font-weight: 600; color: var(--accent);">@Model.Supplier?.Name</span>
+                <div style="font-size: 0.85rem; opacity: 0.7;">CUIT: @Model.Supplier?.TaxId</div>
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; opacity: 0.5; font-size: 0.8rem;">Comprobante:</label>
+                <span style="font-family: monospace; font-weight: 700; font-size: 1.1rem;">
+                    @Model.VoucherLetter - @Model.ReferenceNumber
+                </span>
+            </div>
+
+            @if (!string.IsNullOrEmpty(Model.ImageUrl))
+            {
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; opacity: 0.5; font-size: 0.8rem;">Imagen Factura:</label>
+                    <a href="@Model.ImageUrl" target="_blank" class="btn-secondary" style="display: block; text-align: center; margin-top: 0.5rem;">
+                        Ver Comprobante Original
+                    </a>
+                </div>
+            }
+
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; opacity: 0.5; font-size: 0.8rem;">Notas:</label>
+                <p style="font-size: 0.9rem; font-style: italic;">@(string.IsNullOrEmpty(Model.Notes) ? "Sin notas" : Model.Notes)</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Items Info -->
+    <div>
+        <div class="glass-panel">
+            <h3 style="margin-top: 0; opacity: 0.7; font-size: 1rem;">Items Ingresados</h3>
+            <hr style="opacity: 0.1; margin: 1rem 0;" />
+
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th style="text-align: center;">Pedido</th>
+                        <th style="text-align: center;">Recibido</th>
+                        <th style="text-align: right;">Costo Unit.</th>
+                        <th style="text-align: right;">Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.Items)
+                    {
+                        var isMissing = Model.Status == GestionQ.Domain.Entities.PurchaseStatus.Received && (item.ReceivedQuantity ?? 0) < item.Quantity;
+                        <tr style="@(isMissing ? "background: rgba(239, 68, 68, 0.05);" : "")">
+                            <td style="font-weight: 600;">
+                                @item.Product?.Name
+                                @if (isMissing)
+                                {
+                                    <br/><small style="color: #ef4444; font-weight: 400;">Faltante: @(item.Quantity - (item.ReceivedQuantity ?? 0)) un.</small>
+                                }
+                            </td>
+                            <td style="text-align: center; opacity: 0.7;">@item.Quantity.ToString("N2")</td>
+                            <td style="text-align: center; font-weight: 700; color: @(isMissing ? "#ef4444" : "#10b981")">
+                                @(Model.Status == GestionQ.Domain.Entities.PurchaseStatus.Pending ? "-" : item.ReceivedQuantity?.ToString("N2") ?? "0.00")
+                            </td>
+                            <td style="text-align: right;">$@item.UnitCost.ToString("N2")</td>
+                            <td style="text-align: right; font-weight: 600; color: var(--accent);">
+                                $@(((item.ReceivedQuantity ?? item.Quantity) * item.UnitCost).ToString("N2"))
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr style="border-top: 2px solid rgba(255,255,255,0.1);">
+                        <td colspan="4" style="text-align: right; font-weight: 700; padding-top: 1.5rem; font-size: 1.2rem;">TOTAL:</td>
+                        <td style="text-align: right; font-weight: 700; color: var(--accent); padding-top: 1.5rem; font-size: 1.5rem;">
+                            $@Model.Items.Sum(i => (i.ReceivedQuantity ?? i.Quantity) * i.UnitCost).ToString("N2")
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        @if (Model.Status == GestionQ.Domain.Entities.PurchaseStatus.Received)
+        {
+            var discrepancies = Model.Items.Where(i => i.ReceivedQuantity != i.Quantity).ToList();
+            if (discrepancies.Any())
+            {
+                <div class="glass-panel" style="margin-top: 1.5rem; border-color: #ef4444; background: rgba(239, 68, 68, 0.05);">
+                    <h3 style="margin-top: 0; color: #ef4444; font-size: 1.1rem;">⚠️ Auditoría de Recepción: Discrepancias Detectadas</h3>
+                    <p style="opacity: 0.8; font-size: 0.9rem;">Los siguientes productos se recibieron con cantidades distintas a las pedidas originalmente:</p>
+                    <ul style="margin-bottom: 0;">
+                        @foreach (var d in discrepancies)
+                        {
+                            <li style="margin-bottom: 0.5rem;">
+                                <strong>@d.Product?.Name</strong>: 
+                                @if ((d.ReceivedQuantity ?? 0) < d.Quantity)
+                                {
+                                    <span style="color: #ef4444;">FALTANTE de @(d.Quantity - (d.ReceivedQuantity ?? 0)) unidades</span>
+                                }
+                                else
+                                {
+                                    <span style="color: #10b981;">EXCEDENTE de @((d.ReceivedQuantity ?? 0) - d.Quantity) unidades</span>
+                                }
+                                <br/>
+                                <small style="opacity: 0.6;">Pedido: @d.Quantity | Recibido: @(d.ReceivedQuantity ?? 0)</small>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            }
+            else
+            {
+                <div class="glass-panel" style="margin-top: 1.5rem; border-color: #10b981; background: rgba(16, 185, 129, 0.05); text-align: center; padding: 1rem;">
+                    <span style="color: #10b981; font-weight: 600;">✅ Recepción Completa: Todos los productos coinciden con el pedido.</span>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+<style>
+    .table th { border-top: none; opacity: 0.5; font-size: 0.75rem; text-transform: uppercase; }
+    .table td { border-color: rgba(255,255,255,0.05); }
+</style>

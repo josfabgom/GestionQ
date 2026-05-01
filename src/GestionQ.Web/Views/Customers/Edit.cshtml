@@ -1,0 +1,127 @@
+@model GestionQ.Web.Models.CustomerViewModel
+
+@{
+    ViewData["Title"] = "Editar Cliente";
+}
+
+<h1 class="page-title">Editar Cliente</h1>
+
+<div class="glass-panel" style="max-width: 800px;">
+    <form asp-action="Edit" enctype="multipart/form-data">
+        <input type="hidden" asp-for="Id" />
+        <input type="hidden" asp-for="ImageUrl" />
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+            <div>
+                <div class="form-group">
+                    <label asp-for="Name" class="control-label"></label>
+                    <input asp-for="Name" class="form-control" />
+                    <span asp-validation-for="Name" class="text-danger"></span>
+                </div>
+                
+                <div class="form-group">
+                    <label asp-for="InternalCode" class="control-label"></label>
+                    <input asp-for="InternalCode" class="form-control" readonly style="background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.5);" />
+                    <span asp-validation-for="InternalCode" class="text-danger"></span>
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="Dni" class="control-label"></label>
+                    <input asp-for="Dni" class="form-control" />
+                    <span asp-validation-for="Dni" class="text-danger"></span>
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="Cuit" class="control-label"></label>
+                    <input asp-for="Cuit" class="form-control" />
+                    <span asp-validation-for="Cuit" class="text-danger"></span>
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="TaxConditionId" class="control-label"></label>
+                    <select asp-for="TaxConditionId" class="form-control" asp-items="ViewBag.TaxConditions">
+                        <option value="">Seleccione condición...</option>
+                    </select>
+                    <span asp-validation-for="TaxConditionId" class="text-danger"></span>
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="Email" class="control-label"></label>
+                    <input asp-for="Email" class="form-control" />
+                    <span asp-validation-for="Email" class="text-danger"></span>
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="Phone" class="control-label"></label>
+                    <input asp-for="Phone" class="form-control" />
+                    <span asp-validation-for="Phone" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div>
+                <div class="form-group">
+                    <label asp-for="Address" class="control-label"></label>
+                    <input asp-for="Address" class="form-control" />
+                    <span asp-validation-for="Address" class="text-danger"></span>
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="Locality" class="control-label"></label>
+                    <input asp-for="Locality" class="form-control" />
+                    <span asp-validation-for="Locality" class="text-danger"></span>
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="Balance" class="control-label"></label>
+                    <input asp-for="Balance" type="number" step="0.01" class="form-control" />
+                    <span asp-validation-for="Balance" class="text-danger"></span>
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="ImageFile" class="control-label"></label>
+                    <input asp-for="ImageFile" type="file" class="form-control" accept="image/*" onchange="previewImage(this)" />
+                    <div id="imagePreview" style="margin-top: 1rem; width: 100px; height: 100px; border-radius: 0.5rem; border: 2px dashed rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                        @if (!string.IsNullOrEmpty(Model.ImageUrl))
+                        {
+                            <img src="@Model.ImageUrl" style="width: 100%; height: 100%; object-fit: cover;" />
+                        }
+                        else
+                        {
+                            <span style="font-size: 0.7rem; color: rgba(255,255,255,0.3);">Sin imagen</span>
+                        }
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="IsActive" class="control-label"></label>
+                    <select asp-for="IsActive" class="form-control">
+                        <option value="true">SI</option>
+                        <option value="false">NO</option>
+                    </select>
+                    <span asp-validation-for="IsActive" class="text-danger"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group" style="margin-top: 2rem; display: flex; gap: 1rem; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1.5rem;">
+            <button type="submit" class="btn-primary" style="padding: 0.75rem 2rem;">Actualizar Cliente</button>
+            <a asp-action="Index" class="btn-secondary" style="padding: 0.75rem 2rem;">Cancelar</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        function previewImage(input) {
+            var preview = document.getElementById('imagePreview');
+            if (input.files && input.files[0]) {
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.innerHTML = '<img src="' + e.target.result + '" style="width: 100%; height: 100%; object-fit: cover;" />';
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+    </script>
+}

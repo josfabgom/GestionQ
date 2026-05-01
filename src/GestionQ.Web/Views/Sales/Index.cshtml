@@ -1,0 +1,40 @@
+@model IEnumerable<GestionQ.Domain.Entities.Sale>
+
+@{
+    ViewData["Title"] = "Registro de Ventas";
+}
+
+<div style="display: flex; justify-content: space-between; align-items: center;">
+    <h1 class="page-title">Historial de Ventas</h1>
+    <a asp-action="Create" class="btn-primary">+ Nueva Venta</a>
+</div>
+
+<div class="glass-panel">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Nº Ticket</th>
+                <th>Fecha y Hora</th>
+                <th>Cliente</th>
+                <th>Total Facturado</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td>#@item.Id.ToString("D5")</td>
+                    <td>@item.Date.ToString("dd/MM/yyyy HH:mm")</td>
+                    <td>@(item.Customer?.Name ?? "Consumidor Final")</td>
+                    <td style="font-weight: 600; color: #10b981;">
+                        $@item.TotalAmount.ToString("N2")
+                    </td>
+                    <td>
+                        <a asp-action="Details" asp-route-id="@item.Id" class="btn-secondary">Ver Detalle</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

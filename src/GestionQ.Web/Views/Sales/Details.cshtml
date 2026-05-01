@@ -1,0 +1,53 @@
+@model GestionQ.Domain.Entities.Sale
+
+@{
+    ViewData["Title"] = "Detalle de Venta";
+}
+
+<div style="display: flex; justify-content: space-between; align-items: center;">
+    <h1 class="page-title">Detalle de Venta #@Model.Id.ToString("D5")</h1>
+    <a asp-action="Index" class="btn-secondary">Volver</a>
+</div>
+
+<div class="glass-panel">
+    <div style="display: flex; gap: 2rem; margin-bottom: 2rem;">
+        <div>
+            <h3 style="font-size: 1rem; color: var(--text-muted); margin-bottom: 0.5rem;">Fecha</h3>
+            <p style="font-size: 1.25rem; font-weight: 600;">@Model.Date.ToString("dd/MM/yyyy HH:mm")</p>
+        </div>
+        <div>
+            <h3 style="font-size: 1rem; color: var(--text-muted); margin-bottom: 0.5rem;">Cliente (Cuenta Corriente)
+            </h3>
+            <p style="font-size: 1.25rem; font-weight: 600;">@(Model.Customer?.Name ?? "Consumidor Final")</p>
+        </div>
+        <div>
+            <h3 style="font-size: 1rem; color: var(--text-muted); margin-bottom: 0.5rem;">Monto Total</h3>
+            <p style="font-size: 1.5rem; font-weight: 600; color: #10b981;">$@Model.TotalAmount.ToString("N2")</p>
+        </div>
+    </div>
+
+    <h2>Productos Vendidos</h2>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Producto</th>
+                <th>Precio Unitario</th>
+                <th>Cantidad</th>
+                <th>Subtotal</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model.Items)
+            {
+                <tr>
+                    <td>@item.Product?.Name</td>
+                    <td>$@item.UnitPrice.ToString("N2")</td>
+                    <td>@item.Quantity un.</td>
+                    <td style="font-weight: 600;">
+                        $@((item.UnitPrice * item.Quantity).ToString("N2"))
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

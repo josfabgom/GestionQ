@@ -1,0 +1,67 @@
+@model GestionQ.Web.Controllers.LoginViewModel
+@using Microsoft.AspNetCore.Hosting
+@inject IWebHostEnvironment Env
+@{
+    ViewData["Title"] = "Iniciar Sesión";
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - GestionQ</title>
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+
+<body style="display: flex; align-items: center; justify-content: center; height: 100vh;">
+    <div class="glass-panel" style="width: 100%; max-width: 400px; text-align: center;">
+        <h2
+            style="color: var(--accent); margin-bottom: 2rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+            @{
+                var logoPath = System.IO.Path.Combine(Env.WebRootPath, "images", "logo.png");
+                var hasLogo = System.IO.File.Exists(logoPath);
+            }
+            @if (hasLogo)
+            {
+                <img src="~/images/logo.png?v=@DateTime.Now.Ticks" style="max-height: 55px;" alt="Logo" />
+            }
+            else
+            {
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                    <path d="M2 17l10 5 10-5"></path>
+                    <path d="M2 12l10 5 10-5"></path>
+                </svg>
+                <span>GestionQ</span>
+            }
+        </h2>
+        <form asp-action="Login" asp-route-returnurl="@ViewData["ReturnUrl"]" method="post" style="text-align: left;">
+            <div asp-validation-summary="ModelOnly" class="text-danger"
+                style="color: #ef4444; margin-bottom: 1rem; font-size: 0.9rem;"></div>
+            <div class="form-group">
+                <label asp-for="Email" class="control-label"></label>
+                <input asp-for="Email" class="form-control" placeholder="admin@gestionq.com" />
+                <span asp-validation-for="Email" class="text-danger" style="color: #ef4444; font-size: 0.85rem;"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Password" class="control-label">Contraseña</label>
+                <input asp-for="Password" class="form-control" placeholder="••••••••" />
+                <span asp-validation-for="Password" class="text-danger"
+                    style="color: #ef4444; font-size: 0.85rem;"></span>
+            </div>
+            <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem;">
+                <input asp-for="RememberMe" />
+                <label asp-for="RememberMe" style="margin: 0;">Recordarme</label>
+            </div>
+            <div class="form-group" style="margin-top: 2rem;">
+                <button type="submit" class="btn-primary" style="width: 100%; padding: 0.8rem;">Entrar al
+                    Sistema</button>
+            </div>
+        </form>
+    </div>
+</body>
+
+</html>
