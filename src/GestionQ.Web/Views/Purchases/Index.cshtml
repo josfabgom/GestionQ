@@ -60,12 +60,17 @@
                             <span style="opacity: 0.3;">-</span>
                         }
                     </td>
-                    <td style="text-align: right; display: flex; gap: 0.5rem; justify-content: flex-end;">
-                        @if (item.Status == GestionQ.Domain.Entities.PurchaseStatus.Pending)
-                        {
-                            <a asp-action="Receive" asp-route-id="@item.Id" class="btn-primary" style="padding: 0.4rem 0.75rem; background: var(--accent);">Recibir</a>
-                        }
-                        <a asp-action="Details" asp-route-id="@item.Id" class="btn-secondary" style="padding: 0.4rem 0.75rem;">Detalles</a>
+                    <td style="text-align: right;">
+                        <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                            <a asp-action="Details" asp-route-id="@item.Id" class="btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;">Detalles</a>
+                            @if (item.Status == GestionQ.Domain.Entities.PurchaseStatus.Pending)
+                            {
+                                <a asp-action="Receive" asp-route-id="@item.Id" class="btn-primary" style="padding: 0.3rem 0.6rem; font-size: 0.8rem; background: var(--accent);">Recibir</a>
+                            }
+                            <form asp-action="Delete" asp-route-id="@item.Id" method="post" style="display: inline;" onsubmit="return confirm('¿Estás seguro de que deseas ANULAR esta compra? Si ya fue recibida, se restará el stock automáticamente.');">
+                                <button type="submit" class="btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.8rem; color: #ef4444; border-color: rgba(239, 68, 68, 0.2);">Anular</button>
+                            </form>
+                        </div>
                     </td>
                 </tr>
             }

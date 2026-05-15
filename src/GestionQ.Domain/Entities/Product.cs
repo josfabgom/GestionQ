@@ -40,6 +40,10 @@ namespace GestionQ.Domain.Entities
         public string? ImageUrl { get; set; }
 
         public DateTime CreationDate { get; set; } = DateTime.Now;
+        
+        [Display(Name = "Días de Vencimiento")]
+        public int ExpirationDays { get; set; } = 0;
+
         public bool IsActive { get; set; } = true;
     }
 }

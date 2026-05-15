@@ -4,71 +4,103 @@
 
 <h1 class="page-title">Punto de Venta</h1>
 
-<div style="display: flex; gap: 2rem; align-items: flex-start;">
-    <!-- Productos Disponibles -->
-    <div class="glass-panel" style="flex: 2;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-            <h2 style="margin: 0;">Seleccionar Productos</h2>
-            <input type="text" id="searchProduct" onkeyup="filterProducts()" class="form-control"
-                placeholder="🔍 Buscar por nombre, cód interno o barras..."
-                style="max-width: 300px; padding: 0.5rem; border-radius: 8px;" />
+<div style="display: flex; gap: 1.5rem; align-items: flex-start;">
+    <!-- Detalle de Venta (Principal) -->
+    <div class="glass-panel" style="flex: 2.5;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h2 style="margin: 0;">Detalle de Compra</h2>
+            <div style="color: var(--text-muted); font-size: 0.9rem;">
+                <span id="itemCount">0</span> ítems en total
+            </div>
         </div>
 
-        <div id="productGrid"
-            style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;">
-            @foreach (var product in ViewBag.Products as IEnumerable<GestionQ.Domain.Entities.Product>)
-            {
-                <div class="product-card"
-                    data-search="@product.Name.ToLower() @product.InternalCode.ToString("D5") @(product.Barcode?.ToLower() ?? "")"
-                    style="background: rgba(15, 23, 42, 0.5); padding: 1rem; border-radius: 8px; border: 1px solid var(--border); transition: 0.2s; cursor: pointer;"
-                    onclick="addToCart(@product.Id, '@product.Name', @product.Price, @product.Stock)">
-                    <div style="font-size: 0.8rem; color: var(--accent); font-weight: 600; margin-bottom: 0.25rem;">Cód.
-                        @product.InternalCode.ToString("D5")</div>
-                    <div style="font-weight: 600; font-size: 1.1rem; margin-bottom: 0.5rem;">@product.Name</div>
-                    <div style="color: #10b981; font-weight: 600;">$@product.Price.ToString("N2")</div>
-                    <div style="color: var(--text-muted); font-size: 0.9rem;">Stock: @product.Stock un.</div>
-                </div>
-            }
+        <div style="overflow-x: auto;">
+            <table class="table" style="min-width: 600px;">
+                <thead>
+                    <tr>
+                        <th style="width: 40%;">Producto</th>
+                        <th style="text-align: right;">Precio</th>
+                        <th style="text-align: center; width: 150px;">Cantidad</th>
+                        <th style="text-align: right;">Subtotal</th>
+                        <th style="text-align: center; width: 50px;"></th>
+                    </tr>
+                </thead>
+                <tbody id="cartTableBody">
+                    <!-- Renderizado dinámico desde JS -->
+                </tbody>
+            </table>
+            <div id="emptyCartMessage" style="padding: 3rem; text-align: center; color: var(--text-muted);">
+                <i class="fas fa-shopping-cart" style="font-size: 2rem; margin-bottom: 1rem; display: block;"></i>
+                El carrito está vacío. Busca productos a la derecha para comenzar.
+            </div>
         </div>
     </div>
 
-    <!-- Carrito y Cobro -->
-    <div class="glass-panel" style="flex: 1; position: sticky; top: 2rem;">
-        <h2>Resumen de Venta</h2>
+    <!-- Panel Lateral: Búsqueda y Resumen -->
+    <div style="flex: 1; display: flex; flex-direction: column; gap: 1.5rem; position: sticky; top: 1.5rem;">
+        
+        <!-- Búsqueda de Productos -->
+        <div class="glass-panel" style="padding: 1rem;">
+            <h3 style="font-size: 1.1rem; margin-bottom: 1rem;">Agregar Productos</h3>
+            <input type="text" id="searchProduct" class="form-control"
+                placeholder="🔍 Nombre, código o barras..."
+                style="margin-bottom: 1rem; font-size: 1.1rem; height: 3rem;" 
+                autocomplete="off" />
 
-        <div class="form-group">
-            <label>Cliente (Para Cta. Cte.)</label>
-            <select id="customerId" class="form-control">
-                <option value="">Consumidor Final</option>
-                @foreach (var cus in ViewBag.Customers as IEnumerable<GestionQ.Domain.Entities.Customer>)
+            <div id="productGrid"
+                style="max-height: 400px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.5rem; padding-right: 0.5rem;">
+                @foreach (var product in ViewBag.Products as IEnumerable<GestionQ.Domain.Entities.Product>)
                 {
-                    <option value="@cus.Id">[@cus.InternalCode] @cus.Name (@cus.Dni) - Saldo: $@cus.Balance.ToString("N2")</option>
+                    <div class="product-item-compact"
+                        data-id="@product.Id"
+                        data-name="@product.Name"
+                        data-price="@product.Price.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)"
+                        data-stock="@product.Stock.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)"
+                        data-barcode="@(product.Barcode?.ToLower() ?? "")"
+                        data-internalcode="@product.InternalCode.ToString("D5")"
+                        data-search="@product.Name.ToLower() @product.InternalCode.ToString("D5") @(product.Barcode?.ToLower() ?? "")"
+                        style="background: rgba(15, 23, 42, 0.3); padding: 0.75rem; border-radius: 10px; border: 1px solid var(--border); transition: 0.2s; cursor: pointer; display: flex; justify-content: space-between; align-items: center; display: none;"
+                        onclick="addToCart(@product.Id, @Html.Raw(System.Text.Json.JsonSerializer.Serialize(product.Name)), @product.Price.ToString("F2", System.Globalization.CultureInfo.InvariantCulture), @product.Stock.ToString("F2", System.Globalization.CultureInfo.InvariantCulture))">
+                        <div style="overflow: hidden;">
+                            <div style="font-weight: 600; font-size: 0.95rem; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">@product.Name</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted);">Cód: @product.InternalCode.ToString("D5") | Stock: @product.Stock</div>
+                        </div>
+                        <div style="color: #10b981; font-weight: 600; font-size: 0.95rem;">$@product.Price.ToString("N0")</div>
+                    </div>
                 }
-            </select>
-            <small style="color: var(--text-muted);">Si es Consumidor Final no se afecta la cuenta corriente.</small>
-            <div class="form-group" style="margin-top: 1rem;">
+            </div>
+        </div>
+
+        <!-- Resumen y Pago -->
+        <div class="glass-panel">
+            <h3 style="font-size: 1.1rem; margin-bottom: 1.5rem;">Resumen de Pago</h3>
+
+            <div class="form-group">
+                <label>Cliente</label>
+                <select id="customerId" class="form-control">
+                    <option value="">Consumidor Final</option>
+                    @foreach (var cus in ViewBag.Customers as IEnumerable<GestionQ.Domain.Entities.Customer>)
+                    {
+                        <option value="@cus.Id">[@cus.InternalCode] @cus.Name</option>
+                    }
+                </select>
+            </div>
+
+            <div class="form-group">
                 <label>Medios de Pago</label>
                 <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
-                    <select id="paymentMethod1" class="form-control" style="flex: 2;">
+                    <select id="paymentMethod1" class="form-control" style="flex: 1.5;">
                         @foreach (var pm in ViewBag.PaymentMethods as IEnumerable<GestionQ.Domain.Entities.PaymentMethod>)
                         {
-                            if (pm.Name == "Efectivo")
-                            {
-                                <option value="@pm.Id" selected>@pm.Name</option>
-                            }
-                            else
-                            {
-                                <option value="@pm.Id">@pm.Name</option>
-                            }
+                            <option value="@pm.Id" selected="@(pm.Name == "Efectivo")">@pm.Name</option>
                         }
                     </select>
                     <input type="number" id="paymentAmount1" oninput="calculateDifference()" class="form-control"
                         style="flex: 1;" placeholder="Monto" />
                 </div>
-
-                <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
-                    <select id="paymentMethod2" class="form-control" style="flex: 2;">
-                        <option value="">-- Opcional (2do Pago) --</option>
+                <div style="display: flex; gap: 0.5rem;">
+                    <select id="paymentMethod2" class="form-control" style="flex: 1.5;">
+                        <option value="">-- 2do Pago --</option>
                         @foreach (var pm in ViewBag.PaymentMethods as IEnumerable<GestionQ.Domain.Entities.PaymentMethod>)
                         {
                             <option value="@pm.Id">@pm.Name</option>
@@ -77,32 +109,69 @@
                     <input type="number" id="paymentAmount2" oninput="calculateDifference()" class="form-control"
                         style="flex: 1;" placeholder="Monto" />
                 </div>
-                <small style="color: var(--text-muted); cursor: pointer;"
-                    onclick="document.getElementById('paymentAmount1').value = document.getElementById('cartTotalRaw').value; calculateDifference();">Doble
-                    click aquí para poner monto total al Medio 1.</small>
+                <div style="margin-top: 0.5rem; text-align: right;">
+                    <small style="color: var(--accent); cursor: pointer; font-weight: 600;"
+                        onclick="document.getElementById('paymentAmount1').value = document.getElementById('cartTotalRaw').value; calculateDifference();">
+                        Cobrar Total exacto
+                    </small>
+                </div>
                 <input type="hidden" id="cartTotalRaw" value="0" />
             </div>
 
-            <ul id="cartItems"
-                style="list-style: none; padding: 0; margin-bottom: 1rem; max-height: 300px; overflow-y: auto;">
-                <!-- Renderizado desde JS -->
-            </ul>
-
-            <div
-                style="display: flex; justify-content: space-between; font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5rem; border-top: 1px solid var(--border); padding-top: 1rem;">
-                <span>TOTAL</span>
-                <span id="cartTotal" style="color: #10b981;">$0.00</span>
-            </div>
-            <div
-                style="display: flex; justify-content: space-between; font-size: 1.1rem; font-weight: 600; margin-bottom: 1.5rem; color: var(--text-muted);">
-                <span>Diferencia</span>
-                <span id="paymentDifference">$0.00</span>
+            <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 12px; margin-bottom: 1.5rem;">
+                <div style="display: flex; justify-content: space-between; font-size: 1.2rem; font-weight: 600; margin-bottom: 0.5rem;">
+                    <span>TOTAL</span>
+                    <span id="cartTotal" style="color: #10b981;">$0.00</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.9rem; color: var(--text-muted);">
+                    <span>Diferencia</span>
+                    <span id="paymentDifference">$0.00</span>
+                </div>
             </div>
 
-            <button id="btnCompleteSale" class="btn-primary" style="width: 100%; font-size: 1.1rem; padding: 1rem;"
-                onclick="completeSale()">Completar Venta</button>
+            <button id="btnCompleteSale" class="btn-primary" style="width: 100%; font-size: 1.1rem; padding: 1rem; border-radius: 12px;"
+                onclick="completeSale()" disabled>Finalizar Venta</button>
         </div>
     </div>
+</div>
+
+<style>
+    .product-item-compact:hover {
+        background: rgba(59, 130, 246, 0.15) !important;
+        border-color: var(--accent) !important;
+        transform: translateX(5px);
+    }
+    
+    .qty-btn {
+        background: rgba(255,255,255,0.05);
+        border: 1px solid var(--border);
+        color: white;
+        width: 30px;
+        height: 30px;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+    .qty-btn:hover {
+        background: var(--accent);
+        border-color: var(--accent);
+    }
+
+    /* Scrollbar minimalista */
+    #productGrid::-webkit-scrollbar {
+        width: 6px;
+    }
+    #productGrid::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.1);
+    }
+    #productGrid::-webkit-scrollbar-thumb {
+        background: rgba(255,255,255,0.1);
+        border-radius: 10px;
+    }
+</style>
 
     @section Scripts {
         <script>
@@ -131,71 +200,236 @@
                 }
             }
 
+            // 1. Memoria interna de productos para búsqueda instantánea
+            const productsList = [
+                @foreach (var p in ViewBag.Products as IEnumerable<GestionQ.Domain.Entities.Product>)
+                {
+                    <text>{
+                        id: @p.Id,
+                        name: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(p.Name)),
+                        price: @p.Price.ToString("F2", System.Globalization.CultureInfo.InvariantCulture),
+                        stock: @p.Stock.ToString("F2", System.Globalization.CultureInfo.InvariantCulture),
+                        barcode: "@(p.Barcode?.ToLower() ?? "")",
+                        internalCode: "@p.InternalCode.ToString("D5")",
+                        internalCodeShort: "@p.InternalCode",
+                        isPesable: @p.IsPesable.ToString().ToLower()
+                    },</text>
+                }
+            ];
+
+            // 2. Inicialización de eventos
+            document.addEventListener('DOMContentLoaded', function() {
+                const searchInput = document.getElementById('searchProduct');
+                if (!searchInput) return;
+
+                searchInput.focus();
+
+                searchInput.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const query = this.value.toLowerCase().trim();
+                        if (!query) return;
+
+                        // 0. Lógica de Balanza (EAN-13 que empieza con 2)
+                        if (query.length === 13 && query.startsWith('2')) {
+                            // Basado en tu etiqueta: 2 (Prefijo) + 910040 (6 dígitos código) + 00450 (5 dígitos peso) + 1 (checksum)
+                            const scaleCodeStr = query.substring(1, 7); 
+                            const scaleCodeNum = parseInt(scaleCodeStr);
+                            const weightValue = parseInt(query.substring(7, 12));
+                            const weightKg = weightValue / 1000;
+
+                            console.log("Balanza detectada:", { scaleCodeStr, scaleCodeNum, weightKg });
+
+                            // Buscar producto pesable con comparación flexible
+                            const foundPesable = productsList.find(p => 
+                                p.isPesable && (
+                                    parseInt(p.internalCode) === scaleCodeNum || 
+                                    parseInt(p.internalCodeShort) === scaleCodeNum ||
+                                    p.barcode.includes(scaleCodeStr)
+                                )
+                            );
+
+                            if (foundPesable) {
+                                addToCart(foundPesable.id, foundPesable.name, foundPesable.price, foundPesable.stock, weightKg);
+                                this.value = '';
+                                filterProducts();
+                                showSuccessToast(foundPesable.name + " (" + weightKg.toFixed(3) + " kg)");
+                                return;
+                            } else {
+                                // Si detectamos que es balanza pero no encontramos el producto, avisamos qué código buscamos
+                                Swal.fire({
+                                    title: 'Producto no encontrado',
+                                    text: `Se detectó una etiqueta de balanza con el código ${scaleCodeNum}, pero no hay ningún producto marcado como 'Pesable' con ese código en el sistema.`,
+                                    icon: 'info'
+                                });
+                                this.value = '';
+                                return;
+                            }
+                        }
+
+                        // 1. Buscar en la memoria interna (mucho más rápido y fiable)
+                        const found = productsList.find(p => 
+                            p.barcode === query || 
+                            p.internalCode === query || 
+                            p.internalCodeShort === query
+                        );
+
+                        if (found) {
+                            // Cargar producto
+                            addToCart(found.id, found.name, found.price, found.stock);
+                            
+                            // Feedback y Limpieza
+                            this.value = '';
+                            filterProducts();
+                            
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Agregado: ' + found.name,
+                                toast: true,
+                                position: 'top-end',
+                                showConfirmButton: false,
+                                timer: 1500
+                            });
+                        } else {
+                            // Si no hay coincidencia exacta, intentar cargar el único visible en el grid
+                            const productsInDOM = document.querySelectorAll('.product-item-compact');
+                            const visible = Array.from(productsInDOM).filter(p => p.style.display !== 'none');
+                            
+                            if (visible.length === 1) {
+                                const id = parseInt(visible[0].getAttribute('data-id'));
+                                const name = visible[0].getAttribute('data-name');
+                                const price = parseFloat(visible[0].getAttribute('data-price'));
+                                const stock = parseFloat(visible[0].getAttribute('data-stock'));
+                                addToCart(id, name, price, stock);
+                                this.value = '';
+                                filterProducts();
+                            } else {
+                                // Feedback de error
+                                this.style.borderColor = "#ef4444";
+                                setTimeout(() => this.style.borderColor = "", 500);
+                            }
+                        }
+                    }
+                });
+
+                searchInput.addEventListener('input', function() {
+                    filterProducts();
+                });
+            });
+
+            function showSuccessToast(message) {
+                Swal.fire({
+                    icon: 'success',
+                    title: message,
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 1500
+                });
+            }
+
             function filterProducts() {
-                const query = document.getElementById('searchProduct').value.toLowerCase();
-                const cards = document.querySelectorAll('.product-card');
-                cards.forEach(card => {
-                    const searchData = card.getAttribute('data-search');
-                    if (searchData.includes(query)) {
-                        card.style.display = 'block';
+                const query = document.getElementById('searchProduct').value.toLowerCase().trim();
+                const items = document.querySelectorAll('.product-item-compact');
+                
+                items.forEach(item => {
+                    if (query === "") {
+                        item.style.display = 'none';
                     } else {
-                        card.style.display = 'none';
+                        const searchData = item.getAttribute('data-search') || "";
+                        item.style.display = searchData.includes(query) ? 'flex' : 'none';
                     }
                 });
             }
 
-            function addToCart(id, name, price, stock) {
+            function addToCart(id, name, price, stock, quantity = 1) {
                 const existing = cart.find(i => i.productId === id);
                 if (existing) {
-                    if (existing.quantity >= stock) {
+                    if (existing.quantity + quantity > stock) {
                         Swal.fire('Stock Insuficiente', 'No hay más stock disponible de este producto.', 'warning');
                         return;
                     }
-                    existing.quantity++;
+                    existing.quantity += quantity;
                 } else {
-                    cart.push({ productId: id, name, price, quantity: 1, stock });
+                    if (quantity > stock) {
+                        Swal.fire('Stock Insuficiente', 'El stock disponible es menor a lo solicitado.', 'warning');
+                        return;
+                    }
+                    cart.push({ productId: id, name, price, quantity: quantity, stock });
                 }
                 renderCart();
             }
 
-            function decrementQuantity(id) {
-                const existing = cart.find(i => i.productId === id);
-                if (existing) {
-                    existing.quantity--;
-                    if (existing.quantity <= 0) {
-                        cart = cart.filter(x => x.productId !== id);
+            function updateQuantity(id, delta) {
+                const item = cart.find(i => i.productId === id);
+                if (item) {
+                    item.quantity += delta;
+                    if (item.quantity > item.stock) {
+                        item.quantity = item.stock;
+                        Swal.fire('Stock Límite', 'Has alcanzado el stock disponible.', 'info');
+                    }
+                    if (item.quantity <= 0) {
+                        removeFromCart(id);
+                        return;
                     }
                 }
+                renderCart();
+            }
+
+            function removeFromCart(id) {
+                cart = cart.filter(x => x.productId !== id);
                 renderCart();
             }
 
             function renderCart() {
-                const list = document.getElementById('cartItems');
-                list.innerHTML = '';
+                const tbody = document.getElementById('cartTableBody');
+                const emptyMsg = document.getElementById('emptyCartMessage');
+                const itemCountEl = document.getElementById('itemCount');
+                
+                tbody.innerHTML = '';
                 let total = 0;
+                let count = 0;
+
+                if (cart.length === 0) {
+                    emptyMsg.style.display = 'block';
+                } else {
+                    emptyMsg.style.display = 'none';
+                }
 
                 cart.forEach(item => {
                     const subtotal = item.price * item.quantity;
                     total += subtotal;
+                    count += item.quantity;
 
-                    const li = document.createElement('li');
-                    li.style.cssText = "display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.05);";
-                    li.innerHTML = `
-                            <div>
-                                <div>${item.name}</div>
-                                <div style="font-size: 0.85rem; color: var(--text-muted);">$${item.price.toFixed(2)} x ${item.quantity}</div>
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>
+                            <div style="font-weight: 600;">${item.name}</div>
+                            <div style="font-size: 0.8rem; color: var(--text-muted);">Stock disponible: ${item.stock}</div>
+                        </td>
+                        <td style="text-align: right;">$${item.price.toLocaleString('es-AR', {minimumFractionDigits: 2})}</td>
+                        <td style="text-align: center;">
+                            <div style="display: flex; align-items: center; justify-content: center; gap: 0.75rem;">
+                                <button class="qty-btn" onclick="updateQuantity(${item.productId}, -1)">-</button>
+                                <span style="font-weight: 600; min-width: 30px;">${item.quantity}</span>
+                                <button class="qty-btn" onclick="updateQuantity(${item.productId}, 1)">+</button>
                             </div>
-                            <div style="display: flex; gap: 1rem; align-items: center;">
-                                <span style="font-weight: 600;">$${subtotal.toFixed(2)}</span>
-                                <button class="btn-secondary" style="padding: 0.2rem 0.5rem;" onclick="decrementQuantity(${item.productId})">-</button>
-                            </div>
-                        `;
-                    list.appendChild(li);
+                        </td>
+                        <td style="text-align: right; font-weight: 600;">$${subtotal.toLocaleString('es-AR', {minimumFractionDigits: 2})}</td>
+                        <td style="text-align: center;">
+                            <button class="btn-secondary" style="padding: 0.3rem 0.6rem; color: #ef4444; border-color: rgba(239, 68, 68, 0.2);" 
+                                    onclick="removeFromCart(${item.productId})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
                 });
 
-                document.getElementById('cartTotal').textContent = `$${total.toFixed(2)}`;
+                document.getElementById('cartTotal').textContent = `$${total.toLocaleString('es-AR', {minimumFractionDigits: 2})}`;
                 document.getElementById('cartTotalRaw').value = total.toFixed(2);
                 document.getElementById('btnCompleteSale').disabled = cart.length === 0;
+                itemCountEl.textContent = count;
                 calculateDifference();
             }
 
@@ -254,7 +488,26 @@
                     });
 
                     if (response.ok) {
-                        await Swal.fire('Completado', 'La venta fue registrada con éxito.', 'success');
+                        const saleId = await response.text();
+                        
+                        const result = await Swal.fire({
+                            title: '¡Venta Registrada!',
+                            text: 'La venta se ha guardado con éxito. ¿Deseas ver el ticket para imprimir o descargar en PDF?',
+                            icon: 'success',
+                            showCancelButton: true,
+                            confirmButtonText: 'Ver Ticket / PDF',
+                            cancelButtonText: 'No, ir al listado',
+                            confirmButtonColor: '#10b981'
+                        });
+
+                        if (result.isConfirmed) {
+                            // Abrir ticket en nueva pestaña
+                            const printWindow = window.open(`/Sales/PrintTicket/${saleId}`, '_blank');
+                            if (printWindow) {
+                                printWindow.focus();
+                            }
+                        }
+                        
                         window.location.href = '/Sales/Index';
                     } else {
                         const err = await response.text();

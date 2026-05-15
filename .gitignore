@@ -17,3 +17,4 @@ out.txt
 wwwroot/uploads/*
 wwwroot/images/products/*
 !wwwroot/images/products/.gitkeep
+scratch/

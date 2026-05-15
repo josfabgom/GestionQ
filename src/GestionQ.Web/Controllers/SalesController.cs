@@ -14,11 +14,13 @@ namespace GestionQ.Web.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly UserManager<IdentityUser> _userManager;
+        private readonly IConfiguration _config;
 
-        public SalesController(ApplicationDbContext context, UserManager<IdentityUser> userManager)
+        public SalesController(ApplicationDbContext context, UserManager<IdentityUser> userManager, IConfiguration config)
         {
             _context = context;
             _userManager = userManager;
+            _config = config;
         }
 
         public async Task<IActionResult> Index()
@@ -67,8 +69,8 @@ namespace GestionQ.Web.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateSale([FromBody] SaleRequest model)
         {
-            if (model.Items == null || !model.Items.Any())
-                return BadRequest("No items in sale.");
+            if (model == null || model.Items == null || !model.Items.Any())
+                return BadRequest("No items in sale or invalid request.");
 
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
@@ -161,6 +163,26 @@ namespace GestionQ.Web.Controllers
                 return BadRequest($"Error: {ex.Message}");
             }
         }
+
+        public async Task<IActionResult> PrintTicket(int id)
+        {
+            var sale = await _context.Sales
+                .Include(s => s.Customer)
+                .Include(s => s.Items)
+                .ThenInclude(i => i.Product)
+                .Include(s => s.Payments)
+                .ThenInclude(p => p.PaymentMethod)
+                .FirstOrDefaultAsync(s => s.Id == id);
+
+            if (sale == null) return NotFound();
+
+            ViewBag.CompanyName = _config["CompanyInfo:Name"] ?? "GestionQ";
+            ViewBag.CompanyAddress = _config["CompanyInfo:Address"] ?? "";
+            ViewBag.CompanyPhone = _config["CompanyInfo:Phone"] ?? "";
+            ViewBag.CompanyEmail = _config["CompanyInfo:Email"] ?? "";
+
+            return View(sale);
+        }
     }
 
     public class SaleRequest
@@ -173,7 +195,7 @@ namespace GestionQ.Web.Controllers
     public class SaleRequestItem
     {
         public int ProductId { get; set; }
-        public int Quantity { get; set; }
+        public decimal Quantity { get; set; }
     }
 
     public class SaleRequestPayment

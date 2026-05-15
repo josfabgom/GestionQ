@@ -142,7 +142,7 @@
                             div.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
                             div.innerHTML = `
                                 <div style="font-weight: 600;">${p.name}</div>
-                                <div style="font-size: 0.8rem; opacity: 0.6;">Cod: ${p.internalCode.toString().padStart(5, '0')} | Barra: ${p.barcode || '-'} | Stock: ${p.stock}</div>
+                                <div style="font-size: 0.8rem; opacity: 0.6;">Cod: ${p.internalCode.toString().padStart(5, '0')} | Barra: ${p.barcode || '-'} | Stock: ${p.stock} ${p.isPesable ? 'Kg' : 'Un'}</div>
                             `;
                             div.onclick = () => addItem(p);
                             searchResults.appendChild(div);
@@ -159,11 +159,11 @@
             if (existing) {
                 existing.quantity++;
             } else {
-                items.push({
                     productId: product.id,
                     name: product.name,
                     quantity: 1,
-                    unitCost: 0
+                    unitCost: 0,
+                    isPesable: product.isPesable
                 });
             }
             productSearch.value = '';
@@ -184,8 +184,11 @@
 
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td>${item.name}</td>
-                    <td><input type="number" step="0.01" class="form-control" value="${item.quantity}" onchange="updateQty(${index}, this.value)" /></td>
+                    <td>
+                        <div style="font-weight: 600;">${item.name}</div>
+                        <div style="font-size: 0.75rem; color: var(--accent); opacity: 0.8;">${item.isPesable ? 'Kg (Fraccionable)' : 'Unidad (Entero)'}</div>
+                    </td>
+                    <td><input type="number" step="${item.isPesable ? '0.001' : '1'}" class="form-control" value="${item.quantity}" onchange="updateQty(${index}, this.value)" /></td>
                     <td><input type="number" step="0.01" class="form-control" value="${item.unitCost}" onchange="updateCost(${index}, this.value)" /></td>
                     <td>$${subtotal.toFixed(2)}</td>
                     <td><button onclick="removeItem(${index})" class="btn-secondary" style="padding: 0.2rem 0.5rem; color: #ef4444;">&times;</button></td>

@@ -51,6 +51,9 @@ namespace GestionQ.Web.Models
 
         [Display(Name = "Habilitado")]
         public bool IsActive { get; set; } = true;
+        
+        [Display(Name = "Días de Vencimiento")]
+        public int ExpirationDays { get; set; } = 0;
 
         [Display(Name = "Alícuota IVA")]
         public int? VatRateId { get; set; }

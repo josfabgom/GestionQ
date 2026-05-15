@@ -6,7 +6,10 @@
 
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
     <h1 class="page-title" style="margin-bottom: 0;">Detalle de Compra #@Model.Id</h1>
-    <div>
+    <div style="display: flex; gap: 1rem;">
+        <form asp-action="Delete" asp-route-id="@Model.Id" method="post" onsubmit="return confirm('¿Estás seguro de que deseas ANULAR esta compra? Si ya fue recibida, se restará el stock automáticamente.');">
+            <button type="submit" class="btn-secondary" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.2);">Anular Compra</button>
+        </form>
         <a asp-action="Index" class="btn-secondary">Volver al Listado</a>
     </div>
 </div>

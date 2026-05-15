@@ -50,7 +50,8 @@ namespace GestionQ.Web.Controllers
                     p.Barcode,
                     p.InternalCode,
                     p.Price,
-                    p.Stock
+                    p.Stock,
+                    p.IsPesable
                 })
                 .ToListAsync();
 
@@ -82,6 +83,7 @@ namespace GestionQ.Web.Controllers
                     MinimumStock = model.MinimumStock,
                     VatRateId = model.VatRateId,
                     IsActive = model.IsActive,
+                    ExpirationDays = model.ExpirationDays,
                     CreationDate = DateTime.Now
                 };
 
@@ -164,7 +166,8 @@ namespace GestionQ.Web.Controllers
                 MinimumStock = product.MinimumStock,
                 VatRateId = product.VatRateId,
                 ImageUrl = product.ImageUrl,
-                IsActive = product.IsActive
+                IsActive = product.IsActive,
+                ExpirationDays = product.ExpirationDays
             };
 
             ViewBag.Categories = await _context.Categories.ToListAsync();
@@ -207,6 +210,7 @@ namespace GestionQ.Web.Controllers
                     product.MinimumStock = model.MinimumStock;
                     product.VatRateId = model.VatRateId;
                     product.IsActive = model.IsActive;
+                    product.ExpirationDays = model.ExpirationDays;
 
                     var priceEntry = new ProductPrice
                     {

@@ -17,9 +17,14 @@
         <input type="hidden" name="id" value="@Model.Id" />
         
         <div class="form-group">
-            <label class="control-label">Cantidad a ajustar</label>
-            <input type="number" name="quantity" class="form-control" step="0.01" required placeholder="Ej: 10 para sumar, -5 para restar" />
-            <span class="text-muted" style="font-size: 0.75rem;">Use valores negativos para descontar stock.</span>
+            <label class="control-label">Cantidad a ajustar (@(Model.IsPesable ? "Kg" : "Unidades"))</label>
+            <input type="number" name="quantity" class="form-control" 
+                   step="@(Model.IsPesable ? "0.001" : "1")" 
+                   required placeholder="Ej: @(Model.IsPesable ? "0.500" : "10") para sumar, @(Model.IsPesable ? "-0.250" : "-5") para restar" />
+            <span class="text-muted" style="font-size: 0.75rem;">
+                @(Model.IsPesable ? "Use tres decimales para gramos (ej: 0.125)." : "Use números enteros para este producto.")
+                Valores negativos descuentan stock.
+            </span>
         </div>
 
         <div class="form-group">

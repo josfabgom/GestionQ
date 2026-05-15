@@ -228,6 +228,59 @@ namespace GestionQ.Web.Controllers
             }
         }
 
+        [HttpPost, ActionName("Delete")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteConfirmed(int id)
+        {
+            var purchase = await _context.Purchases
+                .Include(p => p.Items)
+                .FirstOrDefaultAsync(m => m.Id == id);
+
+            if (purchase == null) return NotFound();
+
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                // If it was received, we must reverse the stock
+                if (purchase.Status == PurchaseStatus.Received)
+                {
+                    foreach (var item in purchase.Items)
+                    {
+                        var product = await _context.Products.FindAsync(item.ProductId);
+                        if (product != null)
+                        {
+                            decimal qtyToReverse = item.ReceivedQuantity ?? item.Quantity;
+                            
+                            var movement = new StockMovement
+                            {
+                                ProductId = product.Id,
+                                Quantity = -qtyToReverse,
+                                Type = MovementType.AdjustmentOut,
+                                Concept = $"Anulación Compra #{purchase.Id} ({purchase.ReferenceNumber})",
+                                Date = DateTime.Now,
+                                PreviousStock = product.Stock,
+                                NewStock = product.Stock - qtyToReverse
+                            };
+
+                            product.Stock -= qtyToReverse;
+                            _context.StockMovements.Add(movement);
+                        }
+                    }
+                }
+
+                _context.Purchases.Remove(purchase);
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return RedirectToAction(nameof(Index));
+            }
+            catch (Exception)
+            {
+                await transaction.RollbackAsync();
+                return BadRequest("Error al intentar anular la compra. Verifique que no existan dependencias.");
+            }
+        }
+
         private bool PurchaseExists(int id)
         {
             return _context.Purchases.Any(e => e.Id == id);
