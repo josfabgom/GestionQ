@@ -17,7 +17,12 @@ namespace GestionQ.Domain.Entities
         public int? CashRegisterId { get; set; }
         public CashRegister? CashRegister { get; set; }
 
-        public List<SaleItem> Items { get; set; } = new();
+        public int? PointOfSaleId { get; set; }
+        public PointOfSale? PointOfSale { get; set; }
+
+        public string FormattedTicketNumber => $"{(PointOfSale?.PosNumber ?? 0):D5}-{Id:D8}";
+
+        public ICollection<SaleItem> Items { get; set; } = new List<SaleItem>();
         public List<SalePayment> Payments { get; set; } = new();
     }
 

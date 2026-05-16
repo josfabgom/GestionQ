@@ -1,0 +1,67 @@
+@model GestionQ.Domain.Entities.PointOfSale
+
+@{
+    ViewData["Title"] = "Nuevo Punto de Venta";
+}
+
+<h1 class="page-title">Nuevo Punto de Venta</h1>
+
+<div class="glass-panel" style="max-width: 600px;">
+    <form asp-action="Create">
+        <div class="form-group">
+            <label asp-for="Name" class="control-label">Nombre del Punto de Venta</label>
+            <input asp-for="Name" class="form-control" placeholder="Ej. Caja 01, Mostrador Principal..." required />
+            <span asp-validation-for="Name" class="text-danger"></span>
+        </div>
+
+        <div class="form-group" style="margin-top: 1rem;">
+            <label asp-for="PosNumber" class="control-label">Nro. de Punto de Venta (Ej. 1, 2...)</label>
+            <input asp-for="PosNumber" class="form-control" type="number" min="1" max="99999" required />
+            <span asp-validation-for="PosNumber" class="text-danger"></span>
+        </div>
+
+        <div class="form-group" style="margin-top: 1rem;">
+            <label asp-for="MachineName" class="control-label">Nombre de la PC / Identificador</label>
+            <div style="display: flex; gap: 0.5rem;">
+                <input asp-for="MachineName" class="form-control" id="machineNameInput" placeholder="Ej. PC-CAJA-01..." />
+                <button type="button" class="btn-secondary" onclick="detectMachineName()" style="white-space: nowrap; font-size: 0.8rem; background: #3b82f6; border: none; color: white;">
+                    <i class="fas fa-sync-alt"></i> Detectar PC actual
+                </button>
+            </div>
+            <span asp-validation-for="MachineName" class="text-danger"></span>
+        </div>
+
+        <script>
+            async function detectMachineName() {
+                try {
+                    const response = await fetch('/POSConfig/DetectMachineName');
+                    const data = await response.json();
+                    if (data.name) {
+                        document.getElementById('machineNameInput').value = data.name;
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'PC Detectada',
+                            text: 'Se ha identificado: ' + data.name,
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error detectando PC:', error);
+                    alert('No se pudo detectar el nombre de la PC automáticamente.');
+                }
+            }
+        </script>
+
+        <div class="form-group" style="margin-top: 1rem;">
+            <label asp-for="Description" class="control-label">Descripción / Ubicación</label>
+            <input asp-for="Description" class="form-control" placeholder="Ej. Sector entrada, Planta alta..." />
+            <span asp-validation-for="Description" class="text-danger"></span>
+        </div>
+
+        <div class="form-group" style="margin-top: 2rem; display: flex; gap: 1rem;">
+            <button type="submit" class="btn-primary">Guardar Punto de Venta</button>
+            <a asp-action="Index" class="btn-secondary">Volver al Listado</a>
+        </div>
+    </form>
+</div>

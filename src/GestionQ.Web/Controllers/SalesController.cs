@@ -27,6 +27,7 @@ namespace GestionQ.Web.Controllers
         {
             var sales = await _context.Sales
                 .Include(s => s.Customer)
+                .Include(s => s.PointOfSale)
                 .OrderByDescending(s => s.Date)
                 .ToListAsync();
             return View(sales);
@@ -37,13 +38,20 @@ namespace GestionQ.Web.Controllers
             var user = await _userManager.GetUserAsync(User);
             if (user == null) return NotFound();
 
+            var terminalPosId = Request.Cookies["TerminalPOSId"];
+            if (string.IsNullOrEmpty(terminalPosId))
+            {
+                TempData["Message"] = "Esta PC no ha sido configurada como Punto de Venta. Por favor, identifícala primero.";
+                return RedirectToAction("Index", "POSConfig");
+            }
+
             var openRegister = await _context.CashRegisters
                 .FirstOrDefaultAsync(c => c.UserId == user.Id && c.ClosingDate == null);
 
             if (openRegister == null)
             {
-                TempData["Message"] = "Debes aperturar tu caja (turno) obligatoriamente antes de poder comenzar a cobrar ventas.";
-                return RedirectToAction("Index", "CashRegisters");
+                TempData["Message"] = "No tienes una caja abierta. Por favor, realiza la apertura de tu turno para poder vender.";
+                return RedirectToAction("Open", "CashRegisters");
             }
 
             ViewBag.Customers = await _context.Customers.Where(c => c.IsActive).ToListAsync();
@@ -56,6 +64,7 @@ namespace GestionQ.Web.Controllers
         {
             var sale = await _context.Sales
                 .Include(s => s.Customer)
+                .Include(s => s.PointOfSale)
                 .Include(s => s.Items)
                 .ThenInclude(i => i.Product)
                 .Include(s => s.Payments)
@@ -82,6 +91,16 @@ namespace GestionQ.Web.Controllers
                     .FirstOrDefaultAsync(c => c.UserId == user.Id && c.ClosingDate == null);
 
                 if (openRegister == null) return BadRequest("No existe una caja abierta para operar.");
+
+                // Validar que la terminal actual coincida con la caja abierta
+                var terminalPosId = Request.Cookies["TerminalPOSId"];
+                if (string.IsNullOrEmpty(terminalPosId) || int.Parse(terminalPosId) != openRegister.PointOfSaleId)
+                {
+                    var currentPos = await _context.PointsOfSale.FindAsync(string.IsNullOrEmpty(terminalPosId) ? 0 : int.Parse(terminalPosId));
+                    var openedPos = await _context.PointsOfSale.FindAsync(openRegister.PointOfSaleId);
+                    
+                    return BadRequest($"Conflicto de Terminal: Estás intentando vender desde '{currentPos?.Name ?? "Desconocida"}', pero tu caja abierta pertenece a '{openedPos?.Name ?? "Otra Terminal"}'. Por favor, vuelve a la PC original o cierra tu caja actual para abrir una nueva aquí.");
+                }
 
                 decimal total = 0;
                 var saleItems = new List<SaleItem>();
@@ -127,6 +146,7 @@ namespace GestionQ.Web.Controllers
                     TotalAmount = total,
                     UserId = user.Id,
                     CashRegisterId = openRegister.Id,
+                    PointOfSaleId = openRegister.PointOfSaleId,
                     Items = saleItems,
                     Payments = model.Payments?.Select(p => new SalePayment
                     {
@@ -168,6 +188,7 @@ namespace GestionQ.Web.Controllers
         {
             var sale = await _context.Sales
                 .Include(s => s.Customer)
+                .Include(s => s.PointOfSale)
                 .Include(s => s.Items)
                 .ThenInclude(i => i.Product)
                 .Include(s => s.Payments)

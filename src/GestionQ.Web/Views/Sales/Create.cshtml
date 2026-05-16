@@ -60,7 +60,7 @@
                         data-internalcode="@product.InternalCode.ToString("D5")"
                         data-search="@product.Name.ToLower() @product.InternalCode.ToString("D5") @(product.Barcode?.ToLower() ?? "")"
                         style="background: rgba(15, 23, 42, 0.3); padding: 0.75rem; border-radius: 10px; border: 1px solid var(--border); transition: 0.2s; cursor: pointer; display: flex; justify-content: space-between; align-items: center; display: none;"
-                        onclick="addToCart(@product.Id, @Html.Raw(System.Text.Json.JsonSerializer.Serialize(product.Name)), @product.Price.ToString("F2", System.Globalization.CultureInfo.InvariantCulture), @product.Stock.ToString("F2", System.Globalization.CultureInfo.InvariantCulture))">
+                        onclick='handleProductClick(@product.Id, @Html.Raw(System.Text.Json.JsonSerializer.Serialize(product.Name)), @product.Price.ToString("F2", System.Globalization.CultureInfo.InvariantCulture), @product.Stock.ToString("F2", System.Globalization.CultureInfo.InvariantCulture))'>
                         <div style="overflow: hidden;">
                             <div style="font-weight: 600; font-size: 0.95rem; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">@product.Name</div>
                             <div style="font-size: 0.75rem; color: var(--text-muted);">Cód: @product.InternalCode.ToString("D5") | Stock: @product.Stock</div>
@@ -317,6 +317,19 @@
                 });
             });
 
+            function handleProductClick(id, name, price, stock) {
+                addToCart(id, name, price, stock);
+                
+                const searchInput = document.getElementById('searchProduct');
+                if (searchInput) {
+                    searchInput.value = '';
+                    filterProducts();
+                    searchInput.focus();
+                }
+                
+                showSuccessToast('Agregado: ' + name);
+            }
+
             function showSuccessToast(message) {
                 Swal.fire({
                     icon: 'success',
@@ -492,12 +505,13 @@
                         
                         const result = await Swal.fire({
                             title: '¡Venta Registrada!',
-                            text: 'La venta se ha guardado con éxito. ¿Deseas ver el ticket para imprimir o descargar en PDF?',
+                            text: 'La venta se ha guardado con éxito. ¿Deseas ver el ticket para imprimir?',
                             icon: 'success',
                             showCancelButton: true,
-                            confirmButtonText: 'Ver Ticket / PDF',
-                            cancelButtonText: 'No, ir al listado',
-                            confirmButtonColor: '#10b981'
+                            confirmButtonText: 'Ver Ticket / Imprimir',
+                            cancelButtonText: 'Nueva Venta',
+                            confirmButtonColor: '#10b981',
+                            cancelButtonColor: '#3b82f6'
                         });
 
                         if (result.isConfirmed) {
@@ -508,7 +522,7 @@
                             }
                         }
                         
-                        window.location.href = '/Sales/Index';
+                        window.location.href = '/Sales/Create';
                     } else {
                         const err = await response.text();
                         Swal.fire('Error al procesar', err, 'error');

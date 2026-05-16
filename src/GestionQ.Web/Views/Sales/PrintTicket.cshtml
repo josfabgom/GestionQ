@@ -7,7 +7,7 @@
 <html lang="es">
 <head>
     <meta charset="utf-8" />
-    <title>Ticket de Venta #@Model.Id.ToString("D5")</title>
+    <title>Ticket de Venta #@Model.FormattedTicketNumber</title>
     <style>
         body {
             font-family: 'Courier New', Courier, monospace;
@@ -132,7 +132,8 @@
         </div>
 
         <div class="info">
-            <p><strong>Ticket #:</strong> @Model.Id.ToString("D8")</p>
+            <p><strong>Punto de Venta:</strong> @(Model.PointOfSale?.Name ?? "General")</p>
+            <p><strong>Ticket #:</strong> @Model.FormattedTicketNumber</p>
             <p><strong>Fecha:</strong> @Model.Date.ToString("dd/MM/yyyy HH:mm")</p>
             <p><strong>Cliente:</strong> @(Model.Customer?.Name ?? "Consumidor Final")</p>
         </div>
@@ -187,7 +188,7 @@
             const element = document.getElementById('ticket-content');
             const opt = {
                 margin: 0,
-                filename: 'Ticket_@(Model.Id.ToString("D5")).pdf',
+                filename: 'Ticket_@(Model.FormattedTicketNumber).pdf',
                 image: { type: 'jpeg', quality: 0.98 },
                 html2canvas: { scale: 2 },
                 jsPDF: { unit: 'mm', format: [80, 297], orientation: 'portrait' }

@@ -26,5 +26,6 @@ namespace GestionQ.Infrastructure.Data
         public DbSet<VatRate> VatRates { get; set; }
         public DbSet<ProductPrice> ProductPrices { get; set; }
         public DbSet<SystemSetting> SystemSettings { get; set; }
+        public DbSet<PointOfSale> PointsOfSale { get; set; }
     }
 }

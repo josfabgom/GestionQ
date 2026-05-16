@@ -1,0 +1,72 @@
+@{
+    ViewData["Title"] = "Configurar Terminal";
+    var currentPosId = ViewBag.CurrentPosId as string;
+}
+
+<h1 class="page-title">Configuración de este Puesto / PC</h1>
+
+<div class="glass-panel" style="max-width: 600px;">
+    @if (string.IsNullOrEmpty(currentPosId))
+    {
+        <p style="color: var(--text-muted); margin-bottom: 2rem;">
+            Esta terminal (PC) aún no ha sido identificada. Por favor, selecciona a qué Punto de Venta pertenece este equipo físico.
+        </p>
+
+        <form asp-action="Configure" method="post">
+            <div class="form-group">
+                <label class="control-label">Seleccionar Punto de Venta</label>
+                <select name="posId" class="form-control" required>
+                    <option value="">-- Selecciona Terminal --</option>
+                    @foreach (var pos in ViewBag.PointsOfSale as IEnumerable<GestionQ.Domain.Entities.PointOfSale>)
+                    {
+                        <option value="@pos.Id">@pos.Name</option>
+                    }
+                </select>
+            </div>
+
+            <div style="margin-top: 2rem;">
+                <button type="submit" class="btn-primary" style="width: 100%;">Vincular esta PC a este Punto de Venta</button>
+            </div>
+        </form>
+    }
+    else
+    {
+        <div style="text-align: center; padding: 2rem;">
+            <div style="font-size: 3rem; color: #10b981; margin-bottom: 1rem;">
+                <i class="fas fa-desktop"></i>
+            </div>
+            <h3>Terminal Identificada</h3>
+            <p style="color: var(--text-muted);">
+                Esta computadora está vinculada al Punto de Venta ID: <strong>@currentPosId</strong>
+            </p>
+            
+            @{
+                var posList = ViewBag.PointsOfSale as IEnumerable<GestionQ.Domain.Entities.PointOfSale>;
+                var currentPos = posList?.FirstOrDefault(p => p.Id.ToString() == currentPosId);
+                if (currentPos != null)
+                {
+                    <div style="background: rgba(16, 185, 129, 0.1); padding: 1rem; border-radius: 8px; margin: 1rem 0; border: 1px solid #10b981;">
+                        <span style="font-size: 1.2rem; font-weight: 700; color: #10b981;">@currentPos.Name</span>
+                        @if (!string.IsNullOrEmpty(currentPos.MachineName))
+                        {
+                            <div style="font-size: 0.85rem; color: #10b981; margin-top: 0.5rem;">
+                                PC Registrada: <strong>@currentPos.MachineName</strong>
+                            </div>
+                        }
+                    </div>
+
+                    <form asp-action="UpdateMachineName" method="post" style="margin-bottom: 1rem;">
+                        <input type="hidden" name="posId" value="@currentPos.Id" />
+                        <button type="submit" class="btn-primary" style="background: #3b82f6; font-size: 0.85rem; padding: 0.5rem 1rem;">
+                            <i class="fas fa-sync-alt"></i> Detectar y Guardar nombre de esta PC
+                        </button>
+                    </form>
+                }
+            }
+
+            <form asp-action="Unconfigure" method="post" style="margin-top: 2rem;" onsubmit="return confirm('¿Desvincular esta PC? Deberás volver a configurarla para vender.');">
+                <button type="submit" class="btn-secondary" style="font-size: 0.85rem; color: #ef4444;">Desvincular / Cambiar Terminal</button>
+            </form>
+        </div>
+    }
+</div>

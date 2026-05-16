@@ -50,16 +50,40 @@ namespace GestionQ.Web.Controllers
             var user = await _userManager.GetUserAsync(User);
             if (user == null) return NotFound();
 
-            var openRegister = await _context.CashRegisters
+            var terminalPosId = Request.Cookies["TerminalPOSId"];
+            if (string.IsNullOrEmpty(terminalPosId))
+            {
+                TempData["Message"] = "Esta PC no está configurada. Por favor vincula esta terminal a un Punto de Venta.";
+                return RedirectToAction("Index", "POSConfig");
+            }
+
+            int posId = int.Parse(terminalPosId);
+
+            // Verificar si el usuario ya tiene UNA caja abierta (en cualquier POS)
+            var userOpenRegister = await _context.CashRegisters
                 .FirstOrDefaultAsync(c => c.UserId == user.Id && c.ClosingDate == null);
 
-            if (openRegister != null)
+            if (userOpenRegister != null)
             {
                 TempData["Message"] = "Ya tienes una caja abierta.";
                 return RedirectToAction(nameof(Index));
             }
 
-            return View(new CashRegister { InitialBalance = 0 });
+            // Verificar si el PUNTO DE VENTA ya está siendo usado por OTRO usuario
+            var posOpenRegister = await _context.CashRegisters
+                .Include(c => c.User)
+                .FirstOrDefaultAsync(c => c.PointOfSaleId == posId && c.ClosingDate == null);
+
+            if (posOpenRegister != null)
+            {
+                TempData["Message"] = $"Este Punto de Venta ya tiene una caja abierta por el usuario {posOpenRegister.User?.UserName}.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            var pos = await _context.PointsOfSale.FindAsync(posId);
+            ViewBag.PointOfSaleName = pos?.Name ?? "Desconocido";
+
+            return View(new CashRegister { InitialBalance = 0, PointOfSaleId = posId });
         }
 
         [HttpPost]
@@ -68,24 +92,49 @@ namespace GestionQ.Web.Controllers
             var user = await _userManager.GetUserAsync(User);
             if (user == null) return NotFound();
 
+            var terminalPosId = Request.Cookies["TerminalPOSId"];
+            if (string.IsNullOrEmpty(terminalPosId)) return RedirectToAction("Index", "POSConfig");
+
+            int posId = int.Parse(terminalPosId);
+
+            // Re-validar antes de guardar
+            var existingOpen = await _context.CashRegisters
+                .AnyAsync(c => (c.UserId == user.Id || c.PointOfSaleId == posId) && c.ClosingDate == null);
+            
+            if (existingOpen)
+            {
+                TempData["Message"] = "No se puede abrir la caja: el usuario o el Punto de Venta ya tienen una sesión activa.";
+                return RedirectToAction(nameof(Index));
+            }
+
             model.UserId = user.Id;
+            model.PointOfSaleId = posId;
             model.OpeningDate = DateTime.Now;
 
             _context.CashRegisters.Add(model);
             await _context.SaveChangesAsync();
 
-            return RedirectToAction(nameof(Index));
+            return RedirectToAction("Create", "Sales");
         }
 
         public async Task<IActionResult> Close(int id)
         {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return NotFound();
+
             var register = await _context.CashRegisters
                 .Include(c => c.Sales)
                 .ThenInclude(s => s.Payments)
                 .ThenInclude(p => p.PaymentMethod)
                 .FirstOrDefaultAsync(c => c.Id == id);
 
-            if (register == null || register.ClosingDate != null) return NotFound();
+            if (register == null) return NotFound();
+            
+            // Seguridad: solo el dueño o admin pueden cerrar
+            if (register.UserId != user.Id && !User.IsInRole("Admin")) return Forbid();
+            
+            if (register.ClosingDate != null) 
+                return RedirectToAction(nameof(Details), new { id = register.Id });
 
             decimal totalEfectivoVentas = register.Sales
                 .SelectMany(s => s.Payments)
@@ -98,30 +147,55 @@ namespace GestionQ.Web.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Close(int id, decimal finalCashBalance)
+        public async Task<IActionResult> Close(int id, string finalCashBalance)
         {
-            var register = await _context.CashRegisters
-                .Include(c => c.Sales)
-                .ThenInclude(s => s.Payments)
-                .ThenInclude(p => p.PaymentMethod)
-                .FirstOrDefaultAsync(c => c.Id == id);
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return NotFound();
 
-            if (register == null || register.ClosingDate != null) return NotFound();
+            try 
+            {
+                // Limpiar el formato del número por si viene con puntos/comas de cultura
+                string cleanBalance = finalCashBalance.Replace(".", "").Replace(",", ".");
+                if (!decimal.TryParse(cleanBalance, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out decimal balanceValue))
+                {
+                    // Intentar parseo directo si el anterior falla
+                    if (!decimal.TryParse(finalCashBalance, out balanceValue))
+                    {
+                        TempData["Message"] = "El monto ingresado no es un número válido.";
+                        return RedirectToAction(nameof(Close), new { id });
+                    }
+                }
 
-            decimal totalEfectivoVentas = register.Sales
-                .SelectMany(s => s.Payments)
-                .Where(p => p.PaymentMethod?.Name == "Efectivo")
-                .Sum(p => p.Amount);
+                var register = await _context.CashRegisters
+                    .Include(c => c.Sales)
+                    .ThenInclude(s => s.Payments)
+                    .ThenInclude(p => p.PaymentMethod)
+                    .FirstOrDefaultAsync(c => c.Id == id);
 
-            register.ExpectedCashBalance = register.InitialBalance + totalEfectivoVentas;
-            register.FinalCashBalance = finalCashBalance;
-            register.Difference = finalCashBalance - register.ExpectedCashBalance;
-            register.ClosingDate = DateTime.Now;
+                if (register == null) return NotFound();
+                if (register.UserId != user.Id && !User.IsInRole("Admin")) return Forbid();
+                if (register.ClosingDate != null) return RedirectToAction(nameof(Details), new { id = register.Id });
 
-            _context.CashRegisters.Update(register);
-            await _context.SaveChangesAsync();
+                decimal totalEfectivoVentas = register.Sales
+                    .SelectMany(s => s.Payments)
+                    .Where(p => p.PaymentMethod?.Name == "Efectivo")
+                    .Sum(p => p.Amount);
 
-            return RedirectToAction(nameof(Details), new { id = register.Id });
+                register.ExpectedCashBalance = register.InitialBalance + totalEfectivoVentas;
+                register.FinalCashBalance = balanceValue;
+                register.Difference = balanceValue - register.ExpectedCashBalance;
+                register.ClosingDate = DateTime.Now;
+
+                _context.CashRegisters.Update(register);
+                await _context.SaveChangesAsync();
+
+                return RedirectToAction(nameof(Details), new { id = register.Id });
+            }
+            catch (Exception ex)
+            {
+                TempData["Message"] = "Error al cerrar la caja: " + ex.Message;
+                return RedirectToAction(nameof(Close), new { id });
+            }
         }
 
         public async Task<IActionResult> Details(int id)

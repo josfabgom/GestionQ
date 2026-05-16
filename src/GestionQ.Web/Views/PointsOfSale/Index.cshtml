@@ -1,0 +1,55 @@
+@model IEnumerable<GestionQ.Domain.Entities.PointOfSale>
+
+@{
+    ViewData["Title"] = "Puntos de Venta";
+}
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <h1 class="page-title" style="margin: 0;">Puntos de Venta (Terminales)</h1>
+    <a asp-action="Create" class="btn-primary">Nuevo Punto de Venta</a>
+</div>
+
+<div class="glass-panel">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th style="text-align: center;">Nro. POS</th>
+                <th>PC / Terminal</th>
+                <th>Descripción</th>
+                <th>Estado</th>
+                <th style="text-align: center;">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td style="font-weight: 600;">@item.Name</td>
+                    <td style="text-align: center; font-weight: 700; color: #3b82f6;">@item.PosNumber.ToString("D5")</td>
+                    <td style="font-size: 0.9rem; color: var(--text-muted);">
+                        @(string.IsNullOrEmpty(item.MachineName) ? "No vinculada" : item.MachineName)
+                    </td>
+                    <td>@item.Description</td>
+                    <td>
+                        <span class="badge @(item.IsActive ? "bg-success" : "bg-danger")" 
+                              style="padding: 0.4rem 0.8rem; border-radius: 20px; font-size: 0.8rem; background: @(item.IsActive ? "rgba(16, 185, 129, 0.2)" : "rgba(239, 68, 68, 0.2)"); color: @(item.IsActive ? "#10b981" : "#ef4444");">
+                            @(item.IsActive ? "Activo" : "Inactivo")
+                        </span>
+                    </td>
+                    <td style="text-align: center;">
+                        <div style="display: flex; gap: 0.5rem; justify-content: center;">
+                            <a asp-action="Edit" asp-route-id="@item.Id" class="btn-secondary" style="padding: 0.4rem 0.8rem;">Editar</a>
+                            @if (item.IsActive)
+                            {
+                                <form asp-action="Delete" asp-route-id="@item.Id" method="post" style="display:inline;" onsubmit="return confirm('¿Inactivar este punto de venta?');">
+                                    <button type="submit" class="btn-danger" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">Inactivar</button>
+                                </form>
+                            }
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

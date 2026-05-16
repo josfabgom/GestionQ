@@ -33,6 +33,9 @@ namespace GestionQ.Domain.Entities
 
         public bool IsOpen => ClosingDate == null;
 
+        public int? PointOfSaleId { get; set; }
+        public PointOfSale? PointOfSale { get; set; }
+
         public List<Sale> Sales { get; set; } = new();
     }
 }
