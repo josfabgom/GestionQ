@@ -4,9 +4,11 @@ using GestionQ.Domain.Entities;
 using GestionQ.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
 
+using GestionQ.Domain.Constants;
+
 namespace GestionQ.Web.Controllers
 {
-    [Authorize]
+    [Authorize(Policy = Permissions.Config.View)]
     public class SuppliersController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -40,14 +42,15 @@ namespace GestionQ.Web.Controllers
             if (supplier == null) return NotFound();
             return View(supplier);
         }
+        [Authorize(Policy = Permissions.Config.Create)]
 
         public async Task<IActionResult> Create()
         {
             ViewBag.TaxConditions = await _context.TaxConditions.Where(v => v.IsActive).ToListAsync();
             return View();
         }
-
         [HttpPost]
+        [Authorize(Policy = Permissions.Config.Create)]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Supplier supplier)
         {
@@ -60,6 +63,7 @@ namespace GestionQ.Web.Controllers
             ViewBag.TaxConditions = await _context.TaxConditions.Where(v => v.IsActive).ToListAsync();
             return View(supplier);
         }
+        [Authorize(Policy = Permissions.Config.Edit)]
 
         public async Task<IActionResult> Edit(int? id)
         {
@@ -72,6 +76,7 @@ namespace GestionQ.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Policy = Permissions.Config.Edit)]
         public async Task<IActionResult> Edit(int id, Supplier supplier)
         {
             if (id != supplier.Id) return NotFound();
@@ -92,8 +97,8 @@ namespace GestionQ.Web.Controllers
             }
             return View(supplier);
         }
-
         [HttpPost]
+        [Authorize(Policy = Permissions.Config.Delete)]
         public async Task<IActionResult> Delete(int id)
         {
             var supplier = await _context.Suppliers.FindAsync(id);

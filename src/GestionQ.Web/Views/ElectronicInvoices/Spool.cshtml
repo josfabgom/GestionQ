@@ -1,0 +1,770 @@
+@model GestionQ.Web.Controllers.ElectronicInvoicesDashboardViewModel
+@{
+    ViewData["Title"] = "Facturación Electrónica ARCA";
+}
+
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+<div class="arca-container">
+    <!-- Header Area -->
+    <div class="arca-header-card">
+        <div class="arca-header-content">
+            <div class="arca-badge">ARCA / AFIP v4.0</div>
+            <h1>Módulo de Facturación Electrónica</h1>
+            <p style="margin-bottom: 15px;">Emita, gestione y consulte comprobantes electrónicos fiscales de forma desacoplada y flexible.</p>
+        </div>
+        <div class="arca-header-graphic">
+            <i class="bi bi-shield-check"></i>
+        </div>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show arca-alert" role="alert">
+            <div class="alert-icon"><i class="bi bi-check-circle-fill"></i></div>
+            <div class="alert-content">
+                <strong>¡Operación Exitosa!</strong> @TempData["SuccessMessage"]
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show arca-alert" role="alert">
+            <div class="alert-icon"><i class="bi bi-exclamation-triangle-fill"></i></div>
+            <div class="alert-content">
+                <strong>Error:</strong> @TempData["ErrorMessage"]
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <!-- Stat Cards -->
+    <div class="arca-stats-grid">
+        <div class="arca-stat-card glow-blue">
+            <div class="stat-icon"><i class="bi bi-currency-dollar"></i></div>
+            <div class="stat-info">
+                <h3>Total Facturado</h3>
+                <p class="stat-value">@Model.TotalInvoiced.ToString("C")</p>
+                <span class="stat-desc">Mes en curso</span>
+            </div>
+        </div>
+        
+        <div class="arca-stat-card glow-green">
+            <div class="stat-icon"><i class="bi bi-patch-check"></i></div>
+            <div class="stat-info">
+                <h3>CAE Aprobados</h3>
+                <p class="stat-value">@Model.ApprovedCount</p>
+                <span class="stat-desc">Comprobantes autorizados</span>
+            </div>
+        </div>
+
+        <div class="arca-stat-card glow-orange">
+            <div class="stat-icon"><i class="bi bi-clock-history"></i></div>
+            <div class="stat-info">
+                <h3>Ventas Pendientes</h3>
+                <p class="stat-value">@Model.PendingCount</p>
+                <span class="stat-desc">Listas para facturar</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Interface Section -->
+    <div class="arca-content-card">
+        <div class="arca-tabs-header">
+            <button class="arca-tab-btn active" onclick="switchTab('tab-pending')">
+                <i class="bi bi-receipt-cutoff"></i> Ventas Pendientes de Facturar
+            </button>
+            <button class="arca-tab-btn" onclick="switchTab('tab-history')">
+                <i class="bi bi-journal-text"></i> Historial de Comprobantes
+            </button>
+        </div>
+
+        <!-- Tab 1: Pending Sales -->
+        <div id="tab-pending" class="arca-tab-content active">
+            @if (!Model.PendingSales.Any())
+            {
+                <div class="arca-empty-state">
+                    <i class="bi bi-clipboard-check"></i>
+                    <h4>¡Todo al día!</h4>
+                    <p>No se encontraron ventas pendientes de facturar electrónicamente en este momento.</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table arca-table">
+                        <thead>
+                            <tr>
+                                <th>N° Ticket</th>
+                                <th>Fecha</th>
+                                <th>Cliente</th>
+                                <th>Monto Total</th>
+                                <th>Medio de Pago</th>
+                                <th>Punto de Venta</th>
+                                <th class="text-end">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var sale in Model.PendingSales)
+                            {
+                                <tr>
+                                    <td>
+                                        <span class="ticket-badge">
+                                            @sale.FormattedTicketNumber
+                                        </span>
+                                    </td>
+                                    <td>@sale.Date.ToString("dd/MM/yyyy HH:mm")</td>
+                                    <td>
+                                        <div class="customer-info">
+                                            <span class="customer-name">@(sale.Customer?.Name ?? "Consumidor Final")</span>
+                                            @if (sale.Customer != null && !string.IsNullOrEmpty(sale.Customer.Cuit))
+                                            {
+                                                <span class="customer-sub text-muted">CUIT: @sale.Customer.Cuit</span>
+                                            }
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <strong class="total-amount">@sale.TotalAmount.ToString("C")</strong>
+                                    </td>
+                                    <td>
+                                        @if (sale.Payments != null && sale.Payments.Any())
+                                        {
+                                            foreach (var p in sale.Payments)
+                                            {
+                                                <span class="badge bg-secondary" style="font-size:0.75rem; margin-bottom:2px;">@(p.PaymentMethod?.Name ?? "N/A")</span><br/>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <span class="pos-badge">
+                                            <i class="bi bi-laptop"></i> @(sale.PointOfSale?.Name ?? "General") (N° @(sale.PointOfSale?.PosNumber ?? 1))
+                                        </span>
+                                    </td>
+                                    <td class="text-end">
+                                        <button type="button" class="btn btn-arca-primary btn-sm" onclick="quickInvoice(@sale.Id)">
+                                            <i class="bi bi-file-earmark-plus"></i> Facturar
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+
+        <!-- Tab 2: Authorized Invoices History -->
+        <div id="tab-history" class="arca-tab-content">
+            @if (!Model.AuthorizedInvoices.Any())
+            {
+                <div class="arca-empty-state">
+                    <i class="bi bi-folder-symlink"></i>
+                    <h4>Sin comprobantes emitidos</h4>
+                    <p>No se han registrado facturas electrónicas autorizadas en la base de datos.</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table arca-table">
+                        <thead>
+                            <tr>
+                                <th>Tipo</th>
+                                <th>N° Comprobante</th>
+                                <th>Fecha Emisión</th>
+                                <th>Cliente</th>
+                                <th>Monto</th>
+                                <th>Medio de Pago</th>
+                                <th>CAE / Vence</th>
+                                <th>Estado</th>
+                                <th class="text-end text-nowrap">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var invoice in Model.AuthorizedInvoices)
+                            {
+                                <tr>
+                                    <td>
+                                        <span class="invoice-type-badge type-@invoice.InvoiceTypeCode">
+                                            @invoice.InvoiceTypeDesc
+                                        </span>
+                                    </td>
+                                    <td><strong>@invoice.FormattedVoucherNumber</strong></td>
+                                    <td>@invoice.IssueDate.ToString("dd/MM/yyyy HH:mm")</td>
+                                    <td>
+                                        <div class="customer-info">
+                                            <span class="customer-name">@invoice.CustomerName</span>
+                                            <span class="customer-sub text-muted">@invoice.CustomerTaxCondition</span>
+                                        </div>
+                                    </td>
+                                    <td><strong>@invoice.TotalAmount.ToString("C")</strong></td>
+                                    <td>
+                                        @if (invoice.Sale?.Payments != null && invoice.Sale.Payments.Any())
+                                        {
+                                            foreach (var p in invoice.Sale.Payments)
+                                            {
+                                                <span class="badge bg-secondary" style="font-size:0.75rem; margin-bottom:2px;">@(p.PaymentMethod?.Name ?? "N/A")</span><br/>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="cae-info">
+                                            <span class="cae-value">@invoice.CAE</span>
+                                            <span class="cae-vto text-muted">Vence: @invoice.CAEExpirationDate.ToString("dd/MM/yyyy")</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        @if (invoice.Status == "Approved")
+                                        {
+                                            <span class="badge bg-success-glow">Aprobado</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger-glow" title="@invoice.ErrorMessage">Rechazado</span>
+                                        }
+                                    </td>
+                                    <td class="text-end text-nowrap">
+                                        <div class="d-flex gap-2 justify-content-end flex-nowrap">
+                                            <a asp-action="Print" asp-route-id="@invoice.Id" class="btn btn-arca-secondary btn-sm" target="_blank" title="Imprimir A4">
+                                                <i class="bi bi-printer"></i> A4
+                                            </a>
+                                            <a asp-action="PrintTicket" asp-route-id="@invoice.Id" class="btn btn-arca-secondary btn-sm" target="_blank" title="Imprimir Ticket">
+                                                <i class="bi bi-receipt"></i> Ticket
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Styling System following Premium guidelines */
+    :root {
+        --arca-primary: #3b82f6;
+        --arca-primary-hover: #2563eb;
+        --arca-secondary: #4f46e5;
+        --arca-dark: #0f172a;
+        --arca-bg: #f8fafc;
+        --arca-card: #ffffff;
+        --arca-text: #1e293b;
+        --arca-border: #e2e8f0;
+    }
+
+    .arca-container {
+        font-family: 'Outfit', sans-serif;
+        color: var(--arca-text);
+        max-width: 1300px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    /* Premium Header Card with Gradients */
+    .arca-header-card {
+        background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #4f46e5 100%);
+        border-radius: 20px;
+        color: white;
+        padding: 40px;
+        margin-bottom: 30px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.3);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .arca-header-card::before {
+        content: '';
+        position: absolute;
+        width: 300px;
+        height: 300px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        top: -100px;
+        right: -100px;
+        pointer-events: none;
+    }
+
+    .arca-header-content {
+        max-width: 70%;
+    }
+
+    .arca-badge {
+        background: rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(10px);
+        color: white;
+        padding: 6px 14px;
+        border-radius: 50px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        display: inline-block;
+        margin-bottom: 15px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .arca-header-content h1 {
+        font-weight: 800;
+        font-size: 2.2rem;
+        margin: 0 0 10px 0;
+        letter-spacing: -0.02em;
+    }
+
+    .arca-header-content p {
+        font-size: 1.05rem;
+        margin: 0;
+        opacity: 0.9;
+        font-weight: 300;
+    }
+
+    .btn-config-certs {
+        border-radius: 8px;
+        font-weight: 600;
+        padding: 8px 16px;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        background: rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(10px);
+        color: white;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.2s ease;
+        margin-top: 10px;
+    }
+
+    .btn-config-certs:hover {
+        background: rgba(255, 255, 255, 0.25);
+        border-color: rgba(255, 255, 255, 0.6);
+        color: white;
+        transform: translateY(-1px);
+    }
+
+    .arca-header-graphic i {
+        font-size: 5rem;
+        color: rgba(255, 255, 255, 0.25);
+    }
+
+    /* Alerts */
+    .arca-alert {
+        border-radius: 15px;
+        border: none;
+        padding: 20px;
+        display: flex;
+        align-items: center;
+        margin-bottom: 30px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    .arca-alert.alert-success {
+        background-color: #ecfdf5;
+        color: #065f46;
+        border-left: 5px solid #10b981;
+    }
+
+    .arca-alert.alert-danger {
+        background-color: #fef2f2;
+        color: #991b1b;
+        border-left: 5px solid #ef4444;
+    }
+
+    .arca-alert .alert-icon {
+        font-size: 1.5rem;
+        margin-right: 15px;
+    }
+
+    .arca-alert .alert-content {
+        flex-grow: 1;
+    }
+
+    /* Premium Stats Grid */
+    .arca-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 24px;
+        margin-bottom: 30px;
+    }
+
+    .arca-stat-card {
+        background: var(--arca-card);
+        border-radius: 16px;
+        padding: 24px;
+        border: 1px solid var(--arca-border);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
+        display: flex;
+        align-items: center;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .arca-stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 20px -3px rgba(0, 0, 0, 0.08);
+    }
+
+    .arca-stat-card.glow-blue { border-left: 5px solid #3b82f6; }
+    .arca-stat-card.glow-green { border-left: 5px solid #10b981; }
+    .arca-stat-card.glow-orange { border-left: 5px solid #f97316; }
+
+    .stat-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 12px;
+        background: #f1f5f9;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.6rem;
+        margin-right: 20px;
+        color: var(--arca-dark);
+    }
+
+    .arca-stat-card.glow-blue .stat-icon { background: #eff6ff; color: #3b82f6; }
+    .arca-stat-card.glow-green .stat-icon { background: #ecfdf5; color: #10b981; }
+    .arca-stat-card.glow-orange .stat-icon { background: #fff7ed; color: #f97316; }
+
+    .stat-info h3 {
+        font-size: 0.9rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        color: #64748b;
+        margin: 0 0 4px 0;
+        letter-spacing: 0.05em;
+    }
+
+    .stat-value {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: var(--arca-dark);
+        margin: 0;
+        letter-spacing: -0.03em;
+    }
+
+    .stat-desc {
+        font-size: 0.8rem;
+        color: #94a3b8;
+    }
+
+    /* Content Card */
+    .arca-content-card {
+        background: var(--arca-card);
+        border-radius: 20px;
+        border: 1px solid var(--arca-border);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        overflow: hidden;
+        margin-bottom: 40px;
+    }
+
+    .arca-tabs-header {
+        background: #f8fafc;
+        border-bottom: 1px solid var(--arca-border);
+        padding: 15px 25px 0 25px;
+        display: flex;
+        gap: 10px;
+    }
+
+    .arca-tab-btn {
+        background: none;
+        border: none;
+        padding: 12px 20px;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #64748b;
+        border-bottom: 3px solid transparent;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .arca-tab-btn:hover {
+        color: var(--arca-primary);
+    }
+
+    .arca-tab-btn.active {
+        color: var(--arca-primary);
+        border-bottom-color: var(--arca-primary);
+    }
+
+    .arca-tab-content {
+        display: none;
+        padding: 30px;
+    }
+
+    .arca-tab-content.active {
+        display: block;
+    }
+
+    /* Table Design */
+    .arca-table {
+        margin: 0;
+        vertical-align: middle;
+    }
+
+    .arca-table th {
+        background: #f8fafc;
+        color: #64748b;
+        font-weight: 600;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 16px 20px;
+        border-bottom: 2px solid var(--arca-border);
+        vertical-align: middle;
+    }
+
+    .arca-table td {
+        padding: 20px;
+        border-bottom: 1px solid #f1f5f9;
+        font-size: 0.95rem;
+        color: var(--arca-dark);
+        vertical-align: middle;
+    }
+
+    .arca-table tr:hover td {
+        background-color: #faf5ff;
+    }
+
+    /* Badges & Special Elements */
+    .ticket-badge {
+        background: #f1f5f9;
+        border: 1px solid var(--arca-border);
+        color: var(--arca-dark);
+        font-family: monospace;
+        font-weight: 600;
+        padding: 6px 12px;
+        border-radius: 8px;
+        font-size: 0.9rem;
+    }
+
+    .pos-badge {
+        background: #f0fdf4;
+        color: #166534;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .invoice-type-badge {
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 800;
+        letter-spacing: 0.5px;
+        white-space: nowrap;
+    }
+
+    .invoice-type-badge.type-1 { background-color: #dbeafe; color: #1e40af; } /* A - Blue */
+    .invoice-type-badge.type-6 { background-color: #fef3c7; color: #92400e; } /* B - Yellow */
+    .invoice-type-badge.type-11 { background-color: #e0f2fe; color: #0369a1; } /* C - Light Blue */
+
+    .customer-info {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .customer-name {
+        font-weight: 600;
+        color: var(--arca-dark);
+    }
+
+    .customer-sub {
+        font-size: 0.8rem;
+    }
+
+    .total-amount {
+        font-size: 1.05rem;
+        color: var(--arca-dark);
+    }
+
+    .cae-info {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .cae-value {
+        font-family: monospace;
+        font-weight: 600;
+        color: var(--arca-dark);
+        letter-spacing: 0.05em;
+    }
+
+    .cae-vto {
+        font-size: 0.8rem;
+    }
+
+    .bg-success-glow {
+        background-color: #d1fae5;
+        color: #065f46;
+        padding: 6px 12px;
+        border-radius: 50px;
+    }
+
+    .bg-danger-glow {
+        background-color: #fee2e2;
+        color: #991b1b;
+        padding: 6px 12px;
+        border-radius: 50px;
+    }
+
+    /* Buttons */
+    .btn-arca-primary {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        padding: 8px 16px;
+        box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2);
+        transition: all 0.2s ease;
+    }
+
+    .btn-arca-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 14px rgba(37, 99, 235, 0.3);
+        color: white;
+    }
+
+    .btn-arca-secondary {
+        background: #f1f5f9;
+        color: #334155;
+        border: 1px solid var(--arca-border);
+        border-radius: 8px;
+        font-weight: 600;
+        padding: 8px 16px;
+        transition: all 0.2s ease;
+    }
+
+    .btn-arca-secondary:hover {
+        background: #e2e8f0;
+        color: var(--arca-dark);
+    }
+
+    /* Empty State */
+    .arca-empty-state {
+        text-align: center;
+        padding: 60px 20px;
+    }
+
+    .arca-empty-state i {
+        font-size: 4rem;
+        color: #cbd5e1;
+        margin-bottom: 20px;
+        display: inline-block;
+    }
+
+    .arca-empty-state h4 {
+        font-weight: 700;
+        color: var(--arca-dark);
+        margin-bottom: 10px;
+    }
+
+    .arca-empty-state p {
+        color: #64748b;
+        max-width: 400px;
+        margin: 0 auto;
+    }
+</style>
+
+<script>
+    function switchTab(tabId) {
+        // Toggle tab buttons
+        document.querySelectorAll('.arca-tab-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        
+        // Find click sender and activate it
+        const clickedBtn = Array.from(document.querySelectorAll('.arca-tab-btn')).find(btn => 
+            btn.innerHTML.includes(tabId === 'tab-pending' ? 'Ventas Pendientes' : 'Historial')
+        );
+        if (clickedBtn) clickedBtn.classList.add('active');
+
+        // Toggle tab content
+        document.querySelectorAll('.arca-tab-content').forEach(content => {
+            content.classList.remove('active');
+        });
+        document.getElementById(tabId).classList.add('active');
+    }
+
+    function quickInvoice(saleId) {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: 'Procesando Facturación',
+                text: 'Conectando con Servidores de ARCA/AFIP...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+        }
+
+        fetch(`/ElectronicInvoices/QuickInvoice?saleId=${saleId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Operación Exitosa!',
+                        text: 'Factura generada y autorizada correctamente.',
+                        confirmButtonText: 'Aceptar'
+                    }).then(() => {
+                        location.reload();
+                    });
+                } else {
+                    alert('Factura generada correctamente.');
+                    location.reload();
+                }
+            } else {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error de Facturación',
+                        text: data.message,
+                        confirmButtonText: 'Aceptar'
+                    });
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            }
+        })
+        .catch(error => {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error de Conexión',
+                    text: 'Hubo un problema al comunicarse con el servidor.',
+                    confirmButtonText: 'Aceptar'
+                });
+            } else {
+                alert('Error de conexión.');
+            }
+        });
+    }
+</script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>

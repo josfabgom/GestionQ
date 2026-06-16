@@ -1,0 +1,748 @@
+@model GestionQ.Web.Controllers.CertificatesViewModel
+@{
+    ViewData["Title"] = "Configuración de Certificados AFIP";
+}
+
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+<div class="certs-container">
+    
+    <div class="back-link">
+        <a asp-action="Index" class="btn-back"><i class="bi bi-arrow-left"></i> Volver a la Bandeja Principal</a>
+    </div>
+
+    <!-- Alert Messaging -->
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show certs-alert" role="alert">
+            <i class="bi bi-check-circle-fill"></i>
+            <div>
+                <strong>¡Operación Exitosa!</strong> @TempData["SuccessMessage"]
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show certs-alert" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <div>
+                <strong>Inconsistencia o Error:</strong> @TempData["ErrorMessage"]
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <!-- Header Block -->
+    <div class="certs-header-card">
+        <div class="header-icon-glowing">
+            <i class="bi bi-key-fill"></i>
+        </div>
+        <div class="header-text-block">
+            <h2>Configuración Criptográfica y Credenciales ARCA / AFIP</h2>
+            <p>
+                Gestione la clave privada del sistema y las solicitudes de certificado (CSR) requeridas por la Administración Federal 
+                de Ingresos Públicos para validar comprobantes electrónicos fiscales de forma segura y automatizada.
+            </p>
+        </div>
+    </div>
+
+    <div class="certs-grid">
+        
+        <!-- Column 1: Status & Actions -->
+        <div class="certs-col">
+            
+            <!-- Card 1: Credentials status -->
+            <div class="certs-card glass-card">
+                <h3 class="certs-card-title"><i class="bi bi-shield-lock-fill text-primary"></i> Estado de las Credenciales</h3>
+                <p class="text-muted text-sm mb-4">Verifique el estado actual de los archivos criptográficos del sistema.</p>
+
+                <div class="status-list">
+                    <!-- Clave Privada -->
+                    <div class="status-item">
+                        <div class="status-icon @(Model.HasPrivateKey ? "success" : "danger")">
+                            <i class="bi @(Model.HasPrivateKey ? "bi-check-circle" : "bi-x-circle")"></i>
+                        </div>
+                        <div class="status-details">
+                            <span class="status-label">Clave Privada RSA (2048 bits)</span>
+                            <span class="status-val @(Model.HasPrivateKey ? "text-success" : "text-danger")">
+                                @(Model.HasPrivateKey ? $"Generada ({Model.PrivateKeyDate?.ToString("dd/MM/yyyy HH:mm")})" : "Faltante (No generada)")
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Solicitud CSR -->
+                    <div class="status-item">
+                        <div class="status-icon @(Model.HasCsr ? "success" : "warning")">
+                            <i class="bi @(Model.HasCsr ? "bi-check-circle" : "bi-dash-circle")"></i>
+                        </div>
+                        <div class="status-details">
+                            <span class="status-label">Solicitud de Certificado (CSR)</span>
+                            <span class="status-val @(Model.HasCsr ? "text-success" : "text-muted")">
+                                @(Model.HasCsr ? $"Lista para descargar ({Model.CsrDate?.ToString("dd/MM/yyyy HH:mm")})" : "No disponible")
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Certificado AFIP -->
+                    <div class="status-item">
+                        <div class="status-icon @(Model.HasCertificate ? "success" : "danger")">
+                            <i class="bi @(Model.HasCertificate ? "bi-check-circle" : "bi-x-circle")"></i>
+                        </div>
+                        <div class="status-details">
+                            <span class="status-label">Certificado Digital AFIP (.crt)</span>
+                            <span class="status-val @(Model.HasCertificate ? "text-success" : "text-danger")">
+                                @(Model.HasCertificate ? $"Activo ({Model.CertificateDate?.ToString("dd/MM/yyyy")})" : "Faltante (Pendiente de carga)")
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                @if (Model.HasCertificate)
+                {
+                    <div class="cert-info-box mt-4">
+                        <h5>Datos del Certificado</h5>
+                        <div class="cert-meta-row">
+                            <span class="meta-lbl">Titular/Sujeto:</span>
+                            <span class="meta-val text-truncate" title="@Model.CertificateSubject">@Model.CertificateSubject</span>
+                        </div>
+                        <div class="cert-meta-row">
+                            <span class="meta-lbl">Organismo Emisor:</span>
+                            <span class="meta-val">@Model.CertificateIssuer</span>
+                        </div>
+                        <div class="cert-meta-row">
+                            <span class="meta-lbl">Vencimiento:</span>
+                            <span class="meta-val @(Model.CertificateExpiration < DateTime.Now ? "text-danger fw-bold" : "text-success fw-bold")">
+                                @Model.CertificateExpiration?.ToString("dd/MM/yyyy HH:mm")
+                                @if (Model.CertificateExpiration < DateTime.Now)
+                                {
+                                    <span> (¡Expirado!)</span>
+                                }
+                            </span>
+                        </div>
+                    </div>
+                }
+
+                @if (Model.HasPrivateKey || Model.HasCsr || Model.HasCertificate)
+                {
+                    <form asp-action="DeleteCertificates" method="post" class="mt-4" onsubmit="return confirm('¿Está seguro de que desea eliminar todas las credenciales criptográficas locales? Esto detendrá la facturación real hasta generar nuevos certificados.');">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-outline-danger w-100 btn-certs-action">
+                            <i class="bi bi-trash3"></i> Eliminar Credenciales y Reiniciar
+                        </button>
+                    </form>
+                }
+            </div>
+
+            <!-- Card 2: Upload Certificate -->
+            @if (Model.HasPrivateKey && !Model.HasCertificate)
+            {
+                <div class="certs-card glass-card mt-4 border-primary-glow">
+                    <h3 class="certs-card-title"><i class="bi bi-cloud-upload-fill text-primary"></i> 3. Cargar Certificado de AFIP</h3>
+                    <p class="text-muted text-sm mb-4">
+                        Una vez que AFIP haya firmado su solicitud y haya descargado su certificado digital (archivo con extensión <code>.crt</code> o <code>.pem</code>), súbalo aquí:
+                    </p>
+
+                    <form asp-action="UploadCertificate" method="post" enctype="multipart/form-data">
+                        @Html.AntiForgeryToken()
+                        <div class="mb-4">
+                            <label class="form-label certs-lbl">Archivo de Certificado (.crt / .pem)</label>
+                            <div class="file-upload-wrapper">
+                                <input type="file" name="certificateFile" class="form-control certs-input" accept=".crt,.pem" required />
+                                <div class="file-upload-icon"><i class="bi bi-file-earmark-binary-fill"></i></div>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 btn-certs-submit">
+                            <i class="bi bi-shield-fill-check"></i> Cargar y Activar Certificado
+                        </button>
+                    </form>
+                </div>
+            }
+
+        </div>
+
+        <!-- Column 2: Generator & Wizard -->
+        <div class="certs-col">
+            
+            <!-- Card 3: CSR Generator Form -->
+            <div class="certs-card glass-card">
+                <h3 class="certs-card-title"><i class="bi bi-gear-wide-connected text-indigo"></i> 1. Generador de Clave y Solicitud (CSR)</h3>
+                <p class="text-muted text-sm mb-4">
+                    Genere de forma automática su llave criptográfica de 2048 bits y la Solicitud de Certificado requerida por AFIP sin necesidad de instalar programas adicionales.
+                </p>
+
+                @if (!Model.HasPrivateKey)
+                {
+                    <form asp-action="GenerateCsr" method="post">
+                        @Html.AntiForgeryToken()
+                        <div class="mb-3">
+                            <label class="form-label certs-lbl">Nombre / Razón Social del Emisor</label>
+                            <input type="text" name="companyName" class="form-control certs-input" placeholder="Ej: GestionQ S.A." required />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label certs-lbl">CUIT Emisor (11 dígitos sin guiones)</label>
+                            <input type="text" name="cuit" class="form-control certs-input" maxlength="11" placeholder="Ej: 30712345678" required />
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label certs-lbl">Alias del Sistema (CN - Common Name)</label>
+                            <input type="text" name="commonName" class="form-control certs-input" value="GestionQ_Facturacion" placeholder="Ej: GestionQ_Facturacion" required />
+                            <span class="form-text text-muted text-xs d-block mt-1">Este identificador sirve para agrupar los certificados dentro del portal de AFIP.</span>
+                        </div>
+                        <button type="submit" class="btn btn-indigo w-100 btn-certs-submit">
+                            <i class="bi bi-cpu"></i> Generar Llave Privada y CSR
+                        </button>
+                    </form>
+                }
+                else
+                {
+                    <div class="alert alert-info certs-inner-alert mb-4">
+                        <i class="bi bi-info-circle-fill"></i>
+                        <div>
+                            La clave privada del sistema se encuentra activa. Puede descargar la solicitud generada para AFIP a continuación.
+                        </div>
+                    </div>
+
+                    @if (Model.HasCsr)
+                    {
+                        <div class="text-center py-3">
+                            <a asp-action="DownloadCsr" class="btn btn-lg btn-success btn-download-glowing">
+                                <i class="bi bi-cloud-arrow-down-fill"></i> Descargar Solicitud (gestionq_afip.csr)
+                            </a>
+                            <p class="text-muted text-xs mt-3 mb-0">Descargue este archivo y guárdelo. Lo necesitará para el paso 2 de la guía de AFIP.</p>
+                        </div>
+                    }
+                }
+            </div>
+
+            <!-- Card 4: AFIP Wizard Guide -->
+            <div class="certs-card glass-card mt-4">
+                <h3 class="certs-card-title"><i class="bi bi-journal-check text-success"></i> 2. Guía de Pasos en el Portal de AFIP</h3>
+                <p class="text-muted text-sm mb-4">Siga este instructivo para obtener su certificado habilitado en AFIP/ARCA:</p>
+
+                <div class="wizard-timeline">
+                    <!-- Paso 1 -->
+                    <div class="timeline-step">
+                        <div class="timeline-number">1</div>
+                        <div class="timeline-content">
+                            <h4>Generar Solicitud</h4>
+                            <p>Complete el formulario superior para generar la clave criptográfica. Descargue el archivo <code>gestionq_afip.csr</code>.</p>
+                        </div>
+                    </div>
+
+                    <!-- Paso 2 -->
+                    <div class="timeline-step">
+                        <div class="timeline-number">2</div>
+                        <div class="timeline-content">
+                            <h4>Subir CSR al Portal de AFIP</h4>
+                            <p>Acceda a AFIP con su Clave Fiscal y CUIT. Siga los pasos correspondientes al entorno elegido:</p>
+                            <div class="accordion mt-2" id="afipAccordion">
+                                <div class="accordion-item certs-accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed certs-accordion-btn" type="button" data-bs-toggle="collapse" data-bs-target="#collapseHomo">
+                                            <i class="bi bi-bug"></i> Para Entorno de Pruebas (Homologación)
+                                        </button>
+                                    </h2>
+                                    <div id="collapseHomo" class="accordion-collapse collapse" data-bs-parent="#afipAccordion">
+                                        <div class="accordion-body text-muted text-sm">
+                                            1. Ingrese al servicio <strong>WSASS - Sistema de Autorización de Web Services</strong>.<br/>
+                                            2. Seleccione <strong>Crear Agente de Transporte</strong>.<br/>
+                                            3. Complete el Nombre del Alias (ej: <code>GestionQ_Facturacion</code>).<br/>
+                                            4. En el campo CSR, suba el archivo <code>gestionq_afip.csr</code> descargado anteriormente.<br/>
+                                            5. Presione <strong>Guardar</strong> y luego descargue el Certificado Digital firmado de pruebas (archivo con extensión <code>.crt</code> o <code>.pem</code>).
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="accordion-item certs-accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed certs-accordion-btn" type="button" data-bs-toggle="collapse" data-bs-target="#collapseProd">
+                                            <i class="bi bi-briefcase"></i> Para Entorno Real (Producción)
+                                        </button>
+                                    </h2>
+                                    <div id="collapseProd" class="accordion-collapse collapse" data-bs-parent="#afipAccordion">
+                                        <div class="accordion-body text-muted text-sm">
+                                            1. Ingrese al servicio <strong>Administración de Certificados Digitales</strong>.<br/>
+                                            2. Haga clic en <strong>Agregar Alias</strong> y complete los datos.<br/>
+                                            3. Suba el archivo <code>gestionq_afip.csr</code> en el cargador correspondiente.<br/>
+                                            4. AFIP generará la clave. Presione **Obtener Certificado** y descargue el archivo final de firma digital (extensión <code>.crt</code>).<br/>
+                                            5. <i>Nota:</i> Posteriormente deberá asociar el Alias al servicio <strong>Facturación Electrónica (wsfe)</strong> desde el **Administrador de Relaciones de Clave Fiscal**.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Paso 3 -->
+                    <div class="timeline-step">
+                        <div class="timeline-number">3</div>
+                        <div class="timeline-content">
+                            <h4>Activar en GestionQ</h4>
+                            <p>Suba el archivo <code>.crt</code> obtenido en la sección superior **"Cargar Certificado de AFIP"**. El sistema estará listo para conectarse de forma real con los servidores fiscales.</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<style>
+    :root {
+        --certs-primary: #3b82f6;
+        --certs-indigo: #6366f1;
+        --certs-indigo-hover: #4f46e5;
+        --certs-dark: #0f172a;
+        --certs-bg: #f8fafc;
+        --certs-card: #ffffff;
+        --certs-border: #e2e8f0;
+        --certs-text: #1e293b;
+    }
+
+    .certs-container {
+        font-family: 'Outfit', sans-serif;
+        color: var(--certs-text);
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    .back-link {
+        margin-bottom: 25px;
+    }
+
+    .btn-back {
+        color: #64748b;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.95rem;
+        transition: color 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .btn-back:hover {
+        color: var(--certs-primary);
+    }
+
+    .certs-alert {
+        border-radius: 12px;
+        padding: 16px 20px;
+        margin-bottom: 25px;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        font-size: 0.92rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+
+    .certs-alert i {
+        font-size: 1.4rem;
+    }
+
+    .certs-header-card {
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        color: white;
+        border-radius: 20px;
+        padding: 30px;
+        margin-bottom: 30px;
+        display: flex;
+        align-items: center;
+        gap: 25px;
+        box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.15);
+    }
+
+    .header-icon-glowing {
+        width: 64px;
+        height: 64px;
+        border-radius: 16px;
+        background: rgba(99, 102, 241, 0.15);
+        border: 1px solid rgba(99, 102, 241, 0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        color: #818cf8;
+        box-shadow: 0 0 20px rgba(99, 102, 241, 0.25);
+    }
+
+    .header-text-block h2 {
+        font-size: 1.4rem;
+        font-weight: 700;
+        margin: 0 0 6px 0;
+        letter-spacing: -0.02em;
+    }
+
+    .header-text-block p {
+        font-size: 0.92rem;
+        margin: 0;
+        opacity: 0.8;
+        font-weight: 300;
+        line-height: 1.5;
+    }
+
+    .certs-grid {
+        display: grid;
+        grid-template-columns: 5fr 7fr;
+        gap: 30px;
+        align-items: start;
+    }
+
+    @@media (max-width: 991px) {
+        .certs-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .glass-card {
+        background: var(--certs-card);
+        border-radius: 20px;
+        border: 1px solid var(--certs-border);
+        padding: 30px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+    }
+
+    .border-primary-glow {
+        border: 1px solid #bfdbfe;
+        box-shadow: 0 4px 25px rgba(59, 130, 246, 0.08);
+    }
+
+    .certs-card-title {
+        font-size: 1.15rem;
+        font-weight: 700;
+        margin: 0 0 8px 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        letter-spacing: -0.01em;
+    }
+
+    .certs-lbl {
+        font-weight: 600;
+        font-size: 0.85rem;
+        color: #475569;
+        margin-bottom: 6px;
+    }
+
+    .certs-input {
+        border-radius: 10px;
+        border: 1px solid var(--certs-border);
+        padding: 10px 14px;
+        font-size: 0.92rem;
+        color: var(--certs-dark);
+        background-color: #f8fafc;
+        transition: all 0.2s ease;
+    }
+
+    .certs-input:focus {
+        border-color: #a5b4fc;
+        background-color: white;
+        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+        outline: none;
+    }
+
+    .text-xs {
+        font-size: 0.78rem;
+    }
+
+    .text-sm {
+        font-size: 0.88rem;
+    }
+
+    .btn-certs-submit {
+        border-radius: 10px;
+        font-weight: 700;
+        padding: 12px 20px;
+        font-size: 0.95rem;
+        transition: all 0.2s ease;
+        border: none;
+    }
+
+    .btn-indigo {
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+        color: white;
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+    }
+
+    .btn-indigo:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 15px rgba(99, 102, 241, 0.3);
+        color: white;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        color: white;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 15px rgba(59, 130, 246, 0.3);
+        color: white;
+    }
+
+    .btn-certs-action {
+        border-radius: 10px;
+        font-weight: 600;
+        padding: 10px 16px;
+        font-size: 0.88rem;
+    }
+
+    /* Status Items */
+    .status-list {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .status-item {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        padding: 12px 16px;
+        background: #f8fafc;
+        border: 1px solid var(--certs-border);
+        border-radius: 12px;
+    }
+
+    .status-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+    }
+
+    .status-icon.success {
+        background: #ecfdf5;
+        color: #10b981;
+    }
+
+    .status-icon.danger {
+        background: #fef2f2;
+        color: #ef4444;
+    }
+
+    .status-icon.warning {
+        background: #fffbeb;
+        color: #f59e0b;
+    }
+
+    .status-details {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .status-label {
+        font-size: 0.82rem;
+        font-weight: 500;
+        color: #64748b;
+    }
+
+    .status-val {
+        font-size: 0.88rem;
+        font-weight: 700;
+    }
+
+    /* Cert Details Box */
+    .cert-info-box {
+        background: #f0fdf4;
+        border: 1px solid #bbf7d0;
+        border-radius: 12px;
+        padding: 16px 20px;
+    }
+
+    .cert-info-box h5 {
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: #166534;
+        margin: 0 0 10px 0;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .cert-meta-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.82rem;
+        padding: 4px 0;
+        border-bottom: 1px solid rgba(187, 247, 208, 0.5);
+    }
+
+    .cert-meta-row:last-child {
+        border-bottom: none;
+    }
+
+    .meta-lbl {
+        color: #166534;
+        opacity: 0.8;
+    }
+
+    .meta-val {
+        font-weight: 600;
+        color: #14532d;
+        max-width: 220px;
+    }
+
+    /* CSR Download glowing button */
+    .btn-download-glowing {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-weight: 700;
+        padding: 15px 30px;
+        box-shadow: 0 0 20px rgba(16, 185, 129, 0.35);
+        transition: all 0.3s ease;
+        animation: pulseGlowing 2s infinite;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .btn-download-glowing:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 0 28px rgba(16, 185, 129, 0.5);
+        color: white;
+    }
+
+    @@keyframes pulseGlowing {
+        0% {
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+        }
+        70% {
+            box-shadow: 0 0 0 15px rgba(16, 185, 129, 0);
+        }
+        100% {
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+        }
+    }
+
+    /* Timeline Wizard styles */
+    .wizard-timeline {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        margin-top: 15px;
+    }
+
+    .timeline-step {
+        display: flex;
+        gap: 15px;
+        position: relative;
+    }
+
+    .timeline-step:not(:last-child)::after {
+        content: '';
+        position: absolute;
+        left: 15px;
+        top: 32px;
+        bottom: -20px;
+        width: 2px;
+        background: #f1f5f9;
+    }
+
+    .timeline-number {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: #f1f5f9;
+        border: 2px solid #cbd5e1;
+        color: #475569;
+        font-weight: 700;
+        font-size: 0.95rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        z-index: 2;
+    }
+
+    .timeline-step:first-child .timeline-number {
+        background: #eff6ff;
+        border-color: #bfdbfe;
+        color: #1d4ed8;
+    }
+
+    .timeline-step:nth-child(2) .timeline-number {
+        background: #f5f3ff;
+        border-color: #ddd6fe;
+        color: #6d28d9;
+    }
+
+    .timeline-step:last-child .timeline-number {
+        background: #ecfdf5;
+        border-color: #a7f3d0;
+        color: #047857;
+    }
+
+    .timeline-content {
+        flex-grow: 1;
+        padding-top: 4px;
+    }
+
+    .timeline-content h4 {
+        font-size: 0.95rem;
+        font-weight: 700;
+        margin: 0 0 4px 0;
+    }
+
+    .timeline-content p {
+        font-size: 0.85rem;
+        color: #64748b;
+        margin: 0;
+        line-height: 1.45;
+    }
+
+    .certs-accordion-item {
+        border-radius: 8px !important;
+        margin-bottom: 8px;
+        border: 1px solid var(--certs-border);
+        overflow: hidden;
+    }
+
+    .certs-accordion-btn {
+        font-weight: 600;
+        font-size: 0.8rem;
+        padding: 10px 14px;
+        background-color: #f8fafc;
+        color: var(--certs-dark) !important;
+        box-shadow: none !important;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .certs-accordion-btn::after {
+        width: 14px;
+        height: 14px;
+        background-size: 14px;
+    }
+
+    /* File Upload Input Wrapper */
+    .file-upload-wrapper {
+        position: relative;
+    }
+
+    .file-upload-wrapper .certs-input {
+        padding-left: 45px;
+    }
+
+    .file-upload-icon {
+        position: absolute;
+        left: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 1.1rem;
+        color: #64748b;
+    }
+</style>

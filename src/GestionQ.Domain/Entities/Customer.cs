@@ -24,4 +24,5 @@ public class Customer
     public string? ImageUrl { get; set; }
 
     public decimal Balance { get; set; }
+    public decimal DiscountPercentage { get; set; } = 0;
 }

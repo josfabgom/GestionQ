@@ -1,0 +1,56 @@
+@model GestionQ.Domain.Entities.MercadoPagoConfig
+@{
+    ViewData["Title"] = "Nueva Configuración MP";
+}
+
+<h1 class="page-title">Nueva Configuración de Mercado Pago</h1>
+
+<div class="glass-panel" style="max-width: 800px;">
+    <form asp-action="Create">
+        <div asp-validation-summary="All" class="text-danger"></div>
+
+        <div class="form-group mb-3">
+            <label asp-for="PointOfSaleId" class="control-label">Punto de Venta (Caja)</label>
+            <select asp-for="PointOfSaleId" class="form-control" asp-items="@(new SelectList(ViewBag.PointsOfSale, "Id", "Name"))">
+                <option value="">Todas las cajas / Global</option>
+            </select>
+        </div>
+
+        <div class="form-group mb-3">
+            <label asp-for="AccessToken" class="control-label">Access Token (Prod)</label>
+            <input asp-for="AccessToken" class="form-control" required />
+            <span asp-validation-for="AccessToken" class="text-danger"></span>
+        </div>
+
+        <div class="form-group mb-3">
+            <label asp-for="DefaultMethod" class="control-label">Modalidad Preferida</label>
+            <select asp-for="DefaultMethod" class="form-control" required>
+                <option value="QR">Código QR Dinámico</option>
+                <option value="POINT">Lector Físico (Point Plus/Smart)</option>
+            </select>
+        </div>
+
+        <div class="form-group mb-3">
+            <label asp-for="ExternalPosId" class="control-label">External Pos ID (Solo para QR)</label>
+            <input asp-for="ExternalPosId" class="form-control" placeholder="Ej: CAJA1" />
+            <span class="text-muted" style="font-size: 0.8rem;">El ID de la caja creada en el panel de Mercado Pago.</span>
+        </div>
+
+        <div class="form-group mb-4">
+            <label asp-for="PointDeviceId" class="control-label">ID del Dispositivo (Solo para Point)</label>
+            <input asp-for="PointDeviceId" class="form-control" placeholder="Ej: PAX_A910_..." />
+            <span class="text-muted" style="font-size: 0.8rem;">El Device ID del lector físico.</span>
+        </div>
+
+        <div class="form-group form-check mb-4">
+            <label class="form-check-label">
+                <input class="form-check-input" asp-for="IsActive" /> Activo
+            </label>
+        </div>
+
+        <div class="form-group">
+            <button type="submit" class="btn-primary">Guardar Configuración</button>
+            <a asp-action="Index" class="btn-secondary" style="margin-left: 10px;">Cancelar</a>
+        </div>
+    </form>
+</div>

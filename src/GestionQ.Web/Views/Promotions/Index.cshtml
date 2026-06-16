@@ -1,0 +1,137 @@
+@model IEnumerable<GestionQ.Domain.Entities.PromotionRule>
+
+@{
+    ViewData["Title"] = "Gestión de Promociones";
+}
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <h1 class="page-title" style="margin: 0;">Gestión de Promociones</h1>
+    <a asp-action="Create" class="btn-primary"><i class="fa-solid fa-plus"></i> Nueva Promoción</a>
+</div>
+
+@if (TempData["Message"] != null)
+{
+    <div class="glass-panel" style="background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.2); color: #34d399; margin-bottom: 1.5rem; padding: 1rem; border-radius: 8px;">
+        <i class="fa-solid fa-circle-check"></i> @TempData["Message"]
+    </div>
+}
+
+<div class="glass-panel">
+    <div style="overflow-x: auto;">
+        <table class="table" style="width: 100%;">
+            <thead>
+                <tr>
+                    <th style="width: 20%;">Nombre</th>
+                    <th style="width: 15%;">Tipo de Regla</th>
+                    <th style="width: 18%;">Configuración</th>
+                    <th style="width: 22%;">Productos</th>
+                    <th style="width: 15%;">Vigencia</th>
+                    <th style="width: 10%; text-align: center;">Estado</th>
+                    <th style="width: 10%;">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Any())
+                {
+                    <tr>
+                        <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 3rem 1rem;">
+                            <i class="fa-solid fa-tags" style="font-size: 2.5rem; margin-bottom: 1rem; display: block; opacity: 0.3;"></i>
+                            No hay promociones creadas actualmente.
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td style="font-weight: 700; color: white;">@item.Name</td>
+                            <td>
+                                @switch (item.Type)
+                                {
+                                    case GestionQ.Domain.Entities.PromotionType.Percentage:
+                                        <span class="badge" style="background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3);">Porcentaje</span>
+                                        break;
+                                    case GestionQ.Domain.Entities.PromotionType.FixedAmount:
+                                        <span class="badge" style="background: rgba(236, 72, 153, 0.15); color: #f472b6; border: 1px solid rgba(236, 72, 153, 0.3);">Descuento Fijo</span>
+                                        break;
+                                    case GestionQ.Domain.Entities.PromotionType.XForY:
+                                        <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3);">Paga X Lleva Y</span>
+                                        break;
+                                    case GestionQ.Domain.Entities.PromotionType.Volume:
+                                        <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3);">Por Volumen</span>
+                                        break;
+                                }
+                                @if (item.IsStackable)
+                                {
+                                    <br />
+                                    <span class="badge" style="background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2); font-size: 0.75rem; margin-top: 0.25rem; display: inline-block;">Acumulable</span>
+                                }
+                            </td>
+                            <td style="font-family: monospace; font-size: 0.9rem;">
+                                @switch (item.Type)
+                                {
+                                    case GestionQ.Domain.Entities.PromotionType.Percentage:
+                                        <span>@item.Value.ToString("N0")% OFF</span>
+                                        break;
+                                    case GestionQ.Domain.Entities.PromotionType.FixedAmount:
+                                        <span>-$@item.Value.ToString("N2")</span>
+                                        break;
+                                    case GestionQ.Domain.Entities.PromotionType.XForY:
+                                        <span>Lleva @item.BuyQuantity Paga @item.PayQuantity</span>
+                                        break;
+                                    case GestionQ.Domain.Entities.PromotionType.Volume:
+                                        <span>@item.BuyQuantity+ un. a $@item.Value.ToString("N2") c/u</span>
+                                        break;
+                                }
+                            </td>
+                            <td>
+                                @if (item.Products != null && item.Products.Any())
+                                {
+                                    <div style="max-height: 80px; overflow-y: auto; display: flex; flex-wrap: wrap; gap: 0.25rem; padding-right: 0.25rem;">
+                                        @foreach (var prod in item.Products)
+                                        {
+                                            <span class="badge" style="background: rgba(255, 255, 255, 0.05); color: white; font-weight: normal; border: 1px solid rgba(255, 255, 255, 0.1);">
+                                                @prod.Product?.Name
+                                            </span>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span style="color: var(--text-muted); font-size: 0.85rem; font-style: italic;">Sin artículos vinculados</span>
+                                }
+                            </td>
+                            <td style="font-size: 0.85rem;">
+                                <div><strong style="color: var(--text-muted);">Desde:</strong> @item.StartDate.ToString("dd/MM/yyyy")</div>
+                                <div><strong style="color: var(--text-muted);">Hasta:</strong> @item.EndDate.ToString("dd/MM/yyyy")</div>
+                            </td>
+                            <td style="text-align: center;">
+                                @if (item.IsActive && item.StartDate <= DateTime.Now && item.EndDate >= DateTime.Now)
+                                {
+                                    <span class="badge bg-success" style="padding: 0.35rem 0.6rem; font-weight: bold; border-radius: 6px;">Vigente</span>
+                                }
+                                else if (!item.IsActive)
+                                {
+                                    <span class="badge bg-danger" style="padding: 0.35rem 0.6rem; font-weight: bold; border-radius: 6px;">Inactiva</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary" style="padding: 0.35rem 0.6rem; font-weight: bold; border-radius: 6px; background-color: #64748b !important;">Fuera de Rango</span>
+                                }
+                            </td>
+                            <td>
+                                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" title="Editar"><i class="fa-solid fa-pen-to-square"></i></a>
+                                    <form asp-action="Delete" asp-route-id="@item.Id" method="post" style="margin: 0;" onsubmit="return confirm('¿Está seguro de eliminar esta promoción?');">
+                                        <button type="submit" class="btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; color: #ef4444;" title="Eliminar"><i class="fa-solid fa-trash-can"></i></button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

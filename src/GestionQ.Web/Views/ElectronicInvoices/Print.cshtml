@@ -1,0 +1,508 @@
+@model GestionQ.Domain.Entities.ElectronicInvoice
+@using System.Text
+@using System.Text.Json
+@{
+    Layout = null; // No MVC wrapper for printing view
+    
+    // Generate AFIP QR Code Base64 Data
+    var qrObj = new {
+        ver = 1,
+        fecha = Model.IssueDate.ToString("yyyy-MM-dd"),
+        cuit = 30712345678L, // Simulated company CUIT (GestionQ)
+        ptoVta = Model.PointOfSaleNumber,
+        tipoCmp = Model.InvoiceTypeCode,
+        nroCmp = Model.InvoiceNumber,
+        importe = (double)Model.TotalAmount,
+        moneda = "PES",
+        ctz = 1.0,
+        tipoDocRec = Model.DocTypeCode,
+        nroDocRec = long.TryParse(Model.DocNumber, out var recDoc) ? recDoc : 0L,
+        tipoCodAut = "E",
+        codAut = long.TryParse(Model.CAE, out var caeVal) ? caeVal : 0L
+    };
+    
+    var jsonString = JsonSerializer.Serialize(qrObj);
+    var base64Json = Convert.ToBase64String(Encoding.UTF8.GetBytes(jsonString));
+    var afipQrUrl = $"https://www.afip.gob.ar/fe/qr/?p={base64Json}";
+    var qrImageUrl = $"https://api.qrserver.com/v1/create-qr-code/?size=110x110&data={Uri.EscapeDataString(afipQrUrl)}";
+    
+    // Barcode value stored in ErrorMessage
+    string barcodeValue = Model.ErrorMessage ?? "";
+}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Factura Electrónica @Model.FormattedVoucherNumber</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+            color: #334155;
+            margin: 0;
+            padding: 20px;
+            background-color: #ffffff;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .invoice-box {
+            max-width: 800px;
+            margin: auto;
+            border: 1px solid #cbd5e1;
+            padding: 25px;
+            background-color: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Invoice Type AFIP standard letter box */
+        .afip-letter-box {
+            position: absolute;
+            left: 50%;
+            top: 45px;
+            transform: translateX(-50%);
+            width: 48px;
+            height: 48px;
+            border: 2px solid #334155;
+            background: white;
+            text-align: center;
+            font-size: 24px;
+            font-weight: 800;
+            line-height: 44px;
+            z-index: 10;
+        }
+
+        .afip-letter-sub {
+            position: absolute;
+            left: 50%;
+            top: 95px;
+            transform: translateX(-50%);
+            font-size: 8px;
+            font-weight: 700;
+            text-transform: uppercase;
+            width: 80px;
+            text-align: center;
+            color: #64748b;
+        }
+
+        .header-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .header-cell {
+            width: 50%;
+            vertical-align: top;
+            padding: 15px;
+            border: 1px solid #cbd5e1;
+        }
+
+        .header-left h1 {
+            font-size: 22px;
+            font-weight: 800;
+            margin: 0 0 10px 0;
+            color: #1e3a8a;
+        }
+
+        .header-right h2 {
+            font-size: 16px;
+            font-weight: 800;
+            margin: 0 0 10px 0;
+            text-transform: uppercase;
+        }
+
+        .header-info-row {
+            margin-bottom: 6px;
+        }
+
+        .header-info-label {
+            font-weight: 600;
+            color: #64748b;
+        }
+
+        /* Customer Section */
+        .section-title {
+            background-color: #f8fafc;
+            font-weight: 700;
+            padding: 8px 12px;
+            border: 1px solid #cbd5e1;
+            border-bottom: none;
+            margin-top: 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 11px;
+            color: #475569;
+        }
+
+        .customer-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        .customer-table td {
+            border: 1px solid #cbd5e1;
+            padding: 10px 12px;
+            width: 50%;
+            vertical-align: top;
+        }
+
+        /* Items Table */
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            margin-bottom: 25px;
+        }
+
+        .items-table th {
+            background-color: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            padding: 10px;
+            font-weight: 700;
+            text-align: left;
+            font-size: 11px;
+            color: #475569;
+        }
+
+        .items-table td {
+            border: 1px solid #e2e8f0;
+            padding: 10px;
+        }
+
+        .items-table tr:last-child td {
+            border-bottom: 1px solid #cbd5e1;
+        }
+
+        .text-right {
+            text-align: right !important;
+        }
+
+        .text-center {
+            text-align: center !important;
+        }
+
+        /* Totals Block */
+        .totals-container {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 30px;
+        }
+
+        .totals-table {
+            width: 250px;
+            border-collapse: collapse;
+        }
+
+        .totals-table td {
+            padding: 6px 12px;
+            border: 1px solid #cbd5e1;
+        }
+
+        .totals-table tr.grand-total td {
+            background-color: #f8fafc;
+            font-weight: 800;
+            font-size: 13px;
+            color: #1e3a8a;
+        }
+
+        /* AFIP Footer */
+        .afip-footer {
+            border-top: 2px solid #334155;
+            padding-top: 20px;
+            margin-top: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .afip-qr-section {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .afip-logo-img {
+            height: 35px;
+            margin-bottom: 10px;
+        }
+
+        .afip-cae-section {
+            text-align: right;
+        }
+
+        .cae-title {
+            font-weight: 800;
+            font-size: 13px;
+            color: #1e293b;
+            margin-bottom: 4px;
+        }
+
+        .cae-date {
+            font-size: 11px;
+            color: #64748b;
+        }
+
+        /* CSS Barcode simulation */
+        .barcode-box {
+            margin-top: 15px;
+            text-align: center;
+        }
+
+        .barcode-lines {
+            font-family: monospace;
+            background: repeating-linear-gradient(90deg, #000, #000 2px, #fff 2px, #fff 4px);
+            height: 32px;
+            width: 250px;
+            margin: 0 auto 5px auto;
+            border-left: 5px solid #000;
+            border-right: 5px solid #000;
+        }
+
+        .barcode-text {
+            font-family: monospace;
+            font-size: 10px;
+            letter-spacing: 2px;
+            color: #475569;
+        }
+
+        /* Print Button Floating */
+        .no-print-area {
+            max-width: 800px;
+            margin: 0 auto 15px auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            padding: 12px 20px;
+            border-radius: 8px;
+        }
+
+        .btn-print {
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-print:hover {
+            background-color: #1d4ed8;
+        }
+
+        @@media print {
+            body {
+                padding: 0;
+            }
+            .invoice-box {
+                border: none;
+                box-shadow: none;
+                padding: 0;
+            }
+            .no-print-area {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="no-print-area">
+        <div>
+            <i class="bi bi-info-circle-fill text-primary"></i>
+            <span>Comprobante fiscal electrónico autorizado por <strong>ARCA/AFIP</strong>. Listo para su impresión.</span>
+        </div>
+        <button class="btn-print" onclick="window.print()"><i class="bi bi-printer"></i> Imprimir Comprobante</button>
+    </div>
+
+    <div class="invoice-box">
+        
+        <!-- Center Box Letter AFIP style -->
+        <div class="afip-letter-box">
+            @(Model.InvoiceTypeCode == 1 ? "A" : (Model.InvoiceTypeCode == 6 ? "B" : "C"))
+        </div>
+        <div class="afip-letter-sub">
+            Cod. @Model.InvoiceTypeCode.ToString("D2")
+        </div>
+
+        <table class="header-table">
+            <tr>
+                <!-- Left Header: Issuer Info -->
+                <td class="header-cell header-left">
+                    <h1>GestionQ S.A.</h1>
+                    <div class="header-info-row">
+                        <span class="header-info-label">Razón Social:</span> GestionQ S.A.
+                    </div>
+                    <div class="header-info-row">
+                        <span class="header-info-label">Domicilio Comercial:</span> Av. Corrientes 1234, CABA
+                    </div>
+                    <div class="header-info-row">
+                        <span class="header-info-label">Condición ante el IVA:</span> IVA Responsable Inscripto
+                    </div>
+                </td>
+                
+                <!-- Right Header: Voucher Info -->
+                <td class="header-cell header-right">
+                    <h2>@Model.InvoiceTypeDesc</h2>
+                    <div class="header-info-row">
+                        <span class="header-info-label">Punto de Venta:</span> @Model.PointOfSaleNumber.ToString("D5")
+                        &nbsp;&nbsp;&nbsp;
+                        <span class="header-info-label">Comp. Nro:</span> @Model.InvoiceNumber.ToString("D8")
+                    </div>
+                    <div class="header-info-row">
+                        <span class="header-info-label">Fecha de Emisión:</span> @Model.IssueDate.ToString("dd/MM/yyyy")
+                    </div>
+                    <div class="header-info-row">
+                        <span class="header-info-label">CUIT Emisor:</span> 30-71234567-8
+                    </div>
+                    <div class="header-info-row">
+                        <span class="header-info-label">Ingresos Brutos:</span> 30-71234567-8
+                    </div>
+                    <div class="header-info-row">
+                        <span class="header-info-label">Inicio de Actividades:</span> 01/01/2020
+                    </div>
+                </td>
+            </tr>
+        </table>
+
+        <!-- Receiver Section -->
+        <div class="section-title">Receptor del Comprobante</div>
+        <table class="customer-table">
+            <tr>
+                <td>
+                    <div class="header-info-row">
+                        <span class="header-info-label">Razón Social:</span> @Model.CustomerName
+                    </div>
+                    <div class="header-info-row">
+                        <span class="header-info-label">Condición ante el IVA:</span> @Model.CustomerTaxCondition
+                    </div>
+                </td>
+                <td>
+                    <div class="header-info-row">
+                        <span class="header-info-label">Documento:</span> 
+                        @(Model.DocTypeCode == 80 ? "CUIT" : (Model.DocTypeCode == 96 ? "DNI" : "Sin Identificar")) 
+                        @Model.DocNumber
+                    </div>
+                    <div class="header-info-row">
+                        <span class="header-info-label">Condición de Pago:</span> Contado
+                    </div>
+                </td>
+            </tr>
+        </table>
+
+        <!-- Items Table -->
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Producto / Concepto</th>
+                    <th class="text-right">Cant.</th>
+                    <th>U. Medida</th>
+                    <th class="text-right">Precio Unit.</th>
+                    <th class="text-right">% IVA</th>
+                    <th class="text-right">Subtotal</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Sale != null && Model.Sale.Items.Any())
+                {
+                    foreach (var item in Model.Sale.Items)
+                    {
+                        decimal itemTotal = item.Quantity * item.UnitPrice;
+                        decimal vatRate = item.Product?.VatRate?.Rate ?? 21.0m;
+                        // Calculate price without VAT for itemized representation
+                        decimal unitPriceNet = item.UnitPrice / (1 + (vatRate / 100));
+                        decimal subtotalNet = itemTotal / (1 + (vatRate / 100));
+
+                        <tr>
+                            <td>@(item.Product != null ? item.Product.InternalCode.ToString() : item.ProductId.ToString())</td>
+                            <td>@(item.Product?.Name ?? "Producto Genérico")</td>
+                            <td class="text-right">@item.Quantity.ToString("N2")</td>
+                            <td>unidades</td>
+                            <td class="text-right">@unitPriceNet.ToString("N2")</td>
+                            <td class="text-right">@vatRate.ToString("N1")%</td>
+                            <td class="text-right">@subtotalNet.ToString("N2")</td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td>1</td>
+                        <td>Operación Global s/ Venta #@Model.SaleId</td>
+                        <td class="text-right">1.00</td>
+                        <td>unidades</td>
+                        <td class="text-right">@Model.NetAmount.ToString("N2")</td>
+                        <td class="text-right">21.0%</td>
+                        <td class="text-right">@Model.NetAmount.ToString("N2")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <!-- Totals block -->
+        <div class="totals-container">
+            <table class="totals-table">
+                <tr>
+                    <td>Importe Neto Gravado</td>
+                    <td class="text-right">@Model.NetAmount.ToString("C")</td>
+                </tr>
+                <tr>
+                    <td>IVA 21% / 10.5%</td>
+                    <td class="text-right">@Model.VatAmount.ToString("C")</td>
+                </tr>
+                @if (Model.ExemptAmount > 0)
+                {
+                    <tr>
+                        <td>Importe Exento</td>
+                        <td class="text-right">@Model.ExemptAmount.ToString("C")</td>
+                    </tr>
+                }
+                <tr class="grand-total">
+                    <td>Importe Total</td>
+                    <td class="text-right">@Model.TotalAmount.ToString("C")</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- AFIP / ARCA Fiscal Footer -->
+        <div class="afip-footer">
+            <div class="afip-qr-section">
+                <!-- Live Scannable QR Server API with the authentic Base64 string -->
+                <img src="@qrImageUrl" alt="Código QR Fiscal AFIP" style="border: 1px solid #cbd5e1; padding: 3px; background: white;" />
+                <div>
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/7/77/Logo_AFIP.svg" alt="AFIP Logo" class="afip-logo-img" onerror="this.src=''" style="display: block; width: 85px;" />
+                    <span style="font-size: 9px; color: #64748b; font-weight: 500;">Comprobante Autorizado por ARCA</span>
+                    <br/>
+                    <span style="font-size: 8px; color: #94a3b8; font-family: monospace;">RG 4291 / RG 5616 (v4.0)</span>
+                </div>
+            </div>
+            
+            <div class="afip-cae-section">
+                <div class="cae-title">CAE N°: @Model.CAE</div>
+                <div class="cae-date">Fecha de Vencimiento de CAE: <strong>@Model.CAEExpirationDate.ToString("dd/MM/yyyy")</strong></div>
+                
+                <!-- simulation barcode -->
+                <div class="barcode-box">
+                    <div class="barcode-lines"></div>
+                    <div class="barcode-text">@barcodeValue</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,80 @@
+========================================================================
+             GUÍA DE INSTALACIÓN Y USO - SISTEMA GESTIONQ
+========================================================================
+
+Este paquete contiene todo lo necesario para instalar el sistema GestionQ
+en otra computadora servidor local, incluyendo la base de datos.
+
+------------------------------------------------------------------------
+REQUISITOS PREVIOS
+------------------------------------------------------------------------
+- Sistema Operativo: Windows 10, Windows 11 o Windows Server (64 bits).
+- Una red local configurada para que otras terminales puedan conectarse.
+
+------------------------------------------------------------------------
+PASOS PARA LA INSTALACIÓN
+------------------------------------------------------------------------
+
+1. DESCOMPRIMIR EL INSTALADOR:
+   Copie el archivo 'GestionQ_Instalador_Completo.zip' a la nueva PC
+   y descomprímalo en una carpeta local (por ejemplo, en el Escritorio).
+
+2. EJECUTAR EL INSTALADOR AUTOMATIZADO:
+   Haga doble clic en el archivo 'Instalar.bat' para iniciar.
+   El instalador solicitará permisos de Administrador. Haga clic en 'Sí'.
+
+3. INSTALACIÓN DE SQL SERVER EXPRESS (MOTOR DE BASE DE DATOS):
+   Si la PC no tiene instalado SQL Server Express:
+   - El script abrirá automáticamente la ventana de instalación oficial.
+   - Seleccione la opción 'BÁSICA' (Basic).
+   - Siga los pasos por defecto de la pantalla y espere a que finalice.
+   - Una vez terminada la instalación de SQL Server, el script de
+     PowerShell continuará de forma automática.
+
+4. FINALIZACIÓN AUTOMÁTICA:
+   El script realizará las siguientes configuraciones automáticamente:
+   - Copiará los archivos del sistema a 'C:\GestionQ'.
+   - Registrará la aplicación como un Servicio de Windows (inicio automático
+     en segundo plano). Ya no es necesario dejar una consola abierta.
+   - Configurará las reglas del Firewall de Windows para permitir las
+     conexiones en red por el puerto 5144 (aplicación web) y 1433 (base de datos).
+   - Creará un acceso directo en el Escritorio llamado 'Punto de Venta - GestionQ'.
+
+------------------------------------------------------------------------
+CÓMO USAR EL SISTEMA
+------------------------------------------------------------------------
+
+- ACCESO DESDE LA PC SERVIDOR:
+  Haga doble clic en el acceso directo 'Punto de Venta - GestionQ' de su
+  Escritorio, o abra el navegador y escriba:
+  http://localhost:5144
+
+- ACCESO DESDE OTRAS PCs O TABLETS EN LA RED LOCAL:
+  1. En la PC Servidor, el instalador le mostrará su dirección IP (ej: 192.168.1.100).
+  2. En los otros dispositivos conectados a la misma red WiFi/Cable, abra
+     el navegador web e introduzca la IP seguida de ':5144'. Por ejemplo:
+     http://192.168.1.100:5144
+
+------------------------------------------------------------------------
+CREDENCIALES DE ACCESO PREDETERMINADAS
+------------------------------------------------------------------------
+Al ingresar por primera vez, el sistema autogenera el usuario administrador:
+
+- Usuario:  admin@gestionq.com
+- Clave:    Admin123
+
+(Se recomienda cambiar la contraseña o agregar nuevos vendedores desde el
+menú de Usuarios dentro del sistema).
+
+------------------------------------------------------------------------
+AJUSTES AVANZADOS (OPCIONAL)
+------------------------------------------------------------------------
+- Si tiene instalado un servidor SQL Server con un nombre de instancia o
+  clave diferentes a la estándar, edite el archivo de texto:
+  'C:\GestionQ\appsettings.json'
+  y modifique la línea de "DefaultConnection" con sus datos. Luego, abra
+  la ventana de Servicios de Windows (services.msc) y reinicie el servicio
+  llamado 'GestionQ - Punto de Venta'.
+- Para desinstalar el sistema por completo de forma limpia, haga doble
+  clic en 'Desinstalar.bat'.
+========================================================================

@@ -1,0 +1,219 @@
+@model GestionQ.Domain.Entities.PromotionRule
+
+@{
+    ViewData["Title"] = "Editar Promoción";
+}
+
+<h1 class="page-title">Editar Promoción</h1>
+
+<form asp-action="Edit" method="post" id="promoForm">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="Id" />
+    
+    <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 2rem; align-items: start;">
+        <!-- Panel Izquierdo: Configuración de la Regla -->
+        <div class="glass-panel">
+            <h3 style="color: var(--accent); margin-bottom: 1.25rem;"><i class="fa-solid fa-gear"></i> Regla de Precio</h3>
+            
+            <div class="form-group" style="margin-bottom: 1rem;">
+                <label asp-for="Name" class="control-label" style="font-weight: 600; margin-bottom: 0.4rem; display: block;">Nombre de la Promoción</label>
+                <input asp-for="Name" class="form-control" placeholder="Ej: 3x2 Fernet Branca, 10% Coca Cola..." required />
+                <span asp-validation-for="Name" class="text-danger"></span>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 1rem;">
+                <label asp-for="Type" class="control-label" style="font-weight: 600; margin-bottom: 0.4rem; display: block;">Tipo de Promoción</label>
+                <select asp-for="Type" id="PromotionTypeSelect" class="form-control" onchange="togglePromotionTypeFields()">
+                    <option value="Percentage">Porcentaje de Descuento (%)</option>
+                    <option value="FixedAmount">Descuento Fijo ($)</option>
+                    <option value="XForY">Paga X Lleva Y (e.g. 3x2)</option>
+                    <option value="Volume">Por Volumen (Precio especial al llevar N+)</option>
+                </select>
+                <span asp-validation-for="Type" class="text-danger"></span>
+            </div>
+
+            <!-- Campo Valor (Descuento, Porcentaje o Precio Unitario) -->
+            <div class="form-group" id="valueGroup" style="margin-bottom: 1rem;">
+                <label asp-for="Value" id="valueLabel" class="control-label" style="font-weight: 600; margin-bottom: 0.4rem; display: block;">Valor</label>
+                <input asp-for="Value" id="valueInput" class="form-control" type="number" step="any" min="0" placeholder="Ej: 10" />
+                <span asp-validation-for="Value" class="text-danger"></span>
+            </div>
+
+            <!-- Campo Cantidad de Compra (X o Mínimo) -->
+            <div class="form-group" id="buyQtyGroup" style="margin-bottom: 1rem; display: none;">
+                <label asp-for="BuyQuantity" id="buyQtyLabel" class="control-label" style="font-weight: 600; margin-bottom: 0.4rem; display: block;">Cantidad</label>
+                <input asp-for="BuyQuantity" id="buyQtyInput" class="form-control" type="number" min="1" placeholder="Ej: 3" />
+                <span asp-validation-for="BuyQuantity" class="text-danger"></span>
+            </div>
+
+            <!-- Campo Cantidad de Pago (Y) -->
+            <div class="form-group" id="payQtyGroup" style="margin-bottom: 1rem; display: none;">
+                <label asp-for="PayQuantity" class="control-label" style="font-weight: 600; margin-bottom: 0.4rem; display: block;">Cantidad a Pagar (Lleva Y)</label>
+                <input asp-for="PayQuantity" id="payQtyInput" class="form-control" type="number" min="1" placeholder="Ej: 2" />
+                <span asp-validation-for="PayQuantity" class="text-danger"></span>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div class="form-group">
+                    <label asp-for="StartDate" class="control-label" style="font-weight: 600; margin-bottom: 0.4rem; display: block;">Vigencia Desde</label>
+                    <input asp-for="StartDate" class="form-control" type="date" asp-format="{0:yyyy-MM-dd}" required />
+                    <span asp-validation-for="StartDate" class="text-danger"></span>
+                </div>
+                <div class="form-group">
+                    <label asp-for="EndDate" class="control-label" style="font-weight: 600; margin-bottom: 0.4rem; display: block;">Vigencia Hasta</label>
+                    <input asp-for="EndDate" class="form-control" type="date" asp-format="{0:yyyy-MM-dd}" required />
+                    <span asp-validation-for="EndDate" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="form-group form-check" style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; padding-left: 0;">
+                <input asp-for="IsActive" class="form-check-input" type="checkbox" id="isActiveCheck" style="width: 1.2rem; height: 1.2rem; margin: 0; cursor: pointer;" />
+                <label asp-for="IsActive" class="form-check-label" for="isActiveCheck" style="cursor: pointer; font-weight: 600;">Promoción Activa</label>
+            </div>
+
+            <div class="form-group form-check" style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem; padding-left: 0;">
+                <input asp-for="IsStackable" class="form-check-input" type="checkbox" id="isStackableCheck" style="width: 1.2rem; height: 1.2rem; margin: 0; cursor: pointer;" />
+                <label asp-for="IsStackable" class="form-check-label" for="isStackableCheck" style="cursor: pointer; font-weight: 600;">Acumulable con otras promociones</label>
+            </div>
+
+            <div class="form-group" style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                <button type="submit" class="btn-primary" style="padding: 0.6rem 1.5rem;"><i class="fa-solid fa-save"></i> Guardar Cambios</button>
+                <a asp-action="Index" class="btn-secondary" style="padding: 0.6rem 1.5rem;">Cancelar</a>
+            </div>
+        </div>
+
+        <!-- Panel Derecho: Artículos Vinculados -->
+        <div class="glass-panel" style="max-height: 520px; display: flex; flex-direction: column;">
+            <h3 style="color: var(--accent); margin-bottom: 1rem;"><i class="fa-solid fa-box"></i> Artículos Vinculados</h3>
+            
+            <!-- Buscador Rápido -->
+            <div style="position: relative; margin-bottom: 0.75rem; display: flex; align-items: center;">
+                <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 0.75rem; color: var(--text-muted);"></i>
+                <input type="text" id="productSearch" class="form-control" style="padding-left: 2.2rem; font-size: 0.9rem;" 
+                       placeholder="Escribe nombre o código del producto..." oninput="filterChecklist()" />
+            </div>
+
+            <!-- Listado con Checkboxes -->
+            <div id="productChecklist" style="flex: 1; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem; background: rgba(0,0,0,0.15);">
+                @if (ViewBag.Products == null || !((IEnumerable<GestionQ.Domain.Entities.Product>)ViewBag.Products).Any())
+                {
+                    <p style="color: var(--text-muted); font-size: 0.9rem; text-align: center; margin-top: 2rem;">No hay productos disponibles en el stock.</p>
+                }
+                else
+                {
+                    @foreach (var prod in ViewBag.Products as IEnumerable<GestionQ.Domain.Entities.Product>)
+                    {
+                        var isChecked = Model.Products != null && Model.Products.Any(p => p.ProductId == prod.Id);
+                        <div class="product-check-item form-check" data-name="@prod.Name.ToLower()" data-code="@prod.InternalCode.ToString().ToLower()" style="padding: 0.4rem 0.5rem; display: flex; align-items: center; gap: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.03);">
+                            <input class="form-check-input" type="checkbox" name="selectedProductIds" value="@prod.Id" id="prod_@prod.Id" style="width: 1.1rem; height: 1.1rem; margin: 0; cursor: pointer;" @(isChecked ? "checked" : "") />
+                            <label class="form-check-label" for="prod_@prod.Id" style="cursor: pointer; color: white; font-size: 0.85rem; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                <span style="color: var(--accent); font-weight: bold; font-family: monospace;">[@prod.InternalCode.ToString("D5")]</span> @prod.Name ($@prod.Price.ToString("N2"))
+                            </label>
+                        </div>
+                    }
+                }
+            </div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem; text-align: right;">
+                <span id="checkedCount">0</span> artículos seleccionados
+            </div>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            togglePromotionTypeFields();
+            updateCheckedCount();
+
+            // Escuchar cambios en los checkboxes para actualizar contador
+            document.querySelectorAll('#productChecklist input[type="checkbox"]').forEach(chk => {
+                chk.addEventListener('change', updateCheckedCount);
+            });
+        });
+
+        function togglePromotionTypeFields() {
+            const typeSelect = document.getElementById('PromotionTypeSelect');
+            const type = typeSelect.value;
+
+            const valueGroup = document.getElementById('valueGroup');
+            const valueLabel = document.getElementById('valueLabel');
+            const valueInput = document.getElementById('valueInput');
+
+            const buyQtyGroup = document.getElementById('buyQtyGroup');
+            const buyQtyLabel = document.getElementById('buyQtyLabel');
+            const buyQtyInput = document.getElementById('buyQtyInput');
+            
+            const payQtyGroup = document.getElementById('payQtyGroup');
+            const payQtyInput = document.getElementById('payQtyInput');
+
+            // Resetear required y values para no enviar basura
+            valueInput.required = false;
+            buyQtyInput.required = false;
+            payQtyInput.required = false;
+
+            if (type === 'Percentage') {
+                valueGroup.style.display = 'block';
+                valueLabel.innerHTML = 'Porcentaje de Descuento (%) <span class="text-danger">*</span>';
+                valueInput.placeholder = 'Ej: 10';
+                valueInput.required = true;
+                
+                buyQtyGroup.style.display = 'none';
+                payQtyGroup.style.display = 'none';
+            } else if (type === 'FixedAmount') {
+                valueGroup.style.display = 'block';
+                valueLabel.innerHTML = 'Descuento Unitario Fijo ($) <span class="text-danger">*</span>';
+                valueInput.placeholder = 'Ej: 150';
+                valueInput.required = true;
+
+                buyQtyGroup.style.display = 'none';
+                payQtyGroup.style.display = 'none';
+            } else if (type === 'XForY') {
+                valueGroup.style.display = 'none';
+                valueInput.value = '0'; // default value for DB
+
+                buyQtyGroup.style.display = 'block';
+                buyQtyLabel.innerHTML = 'Cantidad Requerida (Lleva - X) <span class="text-danger">*</span>';
+                buyQtyInput.placeholder = 'Ej: 3';
+                buyQtyInput.required = true;
+                
+                payQtyGroup.style.display = 'block';
+                payQtyInput.placeholder = 'Ej: 2';
+                payQtyInput.required = true;
+            } else if (type === 'Volume') {
+                valueGroup.style.display = 'block';
+                valueLabel.innerHTML = 'Precio Unitario Especial ($) <span class="text-danger">*</span>';
+                valueInput.placeholder = 'Ej: 1200';
+                valueInput.required = true;
+
+                buyQtyGroup.style.display = 'block';
+                buyQtyLabel.innerHTML = 'Cantidad Mínima Requerida (Desde) <span class="text-danger">*</span>';
+                buyQtyInput.placeholder = 'Ej: 3';
+                buyQtyInput.required = true;
+                
+                payQtyGroup.style.display = 'none';
+            }
+        }
+
+        function filterChecklist() {
+            const query = document.getElementById('productSearch').value.toLowerCase().trim();
+            const items = document.querySelectorAll('.product-check-item');
+            
+            items.forEach(item => {
+                const name = item.getAttribute('data-name') || '';
+                const code = item.getAttribute('data-code') || '';
+                
+                if (query === '' || name.includes(query) || code.includes(query)) {
+                    item.style.setProperty('display', 'flex', 'important');
+                } else {
+                    item.style.setProperty('display', 'none', 'important');
+                }
+            });
+        }
+
+        function updateCheckedCount() {
+            const count = document.querySelectorAll('#productChecklist input[type="checkbox"]:checked').length;
+            document.getElementById('checkedCount').textContent = count;
+        }
+    </script>
+}

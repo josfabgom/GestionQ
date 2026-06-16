@@ -1,8 +1,10 @@
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.AspNetCore.Hosting
+@using GestionQ.Domain.Constants
 @inject SignInManager<IdentityUser> SignInManager
 @inject UserManager<IdentityUser> UserManager
 @inject IWebHostEnvironment Env
+@inject Microsoft.AspNetCore.Authorization.IAuthorizationService AuthorizationService
 
 <!DOCTYPE html>
 <html lang="es">
@@ -18,8 +20,20 @@
 </head>
 
 <body>
+    <script>
+        (function () {
+            if (localStorage.getItem('sidebarCollapsed') === 'true') {
+                document.body.classList.add('sidebar-collapsed');
+            }
+        })();
+    </script>
     @if (SignInManager.IsSignedIn(User))
     {
+        <!-- Botón para Colapsar/Expandir la Barra Lateral -->
+        <button type="button" id="sidebarCollapseBtn" class="sidebar-toggle-btn" onclick="toggleSidebar()">
+            <i id="sidebarToggleIcon" class="fa-solid fa-angle-left"></i>
+        </button>
+
         <!-- Sidebar -->
         <nav class="sidebar">
             <a asp-controller="Home" asp-action="Index" class="brand">
@@ -57,58 +71,89 @@
 
             <ul class="nav-links">
                 <li>
-                    <a asp-controller="Home" asp-action="Index">Dashboard</a>
+                    <a asp-controller="Home" asp-action="Index">
+                        <i class="fa-solid fa-chart-line"></i> Dashboard
+                    </a>
                 </li>
-                <li>
-                    <a asp-controller="Customers" asp-action="Index">Cuentas Corrientes</a>
-                </li>
-                <li>
-                    <a asp-controller="Products" asp-action="Index">Stock (Productos)</a>
-                </li>
-                <li>
-                    <a asp-controller="Prices" asp-action="Index" style="color: #60a5fa;">Gestión de Precios</a>
-                </li>
-                <li>
-                    <a asp-controller="Sales" asp-action="Index">Ventas</a>
-                </li>
-                <li>
-                    <a asp-controller="CashRegisters" asp-action="Index" style="color: #fbbf24;">Caja / Turno</a>
-                </li>
-                @if (User.IsInRole("Admin"))
+                @if (User.HasClaim("Permission", Permissions.Sales.View))
                 {
-                    <li style="margin-top: 2rem;">
-                        <span
-                            style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); padding-left: 1rem; margin-bottom: 0.5rem; display: block;">Configuración</span>
+                <li>
+                    <a asp-controller="Sales" asp-action="Index" style="font-weight: 600;">
+                        <i class="fa-solid fa-cart-shopping"></i> Ventas
+                    </a>
+                </li>
+                }
+                @if (User.HasClaim("Permission", Permissions.CashRegisters.View))
+                {
+                <li>
+                    <a asp-controller="CashRegisters" asp-action="Index" style="color: #fbbf24; font-weight: 600;">
+                        <i class="fa-solid fa-cash-register"></i> Caja / Turno
+                    </a>
+                </li>
+                }
+                @if (User.HasClaim("Permission", Permissions.Customers.View))
+                {
+                <li>
+                    <a asp-controller="Customers" asp-action="Index">
+                        <i class="fa-solid fa-users"></i> Cuentas Corrientes
+                    </a>
+                </li>
+                }
+                @if (User.HasClaim("Permission", Permissions.Products.View))
+                {
+                <li>
+                    <a asp-controller="Products" asp-action="Index">
+                        <i class="fa-solid fa-box"></i> Stock (Productos)
+                    </a>
+                </li>
+                }
+                @if (User.HasClaim("Permission", Permissions.Config.View))
+                {
+                <li>
+                    <a asp-controller="Prices" asp-action="Index" style="color: #60a5fa;">
+                        <i class="fa-solid fa-tags"></i> Gestión de Precios
+                    </a>
+                </li>
+                <li>
+                    <a asp-controller="Scale" asp-action="Index" style="color: #f59e0b;">
+                        <i class="fa-solid fa-scale-balanced"></i> Envío Balanza
+                    </a>
+                </li>
+                }
+                @if (User.HasClaim("Permission", Permissions.Promotions.View))
+                {
+                <li>
+                    <a asp-controller="Promotions" asp-action="Index" style="color: #10b981;">
+                        <i class="fa-solid fa-percent"></i> Promociones
+                    </a>
+                </li>
+                }
+                @if (User.HasClaim("Permission", Permissions.Purchases.View))
+                {
+                    <li>
+                        <a asp-controller="Purchases" asp-action="Index" style="color: #60a5fa;">
+                            <i class="fa-solid fa-truck-ramp-box"></i> Compras (Ingreso)
+                        </a>
+                    </li>
+                }
+                @if (User.HasClaim("Permission", Permissions.ElectronicInvoices.View))
+                {
+
+                <li>
+                    <a asp-controller="ElectronicInvoices" asp-action="Spool" style="color: #34d399; font-weight: 600;">
+                        <i class="fa-solid fa-print"></i> Spool Fiscal
+                    </a>
+                </li>
+                }
+                @if (User.HasClaim("Permission", Permissions.Config.View))
+                {
+                    <li style="margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1.5rem;">
+                        <span style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); padding-left: 1rem; margin-bottom: 0.5rem; display: block;">Configuración</span>
                     </li>
                     <li>
-                        <a asp-controller="Purchases" asp-action="Index" style="color: #60a5fa;">Compras (Ingreso Stock)</a>
-                    </li>
-                    <li>
-                        <a asp-controller="Users" asp-action="Index" style="color: #a78bfa;">ABM Usuarios</a>
-                    </li>
-                    <li>
-                        <a asp-controller="Suppliers" asp-action="Index" style="color: #a78bfa;">Proveedores</a>
-                    </li>
-                    <li>
-                        <a asp-controller="TaxConditions" asp-action="Index" style="color: #a78bfa;">Condiciones ante el IVA</a>
-                    </li>
-                    <li>
-                        <a asp-controller="VatRates" asp-action="Index" style="color: #a78bfa;">Alícuotas de IVA (%)</a>
-                    </li>
-                    <li>
-                        <a asp-controller="Categories" asp-action="Index" style="color: #a78bfa;">Rubros</a>
-                    </li>
-                    <li>
-                        <a asp-controller="SubCategories" asp-action="Index" style="color: #a78bfa;">Subrubros</a>
-                    </li>
-                    <li>
-                        <a asp-controller="PaymentMethods" asp-action="Index" style="color: #a78bfa;">Medios de Pago</a>
-                    </li>
-                    <li>
-                        <a asp-controller="PointsOfSale" asp-action="Index" style="color: #a78bfa;">Puntos de Venta</a>
-                    </li>
-                    <li>
-                        <a asp-controller="Configuration" asp-action="Index" style="color: #a78bfa;">Ajustes BD y Logo</a>
+                        <a asp-controller="Configuration" asp-action="Index" style="color: #a78bfa; font-weight: 600;">
+                            <i class="fa-solid fa-gears"></i> Ajustes Generales
+                        </a>
                     </li>
                 }
             </ul>
@@ -137,6 +182,15 @@
             });
         </script>
     }
+
+    <script>
+        function toggleSidebar() {
+            const body = document.body;
+            body.classList.toggle('sidebar-collapsed');
+            const isCollapsed = body.classList.contains('sidebar-collapsed');
+            localStorage.setItem('sidebarCollapsed', isCollapsed ? 'true' : 'false');
+        }
+    </script>
 
     @await RenderSectionAsync("Scripts", required: false)
 </body>

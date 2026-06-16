@@ -10,6 +10,9 @@ namespace GestionQ.Domain.Entities
         public int? CustomerId { get; set; }
         public Customer? Customer { get; set; }
         public decimal TotalAmount { get; set; }
+        public decimal SubTotal { get; set; }
+        public decimal DiscountAmount { get; set; }
+        public decimal PaymentDiscountAmount { get; set; } = 0;
 
         public string? UserId { get; set; }
         public Microsoft.AspNetCore.Identity.IdentityUser? User { get; set; }
@@ -21,6 +24,11 @@ namespace GestionQ.Domain.Entities
         public PointOfSale? PointOfSale { get; set; }
 
         public string FormattedTicketNumber => $"{(PointOfSale?.PosNumber ?? 0):D5}-{Id:D8}";
+
+        public ElectronicInvoice? ElectronicInvoice { get; set; }
+
+        public bool IsCancelled { get; set; } = false;
+        public DateTime? CancellationDate { get; set; }
 
         public ICollection<SaleItem> Items { get; set; } = new List<SaleItem>();
         public List<SalePayment> Payments { get; set; } = new();
@@ -37,6 +45,7 @@ namespace GestionQ.Domain.Entities
 
         public decimal Quantity { get; set; }
         public decimal UnitPrice { get; set; }
+        public decimal DiscountAmount { get; set; } = 0;
     }
 
     public class SalePayment
@@ -49,5 +58,6 @@ namespace GestionQ.Domain.Entities
         public PaymentMethod? PaymentMethod { get; set; }
 
         public decimal Amount { get; set; }
+        public string? TransactionReference { get; set; }
     }
 }

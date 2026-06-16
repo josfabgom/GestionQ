@@ -4,10 +4,11 @@ using Microsoft.EntityFrameworkCore;
 using GestionQ.Infrastructure.Data;
 using GestionQ.Domain.Entities;
 using GestionQ.Web.Models;
+using GestionQ.Domain.Constants;
 
 namespace GestionQ.Web.Controllers
 {
-    [Authorize]
+    [Authorize(Policy = Permissions.Products.View)]
     public class ProductsController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -58,6 +59,7 @@ namespace GestionQ.Web.Controllers
             return Ok(products);
         }
 
+        [Authorize(Policy = Permissions.Products.Create)]
         public async Task<IActionResult> Create()
         {
             ViewBag.Categories = await _context.Categories.ToListAsync();
@@ -66,6 +68,7 @@ namespace GestionQ.Web.Controllers
         }
 
         [HttpPost]
+        [Authorize(Policy = Permissions.Products.Create)]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(ProductViewModel model)
         {
@@ -136,6 +139,7 @@ namespace GestionQ.Web.Controllers
             return View(model);
         }
 
+        [Authorize(Policy = Permissions.Products.Edit)]
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null) return NotFound();
@@ -187,6 +191,7 @@ namespace GestionQ.Web.Controllers
         }
 
         [HttpPost]
+        [Authorize(Policy = Permissions.Products.Edit)]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, ProductViewModel model)
         {
@@ -270,6 +275,7 @@ namespace GestionQ.Web.Controllers
         }
 
         [HttpPost]
+        [Authorize(Policy = Permissions.Products.Delete)]
         public async Task<IActionResult> Delete(int id)
         {
             var product = await _context.Products.FindAsync(id);
@@ -286,6 +292,7 @@ namespace GestionQ.Web.Controllers
             return RedirectToAction(nameof(Index));
         }
 
+        [Authorize(Policy = Permissions.Products.Edit)]
         public async Task<IActionResult> Movements(int? id)
         {
             if (id == null) return NotFound();
@@ -302,6 +309,7 @@ namespace GestionQ.Web.Controllers
             return View(movements);
         }
 
+        [Authorize(Policy = Permissions.Products.Edit)]
         public async Task<IActionResult> Adjustment(int? id)
         {
             if (id == null) return NotFound();
@@ -311,6 +319,7 @@ namespace GestionQ.Web.Controllers
         }
 
         [HttpPost]
+        [Authorize(Policy = Permissions.Products.Edit)]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Adjustment(int id, decimal quantity, string concept)
         {

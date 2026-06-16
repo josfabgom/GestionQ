@@ -86,6 +86,26 @@ namespace GestionQ.Infrastructure.Data
                 context.PaymentMethods.AddRange(paymentMethods);
             }
 
+            // Asegurar medios de pago de Mercado Pago
+            var oldMp = await context.PaymentMethods.FirstOrDefaultAsync(p => p.Name == "Mercado Pago");
+            if (oldMp != null)
+            {
+                oldMp.Name = "Mercado Pago QR";
+                context.PaymentMethods.Update(oldMp);
+            }
+
+            var hasQr = await context.PaymentMethods.AnyAsync(p => p.Name == "Mercado Pago QR");
+            if (!hasQr)
+            {
+                context.PaymentMethods.Add(new PaymentMethod { Name = "Mercado Pago QR", IsActive = true });
+            }
+
+            var hasPoint = await context.PaymentMethods.AnyAsync(p => p.Name == "Mercado Pago Point");
+            if (!hasPoint)
+            {
+                context.PaymentMethods.Add(new PaymentMethod { Name = "Mercado Pago Point", IsActive = true });
+            }
+
             await context.SaveChangesAsync();
         }
     }

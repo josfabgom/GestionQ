@@ -4,9 +4,11 @@ using GestionQ.Domain.Entities;
 using GestionQ.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
 
+using GestionQ.Domain.Constants;
+
 namespace GestionQ.Web.Controllers
 {
-    [Authorize]
+    [Authorize(Policy = Permissions.Config.View)]
     public class VatRatesController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -20,13 +22,14 @@ namespace GestionQ.Web.Controllers
         {
             return View(await _context.VatRates.ToListAsync());
         }
+        [Authorize(Policy = Permissions.Config.Create)]
 
         public IActionResult Create()
         {
             return View();
         }
-
         [HttpPost]
+        [Authorize(Policy = Permissions.Config.Create)]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(VatRate vatRate)
         {
@@ -38,6 +41,7 @@ namespace GestionQ.Web.Controllers
             }
             return View(vatRate);
         }
+        [Authorize(Policy = Permissions.Config.Edit)]
 
         public async Task<IActionResult> Edit(int? id)
         {
@@ -49,6 +53,7 @@ namespace GestionQ.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Policy = Permissions.Config.Edit)]
         public async Task<IActionResult> Edit(int id, VatRate vatRate)
         {
             if (id != vatRate.Id) return NotFound();

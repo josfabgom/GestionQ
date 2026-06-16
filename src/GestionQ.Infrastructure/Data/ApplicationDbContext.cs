@@ -18,6 +18,7 @@ namespace GestionQ.Infrastructure.Data
         public DbSet<PaymentMethod> PaymentMethods { get; set; }
         public DbSet<SalePayment> SalePayments { get; set; }
         public DbSet<CashRegister> CashRegisters { get; set; }
+        public DbSet<CashRegisterMovement> CashRegisterMovements { get; set; }
         public DbSet<Supplier> Suppliers { get; set; }
         public DbSet<Purchase> Purchases { get; set; }
         public DbSet<PurchaseItem> PurchaseItems { get; set; }
@@ -27,5 +28,30 @@ namespace GestionQ.Infrastructure.Data
         public DbSet<ProductPrice> ProductPrices { get; set; }
         public DbSet<SystemSetting> SystemSettings { get; set; }
         public DbSet<PointOfSale> PointsOfSale { get; set; }
+        public DbSet<ElectronicInvoice> ElectronicInvoices { get; set; }
+        public DbSet<FiscalPrintJob> FiscalPrintJobs { get; set; }
+        public DbSet<MercadoPagoConfig> MercadoPagoConfigs { get; set; }
+        public DbSet<PromotionRule> PromotionRules { get; set; }
+        public DbSet<PromotionRuleProduct> PromotionRuleProducts { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+
+            modelBuilder.Entity<ElectronicInvoice>()
+                .HasOne(e => e.Sale)
+                .WithOne(s => s.ElectronicInvoice)
+                .HasForeignKey<ElectronicInvoice>(e => e.SaleId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<FiscalPrintJob>()
+                .HasOne(f => f.Sale)
+                .WithMany()
+                .HasForeignKey(f => f.SaleId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<PromotionRuleProduct>()
+                .HasKey(pr => new { pr.PromotionRuleId, pr.ProductId });
+        }
     }
 }

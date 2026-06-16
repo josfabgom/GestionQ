@@ -3,10 +3,11 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
+using GestionQ.Domain.Constants;
 
 namespace GestionQ.Web.Controllers
 {
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = Permissions.Users.View)]
     public class UsersController : Controller
     {
         private readonly UserManager<IdentityUser> _userManager;
@@ -38,6 +39,7 @@ namespace GestionQ.Web.Controllers
             return View(userRoles);
         }
 
+        [Authorize(Policy = Permissions.Users.Create)]
         public IActionResult Create()
         {
             ViewBag.Roles = _roleManager.Roles.Select(r => r.Name).ToList();
@@ -45,6 +47,7 @@ namespace GestionQ.Web.Controllers
         }
 
         [HttpPost]
+        [Authorize(Policy = Permissions.Users.Create)]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(CreateUserViewModel model)
         {
@@ -71,6 +74,7 @@ namespace GestionQ.Web.Controllers
         }
 
         [HttpPost]
+        [Authorize(Policy = Permissions.Users.Delete)]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(string id)
         {
@@ -83,6 +87,7 @@ namespace GestionQ.Web.Controllers
         }
 
         // Simplest Edit: Just change Role
+        [Authorize(Policy = Permissions.Users.Edit)]
         public async Task<IActionResult> EditRole(string id)
         {
             var user = await _userManager.FindByIdAsync(id);
@@ -101,6 +106,7 @@ namespace GestionQ.Web.Controllers
         }
 
         [HttpPost]
+        [Authorize(Policy = Permissions.Users.Edit)]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditRole(EditUserRoleViewModel model)
         {

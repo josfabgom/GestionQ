@@ -6,14 +6,33 @@
 
 <div style="display: flex; justify-content: space-between; align-items: center;">
     <h1 class="page-title">Detalle de Venta #@Model.FormattedTicketNumber</h1>
-    <a asp-action="Index" class="btn-secondary">Volver</a>
+    <div style="display: flex; gap: 0.5rem; align-items: center;">
+        @if (!Model.IsCancelled)
+        {
+            <button type="button" onclick="confirmCancelSale(@Model.Id, '@Model.FormattedTicketNumber')" class="btn-danger">Anular Venta</button>
+        }
+        <a asp-action="Index" class="btn-secondary">Volver</a>
+    </div>
 </div>
 
-<div class="glass-panel">
+@if (Model.IsCancelled)
+{
+    <div style="background-color: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); padding: 1.25rem; border-radius: 8px; margin-top: 1rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between;">
+        <div>
+            <strong style="font-size: 1.1rem; display: block; margin-bottom: 0.25rem; font-weight: 600;">Esta venta ha sido anulada</strong>
+            <span style="font-size: 0.9rem; color: var(--text-muted);">
+                Fecha de Anulación: @(Model.CancellationDate?.ToString("dd/MM/yyyy HH:mm") ?? "-")
+            </span>
+        </div>
+        <i class="bi bi-x-circle-fill" style="font-size: 2rem; color: #f87171;"></i>
+    </div>
+}
+
+<div class="glass-panel" style="@(Model.IsCancelled ? "opacity: 0.7;" : "")">
     <div style="display: flex; gap: 2rem; margin-bottom: 2rem;">
         <div>
             <h3 style="font-size: 1rem; color: var(--text-muted); margin-bottom: 0.5rem;">Fecha</h3>
-            <p style="font-size: 1.25rem; font-weight: 600;">@Model.Date.ToString("dd/MM/yyyy HH:mm")</p>
+            <p style="font-size: 1.25rem; font-weight: 600; @(Model.IsCancelled ? "text-decoration: line-through;" : "")">@Model.Date.ToString("dd/MM/yyyy HH:mm")</p>
         </div>
         <div>
             <h3 style="font-size: 1rem; color: var(--text-muted); margin-bottom: 0.5rem;">Cliente (Cuenta Corriente)
@@ -22,7 +41,7 @@
         </div>
         <div>
             <h3 style="font-size: 1rem; color: var(--text-muted); margin-bottom: 0.5rem;">Monto Total</h3>
-            <p style="font-size: 1.5rem; font-weight: 600; color: #10b981;">$@Model.TotalAmount.ToString("N2")</p>
+            <p style="font-size: 1.5rem; font-weight: 600; color: @(Model.IsCancelled ? "#9ca3af; text-decoration: line-through;" : "#10b981;")">$@Model.TotalAmount.ToString("N2")</p>
         </div>
     </div>
 
@@ -43,7 +62,7 @@
                     <td>@item.Product?.Name</td>
                     <td>$@item.UnitPrice.ToString("N2")</td>
                     <td>@item.Quantity un.</td>
-                    <td style="font-weight: 600;">
+                    <td style="font-weight: 600; @(Model.IsCancelled ? "text-decoration: line-through; color: var(--text-muted);" : "")">
                         $@((item.UnitPrice * item.Quantity).ToString("N2"))
                     </td>
                 </tr>
@@ -51,3 +70,64 @@
         </tbody>
     </table>
 </div>
+
+@section Scripts {
+    <script>
+        function confirmCancelSale(saleId, ticketNumber) {
+            Swal.fire({
+                title: '¿Confirmar Anulación?',
+                text: `¿Estás seguro de que deseas anular la venta #${ticketNumber}? Esta acción devolverá el stock, reembolsará en Mercado Pago si corresponde, y emitirá la Nota de Crédito en AFIP. Esta acción no se puede deshacer.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'Sí, Anular Venta',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({
+                        title: 'Procesando...',
+                        html: 'Comunicando con Mercado Pago y AFIP, por favor espera...',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
+                    fetch(`/Sales/CancelSale/${saleId}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            Swal.fire(
+                                '¡Venta Anulada!',
+                                data.message,
+                                'success'
+                            ).then(() => {
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire(
+                                'Error',
+                                data.message,
+                                'error'
+                            );
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        Swal.fire(
+                            'Error de Red',
+                            'No se pudo comunicar con el servidor para anular la venta.',
+                            'error'
+                        );
+                    });
+                }
+            });
+        }
+    </script>
+}

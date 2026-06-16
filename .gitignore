@@ -18,3 +18,7 @@ wwwroot/uploads/*
 wwwroot/images/products/*
 !wwwroot/images/products/.gitkeep
 scratch/
+[Oo]ut/
+Balanza/
+*.zip
+*.exe

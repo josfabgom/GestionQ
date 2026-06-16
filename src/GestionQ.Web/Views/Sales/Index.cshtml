@@ -23,18 +23,89 @@
         <tbody>
             @foreach (var item in Model)
             {
-                <tr>
-                    <td>@item.FormattedTicketNumber</td>
+                <tr style="@(item.IsCancelled ? "opacity: 0.6;" : "")">
+                    <td>
+                        <span style="@(item.IsCancelled ? "text-decoration: line-through;" : "")">@item.FormattedTicketNumber</span>
+                        @if (item.IsCancelled)
+                        {
+                            <span style="background-color: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; margin-left: 8px; font-weight: 500; display: inline-block; vertical-align: middle;">Anulada</span>
+                        }
+                    </td>
                     <td>@item.Date.ToString("dd/MM/yyyy HH:mm")</td>
                     <td>@(item.Customer?.Name ?? "Consumidor Final")</td>
-                    <td style="font-weight: 600; color: #10b981;">
+                    <td style="font-weight: 600; color: @(item.IsCancelled ? "#9ca3af; text-decoration: line-through;" : "#10b981;")">
                         $@item.TotalAmount.ToString("N2")
                     </td>
                     <td>
                         <a asp-action="Details" asp-route-id="@item.Id" class="btn-secondary">Ver Detalle</a>
+                        @if (!item.IsCancelled)
+                        {
+                            <button type="button" onclick="confirmCancelSale(@item.Id, '@item.FormattedTicketNumber')" class="btn-danger" style="margin-left: 8px; padding: 0.5rem 1rem; font-size: 0.875rem;">Anular</button>
+                        }
                     </td>
                 </tr>
             }
         </tbody>
     </table>
 </div>
+
+@section Scripts {
+    <script>
+        function confirmCancelSale(saleId, ticketNumber) {
+            Swal.fire({
+                title: '¿Confirmar Anulación?',
+                text: `¿Estás seguro de que deseas anular la venta #${ticketNumber}? Esta acción devolverá el stock, reembolsará en Mercado Pago si corresponde, y emitirá la Nota de Crédito en AFIP. Esta acción no se puede deshacer.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'Sí, Anular Venta',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({
+                        title: 'Procesando...',
+                        html: 'Comunicando con Mercado Pago y AFIP, por favor espera...',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
+                    fetch(`/Sales/CancelSale/${saleId}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            Swal.fire(
+                                '¡Venta Anulada!',
+                                data.message,
+                                'success'
+                            ).then(() => {
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire(
+                                'Error',
+                                data.message,
+                                'error'
+                            );
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        Swal.fire(
+                            'Error de Red',
+                            'No se pudo comunicar con el servidor para anular la venta.',
+                            'error'
+                        );
+                    });
+                }
+            });
+        }
+    </script>
+}

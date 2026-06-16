@@ -1,6 +1,15 @@
 @model GestionQ.Domain.Entities.Sale
 @{
     Layout = null;
+    var promoDict = ViewBag.PromoNames as Dictionary<int, string>;
+    string GetPromoName(int productId, string defaultName)
+    {
+        if (promoDict != null && promoDict.TryGetValue(productId, out var name))
+        {
+            return name;
+        }
+        return defaultName;
+    }
 }
 
 <!DOCTYPE html>
@@ -150,20 +159,74 @@
                 @foreach (var item in Model.Items)
                 {
                     <tr>
-                        <td>@item.Product?.Name</td>
-                        <td class="text-right">@item.Quantity</td>
-                        <td class="text-right">$@((item.UnitPrice * item.Quantity).ToString("N2"))</td>
+                        <td>
+                            @item.Product?.Name
+                        </td>
+                        <td class="text-right">@item.Quantity.ToString(item.Quantity % 1 == 0 ? "F0" : "F3")</td>
+                        <td class="text-right">
+                            <span>$@((item.UnitPrice * item.Quantity).ToString("N2"))</span>
+                        </td>
                     </tr>
                 }
             </tbody>
         </table>
 
+        @{
+            var totalPromoDiscount = Model.Items.Sum(i => i.DiscountAmount);
+            var generalDiscount = Model.DiscountAmount - totalPromoDiscount;
+        }
+
         <div class="totals">
-            <div class="total-row">
-                <span>TOTAL:</span>
+            @if (Model.DiscountAmount > 0 || Model.PaymentDiscountAmount > 0)
+            {
+                <div>
+                    <span>Subtotal Bruto:</span>
+                    <span>$@Model.SubTotal.ToString("N2")</span>
+                </div>
+                @if (totalPromoDiscount > 0)
+                {
+                    @* Listar cada descuento promocional individualmente agrupado por nombre *@
+                    var promoDiscounts = Model.Items
+                        .Where(i => i.DiscountAmount > 0)
+                        .GroupBy(i => GetPromoName(i.ProductId, "Descuento Promoción"))
+                        .Select(g => new { Name = g.Key, Amount = g.Sum(i => i.DiscountAmount) });
+
+                    @foreach (var promo in promoDiscounts)
+                    {
+                        <div>
+                            <span> - @promo.Name:</span>
+                            <span>-$@promo.Amount.ToString("N2")</span>
+                        </div>
+                    }
+                }
+                @if (generalDiscount > 0)
+                {
+                    <div>
+                        <span>Desct. General:</span>
+                        <span>-$@generalDiscount.ToString("N2")</span>
+                    </div>
+                }
+                @if (Model.PaymentDiscountAmount > 0)
+                {
+                    var discountedMethods = Model.Payments
+                        .Where(p => p.PaymentMethod != null && p.PaymentMethod.DiscountPercentage > 0)
+                        .Select(p => $"{p.PaymentMethod.Name} ({p.PaymentMethod.DiscountPercentage:F0}%)");
+                    var methodNames = string.Join(" / ", discountedMethods);
+                    if (string.IsNullOrEmpty(methodNames))
+                    {
+                        methodNames = "Medio de Pago";
+                    }
+                    <div>
+                        <span>Desct. @methodNames:</span>
+                        <span>-$@Model.PaymentDiscountAmount.ToString("N2")</span>
+                    </div>
+                }
+            }
+            <div class="total-row" style="margin-top: 1mm; border-top: 1px solid #000; padding-top: 1mm;">
+                <span>TOTAL NETO:</span>
                 <span>$@Model.TotalAmount.ToString("N2")</span>
             </div>
-            <div style="margin-top: 2mm;">
+            <div style="margin-top: 2mm; font-weight: bold;">
                 <span>PAGOS:</span>
             </div>
             @foreach (var p in Model.Payments)

@@ -2,11 +2,23 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using GestionQ.Infrastructure.Data;
 using GestionQ.Domain.Entities;
+using GestionQ.Infrastructure.Services;
+using GestionQ.Web.Security;
+using GestionQ.Domain.Constants;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
+using GestionQ.Domain.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+builder.Services.AddHttpClient<IElectronicInvoicingService, ArcaElectronicInvoicingService>();
+builder.Services.AddScoped<IScaleService, KretzJDataGateService>();
+builder.Services.AddHttpClient<IMercadoPagoService, MercadoPagoService>();
+
+builder.Services.AddSingleton<IAuthorizationPolicyProvider, AuthorizationPolicyProvider>();
+builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -56,7 +68,26 @@ using (var scope = app.Services.CreateScope())
         foreach (var role in roles)
         {
             if (!await roleManager.RoleExistsAsync(role))
+            {
                 await roleManager.CreateAsync(new IdentityRole(role));
+            }
+
+            if (role == "Admin")
+            {
+                var adminRole = await roleManager.FindByNameAsync("Admin");
+                if (adminRole != null)
+                {
+                    var existingClaims = await roleManager.GetClaimsAsync(adminRole);
+                    var allPermissions = Permissions.GenerateAllPermissions();
+                    foreach (var permission in allPermissions)
+                    {
+                        if (!existingClaims.Any(c => c.Type == "Permission" && c.Value == permission))
+                        {
+                            await roleManager.AddClaimAsync(adminRole, new Claim("Permission", permission));
+                        }
+                    }
+                }
+            }
         }
 
         var adminEmail = "admin@gestionq.com";
@@ -70,8 +101,20 @@ using (var scope = app.Services.CreateScope())
                 await userManager.AddToRoleAsync(user, "Admin");
             }
         }
+        else
+        {
+            // Force reset password to Admin123 to ensure access
+            var token = await userManager.GeneratePasswordResetTokenAsync(adminUser);
+            await userManager.ResetPasswordAsync(adminUser, token, "Admin123");
+            
+            if (!await userManager.IsInRoleAsync(adminUser, "Admin"))
+            {
+                await userManager.AddToRoleAsync(adminUser, "Admin");
+            }
+        }
 
         var dbContext = services.GetRequiredService<ApplicationDbContext>();
+        await dbContext.Database.MigrateAsync();
         await DbSeeder.InitializeAsync(dbContext);
     }
     catch (Exception ex)

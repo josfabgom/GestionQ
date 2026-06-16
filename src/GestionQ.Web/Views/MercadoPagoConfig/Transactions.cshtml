@@ -1,0 +1,161 @@
+@model IEnumerable<GestionQ.Domain.Entities.Sale>
+@{
+    ViewData["Title"] = "Transacciones Mercado Pago";
+}
+
+<div class="glass-panel" style="margin-bottom: 2rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h1 class="page-title" style="margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+            <img src="https://logospng.org/download/mercado-pago/logo-mercado-pago-icono-1024.png" alt="MP" style="width: 32px; height: 32px;" />
+            Auditoría Mercado Pago
+        </h1>
+    </div>
+</div>
+
+<div class="glass-panel">
+    <table class="table" id="mpTransactionsTable">
+        <thead>
+            <tr>
+                <th>Fecha</th>
+                <th>Comprobante</th>
+                <th>Cliente</th>
+                <th>Referencia MP</th>
+                <th style="text-align: right;">Total Venta</th>
+                <th style="text-align: right;">Monto por MP</th>
+                <th style="text-align: center;">Estado</th>
+                <th style="text-align: center;">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var sale in Model)
+            {
+                var mpPayments = sale.Payments.Where(p => p.PaymentMethod != null && p.PaymentMethod.Name.Contains("Mercado Pago"));
+                foreach (var payment in mpPayments)
+                {
+                    <tr>
+                        <td>@sale.Date.ToString("dd/MM/yyyy HH:mm")</td>
+                        <td>
+                            <a href="/Sales/Details/@sale.Id" style="color: #009ee3; text-decoration: none; font-weight: 600;">
+                                @sale.FormattedTicketNumber
+                            </a>
+                        </td>
+                        <td>@(sale.Customer?.Name ?? "Consumidor Final")</td>
+                        <td>
+                            @if (!string.IsNullOrEmpty(payment.TransactionReference))
+                            {
+                                <span style="background: rgba(0, 158, 227, 0.1); color: #009ee3; padding: 0.2rem 0.5rem; border-radius: 4px; font-family: monospace;">
+                                    @payment.TransactionReference
+                                </span>
+                            }
+                            else
+                            {
+                                <span style="color: var(--text-muted);">Sin Ref.</span>
+                            }
+                        </td>
+                        <td style="text-align: right;">$@sale.TotalAmount.ToString("N2")</td>
+                        <td style="text-align: right; font-weight: 600;">$@payment.Amount.ToString("N2")</td>
+                        <td style="text-align: center;">
+                            @if (sale.IsCancelled)
+                            {
+                                <span class="badge" style="background: rgba(239, 68, 68, 0.2); color: #ef4444;">❌ Anulado/Devuelto</span>
+                            }
+                            else
+                            {
+                                <span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #10b981;">✅ Aprobado</span>
+                            }
+                        </td>
+                        <td style="text-align: center;">
+                            @if (!sale.IsCancelled)
+                            {
+                                <button type="button" class="btn-danger btn-sm" onclick="devolverPago(@sale.Id, '@sale.FormattedTicketNumber', '@payment.Amount.ToString("N2")')" style="border-radius: 4px; border: none; padding: 0.3rem 0.6rem; cursor: pointer;">
+                                    <i class="fa-solid fa-rotate-left"></i> Devolver
+                                </button>
+                            }
+                        </td>
+                    </tr>
+                }
+            }
+            @if (!Model.Any())
+            {
+                <tr>
+                    <td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                        No hay transacciones registradas con Mercado Pago.
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        $(document).ready(function () {
+            if ($('#mpTransactionsTable tbody tr').length > 1) {
+                $('#mpTransactionsTable').DataTable({
+                    "language": {
+                        "url": "//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json"
+                    },
+                    "order": [[0, "desc"]]
+                });
+            }
+        });
+
+        function devolverPago(saleId, ticketInfo, amount) {
+            Swal.fire({
+                title: '¿Devolver pago?',
+                text: `Vas a devolver el pago de $${amount} correspondiente al comprobante ${ticketInfo}. Se anulará la venta, se devolverá el dinero por Mercado Pago, y si hay factura, se intentará emitir Nota de Crédito. Esta acción no se puede deshacer.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'Sí, Devolver Dinero',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({
+                        title: 'Procesando...',
+                        html: 'Comunicando con Mercado Pago y AFIP, por favor espera...',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading()
+                        }
+                    });
+
+                    fetch(`/Sales/CancelSale/${saleId}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            Swal.fire(
+                                '¡Devuelto!',
+                                data.message,
+                                'success'
+                            ).then(() => {
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire(
+                                'Error',
+                                data.message,
+                                'error'
+                            );
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        Swal.fire(
+                            'Error',
+                            'Ocurrió un problema de red o de servidor.',
+                            'error'
+                        );
+                    });
+                }
+            });
+        }
+    </script>
+}

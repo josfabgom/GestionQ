@@ -1,0 +1,50 @@
+@model GestionQ.Web.Models.ManageRolePermissionsViewModel
+
+@{
+    ViewData["Title"] = "Gestionar Permisos - " + Model.RoleName;
+}
+
+<h2>Gestionar Permisos para: @Model.RoleName</h2>
+<hr />
+
+<form asp-action="ManagePermissions" method="post">
+    <input type="hidden" asp-for="RoleId" />
+    <input type="hidden" asp-for="RoleName" />
+
+    <div class="row">
+            @{
+                var groupedPermissions = Model.Permissions
+                    .Select((p, index) => new { Permission = p, Index = index })
+                    .GroupBy(x => x.Permission.Module);
+            }
+
+            @foreach (var group in groupedPermissions)
+            {
+                <div style="margin-bottom: 1.5rem;">
+                    <h5 style="color: #60a5fa; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1rem;">@group.Key</h5>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem;">
+                        @foreach (var item in group)
+                        {
+                            var i = item.Index;
+                            <div>
+                                <div class="form-check">
+                                    <input type="hidden" asp-for="@Model.Permissions[i].PermissionValue" />
+                                    <input type="hidden" asp-for="@Model.Permissions[i].DisplayName" />
+                                    <input type="hidden" asp-for="@Model.Permissions[i].Module" />
+                                    <input asp-for="@Model.Permissions[i].IsSelected" class="form-check-input" />
+                                    <label class="form-check-label" for="@("chk" + i)" style="color: white;">
+                                        @Model.Permissions[i].DisplayName
+                                    </label>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }  </div>
+    
+    <div class="mt-4">
+        <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+        <a asp-action="Index" class="btn btn-secondary">Cancelar</a>
+    </div>
+</form>

@@ -4,9 +4,11 @@ using Microsoft.EntityFrameworkCore;
 using GestionQ.Infrastructure.Data;
 using GestionQ.Domain.Entities;
 
+using GestionQ.Domain.Constants;
+
 namespace GestionQ.Web.Controllers
 {
-    [Authorize]
+    [Authorize(Policy = Permissions.Config.View)]
     public class CategoriesController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -20,13 +22,14 @@ namespace GestionQ.Web.Controllers
         {
             return View(await _context.Categories.Include(c => c.SubCategories).ToListAsync());
         }
+        [Authorize(Policy = Permissions.Config.Create)]
 
         public IActionResult Create()
         {
             return View();
         }
-
         [HttpPost]
+        [Authorize(Policy = Permissions.Config.Create)]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Category category)
         {
@@ -38,6 +41,7 @@ namespace GestionQ.Web.Controllers
             }
             return View(category);
         }
+        [Authorize(Policy = Permissions.Config.Edit)]
 
         public async Task<IActionResult> Edit(int? id)
         {
@@ -49,6 +53,7 @@ namespace GestionQ.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Policy = Permissions.Config.Edit)]
         public async Task<IActionResult> Edit(int id, Category category)
         {
             if (id != category.Id) return NotFound();
@@ -61,8 +66,8 @@ namespace GestionQ.Web.Controllers
             }
             return View(category);
         }
-
         [HttpPost]
+        [Authorize(Policy = Permissions.Config.Delete)]
         public async Task<IActionResult> Delete(int id)
         {
             var category = await _context.Categories.Include(c => c.SubCategories).FirstOrDefaultAsync(c => c.Id == id);

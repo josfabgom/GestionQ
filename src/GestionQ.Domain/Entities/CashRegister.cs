@@ -37,5 +37,6 @@ namespace GestionQ.Domain.Entities
         public PointOfSale? PointOfSale { get; set; }
 
         public List<Sale> Sales { get; set; } = new();
+        public List<CashRegisterMovement> Movements { get; set; } = new();
     }
 }

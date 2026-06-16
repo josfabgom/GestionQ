@@ -15,7 +15,7 @@
         <strong style="font-size: 1.2rem; color: #3b82f6;">@ViewBag.PointOfSaleName</strong>
     </div>
 
-    <form asp-action="Open">
+    <form asp-action="Open" method="post">
         <input type="hidden" asp-for="PointOfSaleId" />
 
         <div class="form-group">

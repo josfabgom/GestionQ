@@ -25,6 +25,9 @@ namespace GestionQ.Domain.Entities
         [Display(Name = "Enviar a Balanza")]
         public bool SendToScale { get; set; } = false;
 
+        [Display(Name = "Fecha Envío Balanza")]
+        public DateTime? LastSentToScaleDate { get; set; }
+
         public decimal Price { get; set; }
         public decimal Stock { get; set; }
         

@@ -1,169 +1,137 @@
-@model GestionQ.Web.Models.ConfigurationViewModel
-
 @{
-    ViewData["Title"] = "Configuración General";
+    ViewData["Title"] = "Configuración del Sistema";
 }
 
-<h1 class="page-title">Configuración del Sistema</h1>
+<h1 class="page-title">Configuración General</h1>
 
-@if (TempData["SuccessMessage"] != null)
-{
-    <div
-        style="background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #6ee7b7; padding: 1rem; border-radius: 8px; margin-bottom: 2rem;">
-        @TempData["SuccessMessage"]
-    </div>
-}
+<p style="color: var(--text-muted); margin-bottom: 2.5rem; max-width: 800px; font-size: 1.05rem;">
+    Bienvenido al panel central de configuración. Desde aquí puedes administrar todos los parámetros del sistema, desde conexiones a bases de datos hasta catálogos de rubros y usuarios.
+</p>
 
-<div style="display: flex; gap: 2rem; flex-wrap: wrap; align-items: stretch;">
+<div class="settings-grid">
+    <!-- Ajustes BD y Logo -->
+    <a asp-controller="Configuration" asp-action="SystemSettings" class="settings-card">
+        <span class="settings-card-icon" style="color: #a78bfa;">
+            <i class="fa-solid fa-gears"></i>
+        </span>
+        <div class="settings-card-title">Ajustes del Sistema</div>
+        <div class="settings-card-desc">Configuración de base de datos SQL Server, identidad de la empresa, contacto y carga de logotipo.</div>
+    </a>
 
-    <!-- Formulario de Conexión a BD -->
-    <div class="glass-panel" style="flex: 1; min-width: 320px;">
-        <h3
-            style="margin-top:0; color: #a78bfa; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">
-            Conexión SQL Server</h3>
-        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">Ajuste los parámetros del motor
-            de base de datos. Si la BD conectada aún no tiene las tablas, el sistema las intentará auto-generar al
-            reiniciar.</p>
+    <!-- Configuración Mercado Pago -->
+    <a asp-controller="MercadoPagoConfig" asp-action="Index" class="settings-card">
+        <span class="settings-card-icon" style="color: #009ee3;">
+            <i class="fa-solid fa-handshake"></i>
+        </span>
+        <div class="settings-card-title">Conf. Mercado Pago</div>
+        <div class="settings-card-desc">Administre sus integraciones con Mercado Pago: Códigos QR y terminales Point.</div>
+    </a>
 
-        <form asp-action="Index" enctype="multipart/form-data">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <!-- Auditoría MP -->
+    <a asp-controller="MercadoPagoConfig" asp-action="Transactions" class="settings-card">
+        <span class="settings-card-icon" style="color: #009ee3;">
+            <i class="fa-solid fa-qrcode"></i>
+        </span>
+        <div class="settings-card-title">Auditoría MP</div>
+        <div class="settings-card-desc">Historial y control de todos los cobros aprobados con Mercado Pago y su referencia.</div>
+    </a>
 
-            <div class="form-group">
-                <label asp-for="Server" class="control-label"></label>
-                <input asp-for="Server" class="form-control" />
-                <span asp-validation-for="Server" class="text-danger"></span>
-            </div>
+    <!-- Terminal POS -->
+    <a asp-controller="POSConfig" asp-action="Index" class="settings-card">
+        <span class="settings-card-icon" style="color: #10b981;">
+            <i class="fa-solid fa-desktop"></i>
+        </span>
+        <div class="settings-card-title">Configurar Terminal</div>
+        <div class="settings-card-desc">Asigne y vincule este navegador web a un Punto de Venta específico para la emisión de comprobantes.</div>
+    </a>
 
-            <div class="form-group" style="margin-top: 1rem;">
-                <label asp-for="Database" class="control-label"></label>
-                <input asp-for="Database" class="form-control" />
-                <span asp-validation-for="Database" class="text-danger"></span>
-            </div>
+    <!-- Puntos de Venta -->
+    <a asp-controller="PointsOfSale" asp-action="Index" class="settings-card">
+        <span class="settings-card-icon" style="color: #3b82f6;">
+            <i class="fa-solid fa-store"></i>
+        </span>
+        <div class="settings-card-title">Puntos de Venta</div>
+        <div class="settings-card-desc">Administrar los Puntos de Venta habilitados en el sistema (cajas físicas, facturación electrónica, etc.).</div>
+    </a>
 
-            <div style="display: flex; gap: 1rem; margin-top: 1rem;">
-                <div class="form-group" style="flex: 1;">
-                    <label asp-for="User" class="control-label"></label>
-                    <input asp-for="User" class="form-control" />
-                    <span asp-validation-for="User" class="text-danger"></span>
-                </div>
-                <div class="form-group" style="flex: 1;">
-                    <label asp-for="Password" class="control-label"></label>
-                    <input asp-for="Password" type="password" class="form-control" id="Password" />
-                    <span asp-validation-for="Password" class="text-danger"></span>
-                </div>
-            </div>
+    <!-- Certificados AFIP -->
+    <a asp-controller="ElectronicInvoices" asp-action="Certificates" class="settings-card">
+        <span class="settings-card-icon" style="color: #8b5cf6;">
+            <i class="fa-solid fa-file-signature"></i>
+        </span>
+        <div class="settings-card-title">Certificados AFIP</div>
+        <div class="settings-card-desc">Configure y cargue los certificados digitales (.pfx) necesarios para la emisión de comprobantes en ARCA.</div>
+    </a>
 
-            <div class="form-group" style="margin-top: 1.5rem; display: flex; gap: 1rem;">
-                <button type="button" class="btn-secondary" style="flex: 1;" onclick="testConnection()">
-                    Probar Conexión
-                </button>
-            </div>
+    <!-- ABM Usuarios -->
+    <a asp-controller="Users" asp-action="Index" class="settings-card">
+        <span class="settings-card-icon" style="color: #ec4899;">
+            <i class="fa-solid fa-user-gear"></i>
+        </span>
+        <div class="settings-card-title">ABM Usuarios</div>
+        <div class="settings-card-desc">Gestione los accesos al sistema, contraseñas, roles de Administrador o Vendedor y credenciales.</div>
+    </a>
 
-            <h3
-                style="margin-top: 2rem; color: #3b82f6; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">
-                Identidad de la Empresa</h3>
-            <p style="color: var(--text-muted); font-size: 0.9rem;">Información general que se utilizará en tickets, reportes y pantalla general.</p>
+    <!-- Roles y Permisos -->
+    <a asp-controller="Roles" asp-action="Index" class="settings-card">
+        <span class="settings-card-icon" style="color: #fca5a5;">
+            <i class="fa-solid fa-user-shield"></i>
+        </span>
+        <div class="settings-card-title">Roles y Permisos</div>
+        <div class="settings-card-desc">Cree roles personalizados y asigne permisos detallados para cada módulo del sistema.</div>
+    </a>
 
-            <div class="form-group" style="margin-top: 1rem;">
-                <label asp-for="CompanyName" class="control-label"></label>
-                <input asp-for="CompanyName" class="form-control" />
-                <span asp-validation-for="CompanyName" class="text-danger"></span>
-            </div>
+    <!-- Proveedores -->
+    <a asp-controller="Suppliers" asp-action="Index" class="settings-card">
+        <span class="settings-card-icon" style="color: #f59e0b;">
+            <i class="fa-solid fa-truck-field"></i>
+        </span>
+        <div class="settings-card-title">Proveedores</div>
+        <div class="settings-card-desc">Listado y administración de proveedores asociados para las compras e ingresos de mercadería.</div>
+    </a>
 
-            <div class="form-group" style="margin-top: 1rem;">
-                <label asp-for="CompanyAddress" class="control-label"></label>
-                <input asp-for="CompanyAddress" class="form-control" />
-                <span asp-validation-for="CompanyAddress" class="text-danger"></span>
-            </div>
+    <!-- Medios de Pago -->
+    <a asp-controller="PaymentMethods" asp-action="Index" class="settings-card">
+        <span class="settings-card-icon" style="color: #f43f5e;">
+            <i class="fa-solid fa-credit-card"></i>
+        </span>
+        <div class="settings-card-title">Medios de Pago</div>
+        <div class="settings-card-desc">Configure los métodos de pago aceptados en caja (Efectivo, Tarjetas, Transferencias, Cuenta Corriente).</div>
+    </a>
 
-            <div style="display: flex; gap: 1rem; margin-top: 1rem;">
-            <div class="form-group" style="flex: 1;">
-            <label asp-for="CompanyPhone" class="control-label"></label>
-                <input asp-for="CompanyPhone" class="form-control" />
-                    <span asp-validation-for="CompanyPhone" class="text-danger"></span>
-                </div>
-                <div class="form-group" style="flex: 1;">
-                    <label asp-for="CompanyEmail" class="control-label"></label>
-                    <input asp-for="CompanyEmail" type="email" class="form-control" />
-                    <span asp-validation-for="CompanyEmail" class="text-danger"></span>
-                </div>
-            </div>
+    <!-- Rubros -->
+    <a asp-controller="Categories" asp-action="Index" class="settings-card">
+        <span class="settings-card-icon" style="color: #84cc16;">
+            <i class="fa-solid fa-folder-open"></i>
+        </span>
+        <div class="settings-card-title">Rubros</div>
+        <div class="settings-card-desc">Categorías principales de productos para ordenar el catálogo y facilitar el control del stock.</div>
+    </a>
 
-            <h3
-                style="margin-top: 2rem; color: #10b981; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">
-                Configuración de Compras</h3>
-            <p style="color: var(--text-muted); font-size: 0.9rem;">Parámetros para la gestión de ingresos de proveedores.</p>
+    <!-- Subrubros -->
+    <a asp-controller="SubCategories" asp-action="Index" class="settings-card">
+        <span class="settings-card-icon" style="color: #14b8a6;">
+            <i class="fa-solid fa-folder-tree"></i>
+        </span>
+        <div class="settings-card-title">Subrubros</div>
+        <div class="settings-card-desc">Subcategorías de productos para una clasificación de inventario aún más detallada.</div>
+    </a>
 
-            <div class="form-group" style="margin-top: 1rem;">
-                <label asp-for="NextInternalSupplierNumber" class="control-label"></label>
-                <input asp-for="NextInternalSupplierNumber" type="number" class="form-control" style="max-width: 200px;" />
-                <p style="font-size: 0.8rem; opacity: 0.7; margin-top: 0.3rem;">Este número se utilizará automáticamente si el ingreso no tiene número de factura propio.</p>
-                <span asp-validation-for="NextInternalSupplierNumber" class="text-danger"></span>
-            </div>
+    <!-- Alícuotas de IVA -->
+    <a asp-controller="VatRates" asp-action="Index" class="settings-card">
+        <span class="settings-card-icon" style="color: #06b6d4;">
+            <i class="fa-solid fa-percent"></i>
+        </span>
+        <div class="settings-card-title">Alícuotas de IVA</div>
+        <div class="settings-card-desc">Configuración de las tasas e impuestos del valor agregado (IVA 21%, IVA 10.5%, Exento, etc.).</div>
+    </a>
 
-            <h3
-                style="margin-top: 2rem; color: #3b82f6; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">
-                Logotipo Empresa</h3>
-            <p style="color: var(--text-muted); font-size: 0.9rem;">Sube un archivo de imagen transparente (.png) para
-                reemplazar el diseño de menú lateral y pantalla de login.</p>
-
-            <div class="form-group" style="margin-top: 1rem;">
-                <label asp-for="LogoFile" class="control-label"></label>
-                <input asp-for="LogoFile" type="file" accept="image/png, image/jpeg" class="form-control"
-                    style="background: rgba(0,0,0,0.2); padding: 0.5rem;" />
-                <span asp-validation-for="LogoFile" class="text-danger"></span>
-            </div>
-
-            <div class="form-group" style="margin-top: 2.5rem;">
-                <button type="submit" class="btn-primary" style="width: 100%; font-size: 1.1rem; padding: 0.8rem;"
-                    onclick="return confirm('Al aplicar cambios de base de datos el sistema intentará reiniciar momentáneamente. ¿Deseas aplicar los ajustes?')">
-                    Guardar y Aplicar Todo</button>
-            </div>
-        </form>
-    </div>
-
+    <!-- Condiciones ante el IVA -->
+    <a asp-controller="TaxConditions" asp-action="Index" class="settings-card">
+        <span class="settings-card-icon" style="color: #6366f1;">
+            <i class="fa-solid fa-building-columns"></i>
+        </span>
+        <div class="settings-card-title">Condiciones ante el IVA</div>
+        <div class="settings-card-desc">Tipos de condiciones impositivas de clientes y proveedores ante organismos públicos (ARCA/AFIP).</div>
+    </a>
 </div>
-
-@section Scripts {
-    @{
-        await Html.RenderPartialAsync("_ValidationScriptsPartial");
-    }
-        <script>
-            function testConnection() {
-                var data = {
-                    Server: document.getElementById('Server').value,
-                    Database: document.getElementById('Database').value,
-                    User: document.getElementById('User').value,
-                    Password: document.getElementById('Password').value
-                };
-
-                Swal.fire({
-                    title: 'Probando Conexión...',
-                    text: 'Por favor espera',
-                    allowOutsideClick: false,
-                    didOpen: () => {
-                        Swal.showLoading();
-                    }
-                });
-
-                fetch('/Configuration/TestConnection', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(data)
-                })
-                .then(res => res.json())
-                .then(res => {
-                    if (res.success) {
-                        Swal.fire('¡Éxito!', res.message, 'success');
-                    } else {
-                        Swal.fire('Falló', res.message, 'error');
-                    }
-                })
-                .catch(err => {
-                    Swal.fire('Error', 'No se pudo contactar al servidor para verificar.', 'error');
-                });
-            }
-        </script>
-}

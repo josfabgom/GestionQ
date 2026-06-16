@@ -34,5 +34,8 @@ namespace GestionQ.Web.Models
 
         [Display(Name = "Próximo Número Ingreso Proveedor Interno")]
         public int NextInternalSupplierNumber { get; set; }
+
+        [Display(Name = "Ruta de Carpeta JDataGate (Balanza)")]
+        public string JDataGateFolderPath { get; set; } = string.Empty;
     }
 }

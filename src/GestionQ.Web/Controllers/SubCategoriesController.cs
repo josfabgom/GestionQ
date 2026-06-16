@@ -5,9 +5,11 @@ using Microsoft.EntityFrameworkCore;
 using GestionQ.Infrastructure.Data;
 using GestionQ.Domain.Entities;
 
+using GestionQ.Domain.Constants;
+
 namespace GestionQ.Web.Controllers
 {
-    [Authorize]
+    [Authorize(Policy = Permissions.Config.View)]
     public class SubCategoriesController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -21,14 +23,15 @@ namespace GestionQ.Web.Controllers
         {
             return View(await _context.SubCategories.Include(s => s.Category).ToListAsync());
         }
+        [Authorize(Policy = Permissions.Config.Create)]
 
         public async Task<IActionResult> Create()
         {
             ViewBag.CategoryId = new SelectList(await _context.Categories.ToListAsync(), "Id", "Name");
             return View();
         }
-
         [HttpPost]
+        [Authorize(Policy = Permissions.Config.Create)]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(SubCategory subCategory)
         {
@@ -41,6 +44,7 @@ namespace GestionQ.Web.Controllers
             ViewBag.CategoryId = new SelectList(await _context.Categories.ToListAsync(), "Id", "Name", subCategory.CategoryId);
             return View(subCategory);
         }
+        [Authorize(Policy = Permissions.Config.Edit)]
 
         public async Task<IActionResult> Edit(int? id)
         {
@@ -53,6 +57,7 @@ namespace GestionQ.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Policy = Permissions.Config.Edit)]
         public async Task<IActionResult> Edit(int id, SubCategory subCategory)
         {
             if (id != subCategory.Id) return NotFound();
@@ -66,8 +71,8 @@ namespace GestionQ.Web.Controllers
             ViewBag.CategoryId = new SelectList(await _context.Categories.ToListAsync(), "Id", "Name", subCategory.CategoryId);
             return View(subCategory);
         }
-
         [HttpPost]
+        [Authorize(Policy = Permissions.Config.Delete)]
         public async Task<IActionResult> Delete(int id)
         {
             var subCategory = await _context.SubCategories.Include(s => s.Products).FirstOrDefaultAsync(s => s.Id == id);

@@ -4,9 +4,11 @@ using GestionQ.Domain.Entities;
 using GestionQ.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
 
+using GestionQ.Domain.Constants;
+
 namespace GestionQ.Web.Controllers
 {
-    [Authorize]
+    [Authorize(Policy = Permissions.Purchases.View)]
     public class PurchasesController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -24,14 +26,15 @@ namespace GestionQ.Web.Controllers
                 .ToListAsync();
             return View(purchases);
         }
+        [Authorize(Policy = Permissions.Purchases.Create)]
 
         public async Task<IActionResult> Create()
         {
             ViewBag.Suppliers = await _context.Suppliers.Where(s => s.IsActive).ToListAsync();
             return View();
         }
-
         [HttpPost]
+        [Authorize(Policy = Permissions.Purchases.Create)]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([FromForm] Models.PurchaseViewModel vm)
         {

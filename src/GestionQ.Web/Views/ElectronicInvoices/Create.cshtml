@@ -1,0 +1,610 @@
+@model GestionQ.Web.Controllers.ElectronicInvoiceViewModel
+@{
+    ViewData["Title"] = "Solicitar CAE - ARCA";
+}
+
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+<div class="arca-container">
+    <div class="back-link">
+        <a asp-action="Index" class="btn-back"><i class="bi bi-arrow-left"></i> Volver a la Bandeja Principal</a>
+    </div>
+
+    <div class="arca-form-layout">
+        <!-- Left Side: Form Controls -->
+        <div class="arca-form-card">
+            <div class="card-header-gradient">
+                <i class="bi bi-shield-check"></i>
+                <div>
+                    <h2>Autorización de Comprobante Electrónico</h2>
+                    <p>Defina los parámetros para solicitar el Código de Autorización Electrónico (CAE) a ARCA/AFIP.</p>
+                </div>
+            </div>
+
+            <form asp-action="Create" method="post" id="arcaForm" class="arca-form-body">
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="SaleId" />
+                <input type="hidden" asp-for="PointOfSaleId" />
+                <input type="hidden" asp-for="PointOfSaleNumber" />
+                <input type="hidden" asp-for="NetAmount" />
+                <input type="hidden" asp-for="VatAmount" />
+                <input type="hidden" asp-for="ExemptAmount" />
+                <input type="hidden" asp-for="TotalAmount" />
+                <input type="hidden" asp-for="CustomerTaxCondition" />
+
+                <div asp-validation-summary="ModelOnly" class="text-danger arca-error-summary"></div>
+
+                <!-- Step 1: Voucher Definition -->
+                <h4 class="form-section-title">1. Configuración del Comprobante</h4>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label asp-for="InvoiceTypeCode" class="form-label arca-label">Tipo de Comprobante</label>
+                        <select asp-for="InvoiceTypeCode" asp-items="ViewBag.VoucherTypes" class="form-select arca-input" id="invoiceTypeSelect" onchange="onVoucherTypeChange()"></select>
+                        <span asp-validation-for="InvoiceTypeCode" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="ConceptCode" class="form-label arca-label">Concepto Facturado</label>
+                        <select asp-for="ConceptCode" asp-items="ViewBag.Conceptos" class="form-select arca-input"></select>
+                        <span asp-validation-for="ConceptCode" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <!-- Step 2: Customer / Receiver Definition -->
+                <h4 class="form-section-title">2. Identificación del Receptor (Comprador)</h4>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-12">
+                        <label asp-for="CustomerName" class="form-label arca-label">Razón Social / Nombre</label>
+                        <input asp-for="CustomerName" class="form-control arca-input" placeholder="Nombre completo" required />
+                        <span asp-validation-for="CustomerName" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label asp-for="DocTypeCode" class="form-label arca-label">Tipo Documento</label>
+                        <select asp-for="DocTypeCode" asp-items="ViewBag.DocTypes" class="form-select arca-input" id="docTypeSelect" onchange="onDocTypeChange()"></select>
+                        <span asp-validation-for="DocTypeCode" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-8">
+                        <label asp-for="DocNumber" class="form-label arca-label">Número Documento</label>
+                        <input asp-for="DocNumber" class="form-control arca-input" id="docNumberInput" placeholder="Sin guiones" />
+                        <span asp-validation-for="DocNumber" class="text-danger"></span>
+                    </div>
+
+                    <!-- ARCA v4.0 Condicion IVA Receptor (RG 5616) -->
+                    <div class="col-md-12">
+                        <label asp-for="CondicionIVAReceptorId" class="form-label arca-label">
+                            Condición de IVA del Receptor <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Requerido ARCA v4.0</span>
+                        </label>
+                        <select asp-for="CondicionIVAReceptorId" asp-items="ViewBag.CondicionesIva" class="form-select arca-input" id="condicionIvaSelect" onchange="onCondicionIvaChange()"></select>
+                        <span asp-validation-for="CondicionIVAReceptorId" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <!-- Step 3: ARCA v4.0 Extra Options -->
+                <h4 class="form-section-title">3. Parámetros Especiales de Transacción</h4>
+                <div class="arca-checkbox-card mb-4">
+                    <div class="form-check form-switch">
+                        <input asp-for="CanMisMonExt" class="form-check-input arca-switch" type="checkbox" id="canMisMonExtCheck">
+                        <label asp-for="CanMisMonExt" class="form-check-label arca-label-check" for="canMisMonExtCheck">
+                            <strong>Cancela en la misma moneda extranjera (CanMisMonExt)</strong>
+                            <span class="d-block text-muted text-sm mt-1">Especifique si se trata de una operación liquidada en la misma divisa declarada (Mod. v4.0).</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Validation Alerts area -->
+                <div id="arcaValidatorAlert" class="alert alert-warning arca-validator-alert d-none">
+                    <i class="bi bi-exclamation-octagon-fill"></i>
+                    <div class="alert-text">
+                        <strong>Inconsistencia Detectada:</strong> <span id="validatorAlertText"></span>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="d-grid mt-4">
+                    <button type="submit" class="btn btn-arca-submit btn-lg" id="submitBtn">
+                        <span class="normal-state"><i class="bi bi-send-check"></i> Solicitar CAE al ARCA (AFIP)</span>
+                        <span class="loading-state d-none">
+                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                            Conectando con Servidores de ARCA...
+                        </span>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Right Side: Sale Details Summary -->
+        <div class="arca-summary-sidebar">
+            <div class="summary-card shadow-lg">
+                <div class="summary-header">
+                    <h3>Detalle de Venta</h3>
+                    <span class="sale-badge">Ticket original</span>
+                </div>
+                
+                <div class="summary-meta">
+                    <div class="meta-item">
+                        <span class="meta-label">Punto de Venta:</span>
+                        <span class="meta-val">@Model.PointOfSaleName (N° @Model.PointOfSaleNumber)</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">ID de Venta:</span>
+                        <span class="meta-val">#@Model.SaleId</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">Cliente Original:</span>
+                        <span class="meta-val text-truncate" style="max-width: 150px;">@Model.CustomerName</span>
+                    </div>
+                </div>
+
+                <hr class="summary-divider">
+
+                <div class="summary-totals-block">
+                    <div class="totals-row">
+                        <span>Neto Gravado</span>
+                        <strong>@Model.NetAmount.ToString("C")</strong>
+                    </div>
+                    <div class="totals-row">
+                        <span>Alícuotas de IVA</span>
+                        <strong>@Model.VatAmount.ToString("C")</strong>
+                    </div>
+                    <div class="totals-row">
+                        <span>Importe Exento</span>
+                        <strong>@Model.ExemptAmount.ToString("C")</strong>
+                    </div>
+                    <div class="totals-row total-grand">
+                        <span>Monto Total a Facturar</span>
+                        <strong>@Model.TotalAmount.ToString("C")</strong>
+                    </div>
+                </div>
+
+                <div class="summary-info-card">
+                    <div class="info-icon"><i class="bi bi-info-circle-fill"></i></div>
+                    <div class="info-text">
+                        Esta solicitud generará un comprobante fiscal válido ante la Administración Federal de Ingresos Públicos en base a las alícuotas declaradas.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    :root {
+        --arca-primary: #3b82f6;
+        --arca-primary-hover: #2563eb;
+        --arca-secondary: #4f46e5;
+        --arca-dark: #0f172a;
+        --arca-bg: #f8fafc;
+        --arca-card: #ffffff;
+        --arca-text: #1e293b;
+        --arca-border: #e2e8f0;
+    }
+
+    .arca-container {
+        font-family: 'Outfit', sans-serif;
+        color: var(--arca-text);
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    .back-link {
+        margin-bottom: 25px;
+    }
+
+    .btn-back {
+        color: #64748b;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.95rem;
+        transition: color 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .btn-back:hover {
+        color: var(--arca-primary);
+    }
+
+    /* Form Layout Grid */
+    .arca-form-layout {
+        display: grid;
+        grid-template-columns: 7fr 4fr;
+        gap: 30px;
+        align-items: start;
+    }
+
+    @@media (max-width: 991px) {
+        .arca-form-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* Premium Form Card */
+    .arca-form-card {
+        background: var(--arca-card);
+        border-radius: 20px;
+        border: 1px solid var(--arca-border);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+        overflow: hidden;
+    }
+
+    .card-header-gradient {
+        background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+        color: white;
+        padding: 30px;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+    }
+
+    .card-header-gradient i {
+        font-size: 2.8rem;
+        color: #60a5fa;
+    }
+
+    .card-header-gradient h2 {
+        font-weight: 700;
+        font-size: 1.45rem;
+        margin: 0 0 4px 0;
+    }
+
+    .card-header-gradient p {
+        font-size: 0.9rem;
+        margin: 0;
+        opacity: 0.8;
+        font-weight: 300;
+    }
+
+    .arca-form-body {
+        padding: 35px;
+    }
+
+    .form-section-title {
+        font-size: 1rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #475569;
+        border-bottom: 2px solid #f1f5f9;
+        padding-bottom: 8px;
+        margin-bottom: 20px;
+    }
+
+    .arca-label {
+        font-weight: 600;
+        font-size: 0.88rem;
+        color: #475569;
+        margin-bottom: 8px;
+    }
+
+    .arca-input {
+        border-radius: 10px;
+        border: 1px solid var(--arca-border);
+        padding: 11px 16px;
+        font-size: 0.95rem;
+        color: var(--arca-dark);
+        background-color: #f8fafc;
+        transition: all 0.2s ease;
+    }
+
+    .arca-input:focus {
+        border-color: #93c5fd;
+        background-color: white;
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+        outline: none;
+    }
+
+    /* Checkbox card */
+    .arca-checkbox-card {
+        background: #f8fafc;
+        border: 1px solid var(--arca-border);
+        border-radius: 12px;
+        padding: 20px;
+        transition: all 0.2s ease;
+    }
+
+    .arca-checkbox-card:hover {
+        background: #f1f5f9;
+    }
+
+    .arca-switch {
+        cursor: pointer;
+        width: 3rem;
+        height: 1.5rem;
+    }
+
+    .arca-label-check {
+        cursor: pointer;
+        margin-left: 10px;
+        user-select: none;
+    }
+
+    .arca-label-check strong {
+        font-size: 0.95rem;
+        color: var(--arca-dark);
+        display: block;
+    }
+
+    .text-sm {
+        font-size: 0.82rem;
+    }
+
+    /* Validator Alerts */
+    .arca-validator-alert {
+        background-color: #fffbeb;
+        border: 1px solid #fef3c7;
+        color: #b45309;
+        border-radius: 12px;
+        padding: 16px;
+        display: flex;
+        gap: 15px;
+        align-items: start;
+        margin-top: 25px;
+    }
+
+    .arca-validator-alert i {
+        font-size: 1.4rem;
+    }
+
+    .arca-error-summary {
+        border-radius: 10px;
+        background: #fef2f2;
+        padding: 15px;
+        margin-bottom: 25px;
+    }
+
+    .arca-error-summary ul {
+        margin: 0;
+        padding-left: 20px;
+    }
+
+    /* Submit Button */
+    .btn-arca-submit {
+        background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-weight: 700;
+        font-size: 1.1rem;
+        padding: 14px 20px;
+        box-shadow: 0 4px 15px rgba(79, 70, 229, 0.25);
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+
+    .btn-arca-submit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(79, 70, 229, 0.35);
+        color: white;
+    }
+
+    /* Sidebar Summary Card */
+    .arca-summary-sidebar {
+        position: sticky;
+        top: 30px;
+    }
+
+    .summary-card {
+        background: white;
+        border-radius: 20px;
+        border: 1px solid var(--arca-border);
+        padding: 30px;
+    }
+
+    .summary-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 25px;
+    }
+
+    .summary-header h3 {
+        font-size: 1.15rem;
+        font-weight: 800;
+        color: var(--arca-dark);
+        margin: 0;
+    }
+
+    .sale-badge {
+        background: #eff6ff;
+        color: #1d4ed8;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .summary-meta {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .meta-item {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.88rem;
+    }
+
+    .meta-label {
+        color: #64748b;
+    }
+
+    .meta-val {
+        font-weight: 600;
+        color: var(--arca-dark);
+    }
+
+    .summary-divider {
+        margin: 25px 0;
+        border: 0;
+        border-top: 1px solid #f1f5f9;
+        opacity: 1;
+    }
+
+    .summary-totals-block {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        margin-bottom: 25px;
+    }
+
+    .totals-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.95rem;
+        color: #475569;
+    }
+
+    .totals-row strong {
+        color: var(--arca-dark);
+    }
+
+    .total-grand {
+        font-size: 1.25rem;
+        color: var(--arca-dark);
+        border-top: 2px dashed #f1f5f9;
+        padding-top: 15px;
+        margin-top: 5px;
+    }
+
+    .total-grand strong {
+        color: #1d4ed8;
+        font-size: 1.4rem;
+        font-weight: 800;
+    }
+
+    .summary-info-card {
+        background: #f8fafc;
+        border: 1px solid var(--arca-border);
+        border-radius: 12px;
+        padding: 16px;
+        display: flex;
+        gap: 12px;
+        align-items: start;
+        font-size: 0.8rem;
+        color: #64748b;
+        line-height: 1.4;
+    }
+
+    .summary-info-card i {
+        font-size: 1.1rem;
+        color: #3b82f6;
+    }
+</style>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        // Run validation at startup
+        validateARCARules();
+
+        // Loading spinner animation on submit
+        const form = document.getElementById("arcaForm");
+        form.addEventListener("submit", function (e) {
+            if (form.checkValidity() && !submitBtn.disabled) {
+                document.querySelector(".normal-state").classList.add("d-none");
+                document.querySelector(".loading-state").classList.remove("d-none");
+                document.getElementById("submitBtn").disabled = true;
+            }
+        });
+    });
+
+    function validateARCARules() {
+        const invoiceType = parseInt(document.getElementById("invoiceTypeSelect").value);
+        const docType = parseInt(document.getElementById("docTypeSelect").value);
+        const docNumber = document.getElementById("docNumberInput").value.trim();
+        const condicionIva = parseInt(document.getElementById("condicionIvaSelect").value);
+        const alertDiv = document.getElementById("arcaValidatorAlert");
+        const alertText = document.getElementById("validatorAlertText");
+        const submitBtn = document.getElementById("submitBtn");
+
+        let hasError = false;
+        let errorMessage = "";
+
+        // Regla 1: Factura A exige CUIT y Responsable Inscripto
+        if (invoiceType === 1) { // Factura A
+            if (docType !== 80) {
+                hasError = true;
+                errorMessage = "Para emitir una <strong>Factura A</strong>, es obligatorio identificar al receptor con una <strong>CUIT</strong>.";
+            } else if (condicionIva !== 1) { // 1 = Responsable Inscripto
+                hasError = true;
+                errorMessage = "Para emitir una <strong>Factura A</strong>, el receptor debe tener condición de IVA de <strong>IVA Responsable Inscripto</strong> (RG 5616).";
+            }
+        }
+
+        // Regla 2: Factura B no permite Responsable Inscripto
+        if (invoiceType === 6) { // Factura B
+            if (condicionIva === 1) {
+                hasError = true;
+                errorMessage = "No se permite emitir <strong>Factura B</strong> a un Responsable Inscripto. Corresponde emitir Factura A.";
+            }
+        }
+
+        // Regla 3: Si tiene CUIT, la longitud y digito verificador deben sugerirse (avisar en interfaz)
+        if (docType === 80 && docNumber.length > 0 && docNumber.length !== 11) {
+            hasError = true;
+            errorMessage = "La CUIT ingresada debe poseer exactamente <strong>11 dígitos numéricos</strong> sin guiones.";
+        }
+
+        // Mostrar / Ocultar Alerta
+        if (hasError) {
+            alertText.innerHTML = errorMessage;
+            alertDiv.classList.remove("d-none");
+            submitBtn.disabled = true;
+            submitBtn.style.opacity = 0.55;
+            submitBtn.style.cursor = "not-allowed";
+        } else {
+            alertDiv.classList.add("d-none");
+            submitBtn.disabled = false;
+            submitBtn.style.opacity = 1;
+            submitBtn.style.cursor = "pointer";
+        }
+    }
+
+    function onVoucherTypeChange() {
+        const invoiceType = parseInt(document.getElementById("invoiceTypeSelect").value);
+        const docTypeSelect = document.getElementById("docTypeSelect");
+        const condicionIvaSelect = document.getElementById("condicionIvaSelect");
+
+        // Autoconfigurar según el tipo seleccionado para facilitar el flujo
+        if (invoiceType === 1) { // Factura A
+            docTypeSelect.value = "80"; // CUIT
+            condicionIvaSelect.value = "1"; // Responsable Inscripto
+        } else if (invoiceType === 6) { // Factura B
+            // Default to Consumidor Final if they had Responsable Inscripto before
+            if (condicionIvaSelect.value === "1") {
+                condicionIvaSelect.value = "5"; // Consumidor Final
+                docTypeSelect.value = "99"; // Sin Identificar
+            }
+        }
+
+        validateARCARules();
+    }
+
+    function onDocTypeChange() {
+        const docType = parseInt(document.getElementById("docTypeSelect").value);
+        const docNumberInput = document.getElementById("docNumberInput");
+
+        if (docType === 99) {
+            docNumberInput.value = "";
+            docNumberInput.disabled = true;
+            docNumberInput.placeholder = "No identificado (Consumidor Final)";
+        } else {
+            docNumberInput.disabled = false;
+            docNumberInput.placeholder = docType === 80 ? "CUIT de 11 dígitos" : "DNI de 8 dígitos";
+        }
+
+        validateARCARules();
+    }
+
+    function onCondicionIvaChange() {
+        validateARCARules();
+    }
+
+    // Monitor doc number keys for automatic checks
+    document.getElementById("docNumberInput").addEventListener("keyup", validateARCARules);
+    document.getElementById("docNumberInput").addEventListener("change", validateARCARules);
+</script>

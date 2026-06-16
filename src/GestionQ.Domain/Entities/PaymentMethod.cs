@@ -13,5 +13,8 @@ namespace GestionQ.Domain.Entities
 
         [Display(Name = "Habilitado")]
         public bool IsActive { get; set; } = true;
+
+        [Display(Name = "Porcentaje de Descuento (%)")]
+        public decimal DiscountPercentage { get; set; } = 0;
     }
 }

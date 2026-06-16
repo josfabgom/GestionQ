@@ -11,9 +11,11 @@ using System.Text.Json;
 using System.IO;
 using System.Threading.Tasks;
 
+using GestionQ.Domain.Constants;
+
 namespace GestionQ.Web.Controllers
 {
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = Permissions.Config.View)]
     public class ConfigurationController : Controller
     {
         private readonly IWebHostEnvironment _env;
@@ -29,6 +31,11 @@ namespace GestionQ.Web.Controllers
 
         public IActionResult Index()
         {
+            return View();
+        }
+
+        public IActionResult SystemSettings()
+        {
             var connString = _config.GetConnectionString("DefaultConnection");
             var builder = new SqlConnectionStringBuilder(connString);
 
@@ -41,7 +48,8 @@ namespace GestionQ.Web.Controllers
                 CompanyName = _config["CompanyInfo:Name"] ?? "",
                 CompanyAddress = _config["CompanyInfo:Address"] ?? "",
                 CompanyPhone = _config["CompanyInfo:Phone"] ?? "",
-                CompanyEmail = _config["CompanyInfo:Email"] ?? ""
+                CompanyEmail = _config["CompanyInfo:Email"] ?? "",
+                JDataGateFolderPath = _config["Scale:JDataGateFolderPath"] ?? @"C:\JDataGate\IN\"
             };
 
             var setting = _context.SystemSettings.FirstOrDefault(s => s.Key == "NextInternalSupplierNumber");
@@ -85,7 +93,7 @@ namespace GestionQ.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Index(ConfigurationViewModel model)
+        public async Task<IActionResult> SystemSettings(ConfigurationViewModel model)
         {
             if (!ModelState.IsValid) return View(model);
 
@@ -138,6 +146,12 @@ namespace GestionQ.Web.Controllers
                     node["CompanyInfo"]!["Phone"] = model.CompanyPhone;
                     node["CompanyInfo"]!["Email"] = model.CompanyEmail;
 
+                    if (node["Scale"] == null)
+                    {
+                        node["Scale"] = new JsonObject();
+                    }
+                    node["Scale"]!["JDataGateFolderPath"] = model.JDataGateFolderPath;
+
                     var options = new JsonSerializerOptions { WriteIndented = true };
                     await System.IO.File.WriteAllTextAsync(appSettingsPath, node.ToJsonString(options));
                 }
@@ -153,7 +167,7 @@ namespace GestionQ.Web.Controllers
                 await _context.SaveChangesAsync();
 
                 TempData["SuccessMessage"] = "Configuración guardada correctamente.";
-                return RedirectToAction(nameof(Index));
+                return RedirectToAction(nameof(SystemSettings));
             }
             catch (Exception ex)
             {

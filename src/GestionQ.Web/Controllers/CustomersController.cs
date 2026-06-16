@@ -5,9 +5,11 @@ using GestionQ.Infrastructure.Data;
 using GestionQ.Domain.Entities;
 using GestionQ.Web.Models;
 
+using GestionQ.Domain.Constants;
+
 namespace GestionQ.Web.Controllers
 {
-    [Authorize]
+    [Authorize(Policy = Permissions.Customers.View)]
     public class CustomersController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -33,14 +35,15 @@ namespace GestionQ.Web.Controllers
 
             return View(await query.ToListAsync());
         }
+        [Authorize(Policy = Permissions.Customers.Create)]
 
         public async Task<IActionResult> Create()
         {
             ViewBag.TaxConditions = new Microsoft.AspNetCore.Mvc.Rendering.SelectList(await _context.TaxConditions.Where(t => t.IsActive).ToListAsync(), "Id", "Name");
             return View(new CustomerViewModel());
         }
-
         [HttpPost]
+        [Authorize(Policy = Permissions.Customers.Create)]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(CustomerViewModel model)
         {
@@ -84,6 +87,7 @@ namespace GestionQ.Web.Controllers
             }
             return View(model);
         }
+        [Authorize(Policy = Permissions.Customers.Edit)]
 
         public async Task<IActionResult> Edit(int? id)
         {
@@ -114,6 +118,7 @@ namespace GestionQ.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Policy = Permissions.Customers.Edit)]
         public async Task<IActionResult> Edit(int id, CustomerViewModel model)
         {
             if (id != model.Id) return NotFound();
@@ -173,8 +178,8 @@ namespace GestionQ.Web.Controllers
             }
             return "/images/customers/" + uniqueFileName;
         }
-
         [HttpPost]
+        [Authorize(Policy = Permissions.Customers.Delete)]
         public async Task<IActionResult> Delete(int id)
         {
             var customer = await _context.Customers.FindAsync(id);

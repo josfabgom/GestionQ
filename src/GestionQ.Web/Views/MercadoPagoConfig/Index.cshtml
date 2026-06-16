@@ -1,0 +1,93 @@
+@model IEnumerable<GestionQ.Domain.Entities.MercadoPagoConfig>
+@{
+    ViewData["Title"] = "Configuración Mercado Pago";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="page-title mb-0">Configuración Mercado Pago</h1>
+    <div style="display: flex; gap: 1rem;">
+        <button id="btnVincularMP" class="btn-primary" style="background-color: #009ee3; border-color: #009ee3; color: white;" onclick="iniciarViculacionOAuth()">
+            <i class="fas fa-link"></i> Vincular con Mercado Pago
+        </button>
+        <a asp-action="Transactions" class="btn-secondary" style="display: flex; align-items: center; gap: 0.5rem; border-color: #009ee3; color: #009ee3;">
+            <i class="fas fa-list-check"></i> Auditoría de Pagos
+        </a>
+        <a asp-action="Create" class="btn-primary">Nueva Configuración</a>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        async function iniciarViculacionOAuth() {
+            try {
+                const btn = document.getElementById('btnVincularMP');
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando enlace...';
+
+                const response = await fetch('/api/MercadoPago/oauth-url');
+                const data = await response.json();
+                
+                if (data.url) {
+                    window.location.href = data.url;
+                } else {
+                    Swal.fire('Error', 'No se pudo generar el enlace de vinculación.', 'error');
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-link"></i> Vincular con Mercado Pago';
+                }
+            } catch (error) {
+                console.error(error);
+                Swal.fire('Error', 'Hubo un problema de conexión.', 'error');
+            }
+        }
+
+        // Check for success message in URL
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('success') === 'true') {
+            Swal.fire('¡Éxito!', 'Tu cuenta de Mercado Pago se vinculó correctamente.', 'success').then(() => {
+                window.history.replaceState({}, document.title, window.location.pathname);
+            });
+        }
+    </script>
+}
+
+<div class="glass-panel">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Punto de Venta (Caja)</th>
+                <th>Modalidad por Defecto</th>
+                <th>Caja MP (QR)</th>
+                <th>Dispositivo MP (Point)</th>
+                <th>Estado</th>
+                <th style="width: 150px;">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td>@(item.PointOfSale?.Name ?? "Todas las cajas")</td>
+                    <td><span class="badge" style="background: var(--accent); color: white;">@item.DefaultMethod</span></td>
+                    <td>@item.ExternalPosId</td>
+                    <td>@item.PointDeviceId</td>
+                    <td>
+                        @if (item.IsActive)
+                        {
+                            <span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #10b981;">Activo</span>
+                        }
+                        else
+                        {
+                            <span class="badge" style="background: rgba(239, 68, 68, 0.2); color: #ef4444;">Inactivo</span>
+                        }
+                    </td>
+                    <td>
+                        <a asp-action="Edit" asp-route-id="@item.Id" class="btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.875rem;">Editar</a>
+                        <form asp-action="Delete" asp-route-id="@item.Id" method="post" style="display:inline;" onsubmit="return confirm('¿Seguro que desea eliminar esta configuración?');">
+                            <button type="submit" class="btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; color: #ef4444;">Eliminar</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

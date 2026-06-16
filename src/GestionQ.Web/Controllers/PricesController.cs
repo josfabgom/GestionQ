@@ -8,9 +8,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
+using GestionQ.Domain.Constants;
+
 namespace GestionQ.Web.Controllers
 {
-    [Authorize]
+    [Authorize(Policy = Permissions.Config.View)]
     public class PricesController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -71,6 +73,7 @@ namespace GestionQ.Web.Controllers
             decimal finalPrice = (dCost * (1 + (vatRateValue / 100))) * (1 + (dMargin / 100)) + dTax;
 
             product.Price = finalPrice;
+            if (product.IsPesable) product.SendToScale = true;
 
             var priceEntry = new ProductPrice
             {
@@ -136,6 +139,8 @@ namespace GestionQ.Web.Controllers
                 {
                     product.Price = (cost * (1 + (vatRate / 100))) * (1 + (margin / 100)) + tax;
                 }
+
+                if (product.IsPesable) product.SendToScale = true;
 
                 var priceEntry = new ProductPrice
                 {

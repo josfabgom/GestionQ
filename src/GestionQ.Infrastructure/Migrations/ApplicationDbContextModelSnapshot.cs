@@ -64,6 +64,40 @@ namespace GestionQ.Infrastructure.Migrations
                     b.ToTable("CashRegisters");
                 });
 
+            modelBuilder.Entity("GestionQ.Domain.Entities.CashRegisterMovement", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("CashRegisterId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CashRegisterId");
+
+                    b.ToTable("CashRegisterMovements");
+                });
+
             modelBuilder.Entity("GestionQ.Domain.Entities.Category", b =>
                 {
                     b.Property<int>("Id")
@@ -98,6 +132,9 @@ namespace GestionQ.Infrastructure.Migrations
 
                     b.Property<string>("Cuit")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("DiscountPercentage")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("Dni")
                         .HasColumnType("nvarchar(max)");
@@ -135,6 +172,186 @@ namespace GestionQ.Infrastructure.Migrations
                     b.ToTable("Customers");
                 });
 
+            modelBuilder.Entity("GestionQ.Domain.Entities.ElectronicInvoice", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("CAE")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CAEExpirationDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("CanMisMonExt")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("ConceptCode")
+                        .HasColumnType("int");
+
+                    b.Property<int>("CondicionIVAReceptorId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CustomerName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CustomerTaxCondition")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("DocNumber")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("DocTypeCode")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("ExemptAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("InvoiceNumber")
+                        .HasColumnType("int");
+
+                    b.Property<int>("InvoiceTypeCode")
+                        .HasColumnType("int");
+
+                    b.Property<string>("InvoiceTypeDesc")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("IssueDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("NetAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("PointOfSaleId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PointOfSaleNumber")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("SaleId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("VatAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PointOfSaleId");
+
+                    b.HasIndex("SaleId")
+                        .IsUnique()
+                        .HasFilter("[SaleId] IS NOT NULL");
+
+                    b.ToTable("ElectronicInvoices");
+                });
+
+            modelBuilder.Entity("GestionQ.Domain.Entities.FiscalPrintJob", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("PrintedCount")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("PrintedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PrinterName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("SaleId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SaleId");
+
+                    b.ToTable("FiscalPrintJobs");
+                });
+
+            modelBuilder.Entity("GestionQ.Domain.Entities.MercadoPagoConfig", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AccessToken")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("DefaultMethod")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ExternalPosId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<long?>("MpUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("PointDeviceId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int?>("PointOfSaleId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RefreshToken")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PointOfSaleId");
+
+                    b.ToTable("MercadoPagoConfigs");
+                });
+
             modelBuilder.Entity("GestionQ.Domain.Entities.PaymentMethod", b =>
                 {
                     b.Property<int>("Id")
@@ -142,6 +359,9 @@ namespace GestionQ.Infrastructure.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("DiscountPercentage")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
@@ -215,6 +435,9 @@ namespace GestionQ.Infrastructure.Migrations
                     b.Property<bool>("IsPesable")
                         .HasColumnType("bit");
 
+                    b.Property<DateTime?>("LastSentToScaleDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<decimal>("MinimumStock")
                         .HasColumnType("decimal(18,2)");
 
@@ -278,6 +501,62 @@ namespace GestionQ.Infrastructure.Migrations
                     b.HasIndex("ProductId");
 
                     b.ToTable("ProductPrices");
+                });
+
+            modelBuilder.Entity("GestionQ.Domain.Entities.PromotionRule", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("BuyQuantity")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsStackable")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("PayQuantity")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Value")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PromotionRules");
+                });
+
+            modelBuilder.Entity("GestionQ.Domain.Entities.PromotionRuleProduct", b =>
+                {
+                    b.Property<int>("PromotionRuleId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
+                    b.HasKey("PromotionRuleId", "ProductId");
+
+                    b.HasIndex("ProductId");
+
+                    b.ToTable("PromotionRuleProducts");
                 });
 
             modelBuilder.Entity("GestionQ.Domain.Entities.Purchase", b =>
@@ -361,6 +640,9 @@ namespace GestionQ.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<DateTime?>("CancellationDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<int?>("CashRegisterId")
                         .HasColumnType("int");
 
@@ -370,8 +652,20 @@ namespace GestionQ.Infrastructure.Migrations
                     b.Property<DateTime>("Date")
                         .HasColumnType("datetime2");
 
+                    b.Property<decimal>("DiscountAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool>("IsCancelled")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal>("PaymentDiscountAmount")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<int?>("PointOfSaleId")
                         .HasColumnType("int");
+
+                    b.Property<decimal>("SubTotal")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("TotalAmount")
                         .HasColumnType("decimal(18,2)");
@@ -399,6 +693,9 @@ namespace GestionQ.Infrastructure.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("DiscountAmount")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<int>("ProductId")
                         .HasColumnType("int");
@@ -437,6 +734,9 @@ namespace GestionQ.Infrastructure.Migrations
 
                     b.Property<int>("SaleId")
                         .HasColumnType("int");
+
+                    b.Property<string>("TransactionReference")
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
@@ -844,6 +1144,17 @@ namespace GestionQ.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("GestionQ.Domain.Entities.CashRegisterMovement", b =>
+                {
+                    b.HasOne("GestionQ.Domain.Entities.CashRegister", "CashRegister")
+                        .WithMany("Movements")
+                        .HasForeignKey("CashRegisterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CashRegister");
+                });
+
             modelBuilder.Entity("GestionQ.Domain.Entities.Customer", b =>
                 {
                     b.HasOne("GestionQ.Domain.Entities.TaxCondition", "TaxCondition")
@@ -851,6 +1162,44 @@ namespace GestionQ.Infrastructure.Migrations
                         .HasForeignKey("TaxConditionId");
 
                     b.Navigation("TaxCondition");
+                });
+
+            modelBuilder.Entity("GestionQ.Domain.Entities.ElectronicInvoice", b =>
+                {
+                    b.HasOne("GestionQ.Domain.Entities.PointOfSale", "PointOfSale")
+                        .WithMany()
+                        .HasForeignKey("PointOfSaleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("GestionQ.Domain.Entities.Sale", "Sale")
+                        .WithOne("ElectronicInvoice")
+                        .HasForeignKey("GestionQ.Domain.Entities.ElectronicInvoice", "SaleId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("PointOfSale");
+
+                    b.Navigation("Sale");
+                });
+
+            modelBuilder.Entity("GestionQ.Domain.Entities.FiscalPrintJob", b =>
+                {
+                    b.HasOne("GestionQ.Domain.Entities.Sale", "Sale")
+                        .WithMany()
+                        .HasForeignKey("SaleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Sale");
+                });
+
+            modelBuilder.Entity("GestionQ.Domain.Entities.MercadoPagoConfig", b =>
+                {
+                    b.HasOne("GestionQ.Domain.Entities.PointOfSale", "PointOfSale")
+                        .WithMany()
+                        .HasForeignKey("PointOfSaleId");
+
+                    b.Navigation("PointOfSale");
                 });
 
             modelBuilder.Entity("GestionQ.Domain.Entities.Product", b =>
@@ -877,6 +1226,25 @@ namespace GestionQ.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("GestionQ.Domain.Entities.PromotionRuleProduct", b =>
+                {
+                    b.HasOne("GestionQ.Domain.Entities.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("GestionQ.Domain.Entities.PromotionRule", "PromotionRule")
+                        .WithMany("Products")
+                        .HasForeignKey("PromotionRuleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+
+                    b.Navigation("PromotionRule");
                 });
 
             modelBuilder.Entity("GestionQ.Domain.Entities.Purchase", b =>
@@ -1058,6 +1426,8 @@ namespace GestionQ.Infrastructure.Migrations
 
             modelBuilder.Entity("GestionQ.Domain.Entities.CashRegister", b =>
                 {
+                    b.Navigation("Movements");
+
                     b.Navigation("Sales");
                 });
 
@@ -1078,6 +1448,11 @@ namespace GestionQ.Infrastructure.Migrations
                     b.Navigation("PriceHistory");
                 });
 
+            modelBuilder.Entity("GestionQ.Domain.Entities.PromotionRule", b =>
+                {
+                    b.Navigation("Products");
+                });
+
             modelBuilder.Entity("GestionQ.Domain.Entities.Purchase", b =>
                 {
                     b.Navigation("Items");
@@ -1085,6 +1460,8 @@ namespace GestionQ.Infrastructure.Migrations
 
             modelBuilder.Entity("GestionQ.Domain.Entities.Sale", b =>
                 {
+                    b.Navigation("ElectronicInvoice");
+
                     b.Navigation("Items");
 
                     b.Navigation("Payments");

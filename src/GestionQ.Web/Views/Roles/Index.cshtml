@@ -1,0 +1,36 @@
+@model IEnumerable<GestionQ.Web.Models.RoleViewModel>
+
+@{
+    ViewData["Title"] = "Gestión de Roles";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Gestión de Roles</h2>
+    <a asp-action="Create" class="btn btn-primary">Nuevo Rol</a>
+</div>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Nombre</th>
+            <th>Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var role in Model)
+        {
+            <tr>
+                <td>@role.Name</td>
+                <td>
+                    <a asp-action="ManagePermissions" asp-route-roleId="@role.Id" class="btn btn-warning btn-sm">Permisos</a>
+                    @if (role.Name != "Admin")
+                    {
+                        <form asp-action="Delete" asp-route-id="@role.Id" method="post" style="display:inline;" onsubmit="return confirm('¿Seguro que desea eliminar este rol?');">
+                            <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
+                        </form>
+                    }
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

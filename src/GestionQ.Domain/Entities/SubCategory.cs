@@ -13,7 +13,7 @@ namespace GestionQ.Domain.Entities
 
         [Display(Name = "Rubro")]
         public int CategoryId { get; set; }
-        public Category Category { get; set; } = null!;
+        public Category? Category { get; set; }
 
         public List<Product> Products { get; set; } = new();
     }

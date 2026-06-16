@@ -3,44 +3,98 @@
 @{
     ViewData["Title"] = "Detalle de Caja";
     var summary = ViewBag.PaymentSummary as IEnumerable<dynamic>;
+    var productSummary = ViewBag.ProductSummary as IEnumerable<GestionQ.Web.Models.ProductSalesSummaryViewModel>;
+
+    // Cálculos locales para el desglose detallado
+    decimal salesInCash = Model.Sales
+        .SelectMany(s => s.Payments)
+        .Where(p => p.PaymentMethod?.Name == "Efectivo")
+        .Sum(p => p.Amount);
+
+    decimal manualInflows = Model.Movements
+        .Where(m => m.Type == "Ingreso")
+        .Sum(m => m.Amount);
+
+    decimal manualOutflows = Model.Movements
+        .Where(m => m.Type == "Egreso")
+        .Sum(m => m.Amount);
+
+    decimal calculatedExpectedCash = Model.InitialBalance + salesInCash + manualInflows - manualOutflows;
 }
 
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
     <h1 class="page-title">Resumen de Turno / Caja</h1>
-    <a asp-action="Index" class="btn-secondary">Volver al Historial</a>
+    <div style="display: flex; gap: 1rem;">
+        @if (Model.IsOpen)
+        {
+            <a asp-action="Close" asp-route-id="@Model.Id" class="btn-danger" style="background: #ef4444; display: flex; align-items: center; gap: 0.5rem; font-weight: 600;">
+                <i class="fa-solid fa-calculator"></i> Cerrar Caja Actual
+            </a>
+        }
+        <a asp-action="Index" class="btn-secondary">Volver al Historial</a>
+    </div>
 </div>
 
-<div style="display: flex; gap: 2rem; align-items: flex-start; flex-wrap: wrap;">
-    <!-- Info General -->
-    <div class="glass-panel" style="flex: 1; min-width: 300px;">
-        <h3>Datos de la Operación</h3>
-        <p><strong>Operador:</strong> @Model.User?.UserName</p>
-        <p><strong>Apertura:</strong> @Model.OpeningDate.ToString("dd/MM/yyyy HH:mm:ss")</p>
-        <p><strong>Cierre:</strong> @(Model.ClosingDate.HasValue ? Model.ClosingDate.Value.ToString("dd/MM/yyyy HH:mm:ss") : "Aún Abierta")</p>
-        <p><strong>Estado:</strong> 
-            @if(Model.IsOpen) { <span style="color: #10b981; font-weight:600;">ABIERTA</span> } 
-            else { <span style="color: #ef4444; font-weight:600;">CERRADA</span> }
+@if (TempData["SuccessMessage"] != null)
+{
+    <div style="background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #6ee7b7; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
+        <i class="fa-solid fa-circle-check"></i> @TempData["SuccessMessage"]
+    </div>
+}
+@if (TempData["Message"] != null)
+{
+    <div style="background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #fca5a5; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
+        <i class="fa-solid fa-triangle-exclamation"></i> @TempData["Message"]
+    </div>
+}
+
+<div style="display: flex; gap: 2rem; align-items: flex-start; flex-wrap: wrap; margin-bottom: 2rem;">
+    
+    <!-- Info General y Desglose de Caja Física -->
+    <div class="glass-panel" style="flex: 1.2; min-width: 320px;">
+        <h3 style="margin-top:0; color:#3b82f6;"><i class="fa-solid fa-info-circle"></i> Datos de la Operación</h3>
+        <p style="margin: 0.5rem 0;"><strong>Operador:</strong> @Model.User?.UserName</p>
+        <p style="margin: 0.5rem 0;"><strong>Apertura:</strong> @Model.OpeningDate.ToString("dd/MM/yyyy HH:mm:ss")</p>
+        <p style="margin: 0.5rem 0;"><strong>Cierre:</strong> @(Model.ClosingDate.HasValue ? Model.ClosingDate.Value.ToString("dd/MM/yyyy HH:mm:ss") : "Aún Abierta")</p>
+        <p style="margin: 0.5rem 0;"><strong>Estado:</strong> 
+            @if(Model.IsOpen) { <span style="background: rgba(16, 185, 129, 0.2); color: #10b981; padding: 0.1rem 0.4rem; border-radius: 4px; font-weight:600; font-size:0.85rem;">ABIERTA</span> } 
+            else { <span style="background: rgba(239, 68, 68, 0.2); color: #ef4444; padding: 0.1rem 0.4rem; border-radius: 4px; font-weight:600; font-size:0.85rem;">CERRADA</span> }
         </p>
 
         <hr style="border-color: var(--border); margin: 1.5rem 0;"/>
 
-        <h4 style="margin-bottom: 1rem;">Cuadre de Efectivo</h4>
-        <div style="display:flex; justify-content: space-between;">
-            <span>Saldo Fijo (Base):</span>
+        <h4 style="margin-bottom: 1rem; color:#a78bfa;"><i class="fa-solid fa-sack-dollar"></i> Conciliación de Efectivo</h4>
+        
+        <div style="display:flex; justify-content: space-between; padding: 0.4rem 0;">
+            <span style="color: var(--text-muted);">Saldo Inicial (Base):</span>
             <strong>$@Model.InitialBalance.ToString("N2")</strong>
         </div>
-        <div style="display:flex; justify-content: space-between; margin-top: 0.5rem;">
-            <span>Efectivo Calculado (Ventas):</span>
-            <strong style="color: #10b981;">$@((Model.ExpectedCashBalance - Model.InitialBalance)?.ToString("N2") ?? "0.00")</strong>
+        <div style="display:flex; justify-content: space-between; padding: 0.4rem 0;">
+            <span style="color: var(--text-muted);">(+) Ventas en Efectivo:</span>
+            <strong style="color: #34d399;">$@salesInCash.ToString("N2")</strong>
         </div>
+        <div style="display:flex; justify-content: space-between; padding: 0.4rem 0;">
+            <span style="color: var(--text-muted);">(+) Ingresos Manuales (Caja/Cambio):</span>
+            <strong style="color: #60a5fa;">$@manualInflows.ToString("N2")</strong>
+        </div>
+        <div style="display:flex; justify-content: space-between; padding: 0.4rem 0;">
+            <span style="color: var(--text-muted);">(-) Egresos Manuales (Gastos fijos):</span>
+            <strong style="color: #f43f5e;">$@manualOutflows.ToString("N2")</strong>
+        </div>
+
+        <div style="display:flex; justify-content: space-between; margin-top: 1rem; padding-top: 1rem; border-top: 2px solid var(--border);">
+            <span style="font-weight: 600;">Efectivo Calculado (Debería Haber):</span>
+            <strong style="color: #10b981; font-size: 1.25rem;">$@calculatedExpectedCash.ToString("N2")</strong>
+        </div>
+
         @if (!Model.IsOpen)
         {
-            <div style="display:flex; justify-content: space-between; margin-top: 1rem; padding-top: 1rem; border-top: 1px dotted rgba(255,255,255,0.3);">
-                <span>Declarado (Conteos Cierre):</span>
-                <strong style="color: #fbbf24; font-size: 1.2rem;">$@Model.FinalCashBalance?.ToString("N2")</strong>
+            <div style="display:flex; justify-content: space-between; margin-top: 0.8rem; padding-top: 0.8rem; border-top: 1px dotted var(--border);">
+                <span style="font-weight: 600; color: #fbbf24;">Declarado (Físico al Cierre):</span>
+                <strong style="color: #fbbf24; font-size: 1.25rem;">$@Model.FinalCashBalance?.ToString("N2")</strong>
             </div>
             
-            <div style="display:flex; justify-content: space-between; margin-top: 1rem; padding: 1rem; border-radius: 8px; background: @(Model.Difference < 0 ? "rgba(239, 68, 68, 0.2)" : (Model.Difference > 0 ? "rgba(16, 185, 129, 0.2)" : "rgba(255,255,255,0.05)")) ;">
+            <div style="display:flex; justify-content: space-between; margin-top: 1rem; padding: 1rem; border-radius: 8px; background: @(Model.Difference < 0 ? "rgba(239, 68, 68, 0.15)" : (Model.Difference > 0 ? "rgba(16, 185, 129, 0.15)" : "rgba(255,255,255,0.05)")) ; border: 1px solid @(Model.Difference < 0 ? "#ef4444" : (Model.Difference > 0 ? "#10b981" : "var(--border)"));">
                 <span style="font-weight: 600;">Diferencia (Sobrante/Faltante):</span>
                 <strong style="font-size: 1.3rem; color: @(Model.Difference < 0 ? "#ef4444" : (Model.Difference > 0 ? "#10b981" : "var(--text-main)"))">
                     $@Model.Difference?.ToString("N2")
@@ -50,8 +104,9 @@
     </div>
 
     <!-- Metodos de Cobro Consolidados -->
-    <div class="glass-panel" style="flex: 1; min-width: 300px;">
-        <h3>Recaudación (Por Medios de Pago)</h3>
+    <div class="glass-panel" style="flex: 1; min-width: 300px; height: 100%;">
+        <h3 style="margin-top:0; color:#fbbf24;"><i class="fa-solid fa-credit-card"></i> Recaudación por Medios de Pago</h3>
+        <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1rem;">Muestra el total recaudado clasificado por cada medio de cobro.</p>
         
         @if (summary != null && summary.Any())
         {
@@ -59,20 +114,145 @@
                 @foreach(var item in summary)
                 {
                     <li style="display: flex; justify-content: space-between; padding: 0.75rem 0; border-bottom: 1px solid var(--border);">
-                        <span>@item.Method</span>
+                        <span style="font-weight: 500;">@item.Method</span>
                         <strong style="color: var(--accent); font-size: 1.1rem;">$@Convert.ToDecimal(item.Total).ToString("N2")</strong>
                     </li>
                 }
                 
                 <li style="display: flex; justify-content: space-between; padding: 1rem 0; font-size: 1.2rem; margin-top: 1rem; border-top: 2px solid var(--border);">
-                    <strong>TOTAL SISTEMA</strong>
+                    <strong>TOTAL TURNOS</strong>
                     <strong style="color: #10b981;">$@Model.Sales.SelectMany(s => s.Payments).Sum(p => p.Amount).ToString("N2")</strong>
                 </li>
             </ul>
         }
         else
         {
-            <p style="color: var(--text-muted); font-style: italic;">No hubo recaudaciones ni ventas en este turno.</p>
+            <p style="color: var(--text-muted); font-style: italic; margin-top: 2rem;">No hubo ventas ni transacciones registradas.</p>
         }
     </div>
+</div>
+
+<!-- Sección de Movimientos Manuales (Gastos / Cambios) -->
+<div class="glass-panel" style="margin-bottom: 2rem;">
+    <h3 style="margin-top: 0; color: #38bdf8; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1.5rem;">
+        <i class="fa-solid fa-arrows-left-right"></i> Movimientos de Efectivo Manuales (Ingresos y Egresos)
+    </h3>
+
+    <div style="display: flex; gap: 2rem; flex-wrap: wrap; align-items: stretch;">
+        <!-- Lista de Movimientos -->
+        <div style="flex: 2; min-width: 320px;">
+            <h4 style="margin-top: 0; color: var(--text-muted); margin-bottom: 1rem;">Historial de Movimientos</h4>
+            @if (Model.Movements != null && Model.Movements.Any())
+            {
+                <table class="table" style="font-size: 0.9rem;">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Tipo</th>
+                            <th>Descripción / Concepto</th>
+                            <th style="text-align: right;">Monto</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var movement in Model.Movements.OrderBy(m => m.Date))
+                        {
+                            <tr>
+                                <td>@movement.Date.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td>
+                                    @if (movement.Type == "Ingreso")
+                                    {
+                                        <span style="background: rgba(59, 130, 246, 0.2); color: #3b82f6; padding: 0.1rem 0.4rem; border-radius: 4px; font-weight:600; font-size: 0.75rem;">INGRESO</span>
+                                    }
+                                    else
+                                    {
+                                        <span style="background: rgba(244, 63, 94, 0.2); color: #f43f5e; padding: 0.1rem 0.4rem; border-radius: 4px; font-weight:600; font-size: 0.75rem;">EGRESO</span>
+                                    }
+                                </td>
+                                <td>@movement.Description</td>
+                                <td style="text-align: right; font-weight: 600; color: @(movement.Type == "Ingreso" ? "#34d399" : "#f43f5e");">
+                                    $@movement.Amount.ToString("N2")
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <p style="color: var(--text-muted); font-style: italic; padding: 1.5rem 0;">No se han registrado movimientos manuales durante este turno.</p>
+            }
+        </div>
+
+        <!-- Formulario para Registrar (solo si está abierta) -->
+        @if (Model.IsOpen)
+        {
+            <div class="glass-panel" style="flex: 1; min-width: 280px; background: rgba(15, 23, 42, 0.3); border: 1px solid rgba(255,255,255,0.05); margin-bottom: 0;">
+                <h4 style="margin-top: 0; color: #38bdf8; margin-bottom: 1rem;"><i class="fa-solid fa-plus-circle"></i> Nuevo Movimiento</h4>
+                
+                <form asp-action="AddMovement" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="cashRegisterId" value="@Model.Id" />
+
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label for="type">Tipo de Movimiento</label>
+                        <select name="type" id="type" class="form-control" style="background: rgba(0,0,0,0.3);">
+                            <option value="Ingreso">Ingreso (Carga cambio, etc.)</option>
+                            <option value="Egreso">Egreso (Gastos fijos, etc.)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label for="amount">Monto ($)</label>
+                        <input name="amount" id="amount" type="text" inputmode="decimal" class="form-control" placeholder="Ej: 500.00" required style="background: rgba(0,0,0,0.3);" />
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 1.5rem;">
+                        <label for="description">Concepto / Descripción</label>
+                        <input name="description" id="description" type="text" class="form-control" placeholder="Ej: Cambio inicial o Pago de luz" required style="background: rgba(0,0,0,0.3);" />
+                    </div>
+
+                    <button type="submit" class="btn-primary" style="width: 100%; padding: 0.7rem; font-weight:600; background: #0284c7;">
+                        Registrar Movimiento
+                    </button>
+                </form>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Detalle de Productos Vendidos (Arqueo de Inventario) -->
+<div class="glass-panel">
+    <h3 style="margin-top: 0; color: #10b981; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1.5rem;">
+        <i class="fa-solid fa-boxes-stacked"></i> Arqueo de Mercadería (Productos Vendidos)
+    </h3>
+    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">
+        Listado consolidado de todos los productos y unidades comercializadas en este turno para verificación de stock físico.
+    </p>
+
+    @if (productSummary != null && productSummary.Any())
+    {
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Producto</th>
+                    <th style="text-align: right; width: 150px;">Unidades Vendidas</th>
+                    <th style="text-align: right; width: 180px;">Total Recaudado</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in productSummary)
+                {
+                    <tr>
+                        <td style="font-weight: 500;">@item.ProductName</td>
+                        <td style="text-align: right; font-weight: 600; color: #60a5fa;">@item.Quantity.ToString("G29")</td>
+                        <td style="text-align: right; font-weight: 600; color: #10b981;">$@item.Total.ToString("N2")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <p style="color: var(--text-muted); font-style: italic; padding: 1.5rem 0;">No se registraron ventas de artículos en este turno.</p>
+    }
 </div>

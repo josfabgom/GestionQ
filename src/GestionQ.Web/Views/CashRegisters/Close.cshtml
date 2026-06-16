@@ -2,49 +2,168 @@
 
 @{
     ViewData["Title"] = "Cerrar Caja";
+    var summary = ViewBag.PaymentSummary as IEnumerable<dynamic>;
+    var productSummary = ViewBag.ProductSummary as IEnumerable<GestionQ.Web.Models.ProductSalesSummaryViewModel>;
+
+    // Cálculos locales para el desglose detallado
+    decimal salesInCash = Model.Sales
+        .SelectMany(s => s.Payments)
+        .Where(p => p.PaymentMethod?.Name == "Efectivo")
+        .Sum(p => p.Amount);
+
+    decimal manualInflows = Model.Movements
+        .Where(m => m.Type == "Ingreso")
+        .Sum(m => m.Amount);
+
+    decimal manualOutflows = Model.Movements
+        .Where(m => m.Type == "Egreso")
+        .Sum(m => m.Amount);
 }
 
 <h1 class="page-title">Cierre de Caja Operativa</h1>
 
-<div class="glass-panel" style="max-width: 600px;">
-    <p style="color: var(--text-muted); margin-bottom: 2rem;">
-        Revisa la recaudación del sistema. Por favor, realiza el conteo físico de los billetes y decláralo a
-        continuación.
-    </p>
+<div style="display: flex; gap: 2rem; align-items: flex-start; flex-wrap: wrap; margin-bottom: 2rem;">
+    
+    <!-- Columna Izquierda: Formulario de Declaración de Efectivo y Desglose de Caja -->
+    <div style="flex: 1; min-width: 320px;">
+        <div class="glass-panel">
+            <p style="color: var(--text-muted); margin-bottom: 1.5rem;">
+                Por favor, realice el conteo físico de los billetes en caja y declare el total a continuación para finalizar su turno.
+            </p>
 
-    <div
-        style="background: rgba(15,23,42, 0.5); padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; border-left: 4px solid var(--accent);">
-        <p style="margin: 0; font-size: 0.9rem; color: var(--text-muted);">Saldo Inicial al Abrir</p>
-        <div style="font-size: 1.2rem; font-weight: 600;">$@Model.InitialBalance.ToString("N2")</div>
+            <div style="background: rgba(15,23,42, 0.5); padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem; border-left: 4px solid var(--accent);">
+                <div style="display:flex; justify-content: space-between; padding: 0.3rem 0;">
+                    <span style="font-size: 0.9rem; color: var(--text-muted);">Saldo Inicial (Base):</span>
+                    <strong>$@Model.InitialBalance.ToString("N2")</strong>
+                </div>
 
-        <p style="margin: 1rem 0 0 0; font-size: 0.9rem; color: var(--text-muted);">Total de Ventas Recibidas (Efectivo)
-        </p>
-        <div style="font-size: 1.2rem; font-weight: 600;">$@((Model.ExpectedCashBalance -
-            Model.InitialBalance)?.ToString("N2") ?? "0.00")</div>
+                <div style="display:flex; justify-content: space-between; padding: 0.3rem 0;">
+                    <span style="font-size: 0.9rem; color: var(--text-muted);">(+) Ventas en Efectivo:</span>
+                    <strong style="color: #34d399;">$@salesInCash.ToString("N2")</strong>
+                </div>
 
-        <hr style="border-color: rgba(255,255,255,0.1); margin: 1rem 0;" />
+                <div style="display:flex; justify-content: space-between; padding: 0.3rem 0;">
+                    <span style="font-size: 0.9rem; color: var(--text-muted);">(+) Ingresos Manuales:</span>
+                    <strong style="color: #60a5fa;">$@manualInflows.ToString("N2")</strong>
+                </div>
 
-        <p style="margin: 0; font-size: 1rem; color: #10b981; font-weight: 600;">Efectivo Total Calculado (Debería
-            Haber)</p>
-        <div style="font-size: 1.8rem; font-weight: 700; color: #10b981;">$@Model.ExpectedCashBalance?.ToString("N2")
+                <div style="display:flex; justify-content: space-between; padding: 0.3rem 0;">
+                    <span style="font-size: 0.9rem; color: var(--text-muted);">(-) Egresos Manuales (Gastos):</span>
+                    <strong style="color: #f43f5e;">$@manualOutflows.ToString("N2")</strong>
+                </div>
+
+                <hr style="border-color: rgba(255,255,255,0.1); margin: 0.8rem 0;" />
+
+                <p style="margin: 0; font-size: 1rem; color: #10b981; font-weight: 600;">Efectivo Total Calculado (Debería Haber)</p>
+                <div style="font-size: 2rem; font-weight: 700; color: #10b981;">$@Model.ExpectedCashBalance?.ToString("N2")</div>
+            </div>
+
+            <form asp-action="Close" asp-route-id="@Model.Id" method="post" id="closeForm">
+                @Html.AntiForgeryToken()
+
+                <div class="form-group">
+                    <label for="finalCashBalance" style="font-size: 1.1rem; color: #fbbf24; display:block; margin-bottom:0.5rem; font-weight:600;">
+                        Monto de Efectivo Real Encontrado
+                    </label>
+                    <input name="finalCashBalance" id="finalCashBalance" type="text" inputmode="decimal" class="form-control"
+                        placeholder="Ej: 59236.76"
+                        style="font-size: 1.6rem; font-weight: 700; color: #fbbf24; background: rgba(251, 191, 36, 0.1); text-align: center; border-color: rgba(251, 191, 36, 0.3);"
+                        required autocomplete="off" />
+                    <small style="color: var(--text-muted); margin-top: 0.5rem; display:block;">Ingrese el total del dinero contado físicamente. Utilice punto para decimales.</small>
+                </div>
+
+                <div class="form-group" style="margin-top: 2rem; display: flex; gap: 1rem;">
+                    <button type="button" class="btn-danger" style="background: #ef4444; border:none; cursor:pointer; flex: 1; padding: 0.8rem; font-size:1rem;"
+                        id="btnCerrar">Finalizar Cierre de Caja</button>
+                    <a asp-action="Index" class="btn-secondary" style="display:flex; align-items:center; justify-content:center;">Cancelar</a>
+                </div>
+            </form>
         </div>
     </div>
 
-    <form asp-action="Close">
-        <input type="hidden" asp-for="Id" />
-
-        <div class="form-group">
-            <label asp-for="FinalCashBalance" class="control-label" style="font-size: 1.1rem; color: #fbbf24;">Declara
-                el Efectivo Real Encontrado (Conteos de Billetes)</label>
-            <input name="finalCashBalance" id="finalCashBalance" type="number" step="0.01" class="form-control"
-                style="font-size: 1.5rem; font-weight: 700; color: #fbbf24; background: rgba(251, 191, 36, 0.1);"
-                required />
+    <!-- Columna Derecha: Recaudación por Medios de Pago y Arqueo de Mercadería -->
+    <div style="flex: 1.2; min-width: 320px; display: flex; flex-direction: column; gap: 2rem;">
+        
+        <!-- Recaudación General -->
+        <div class="glass-panel">
+            <h3 style="margin-top: 0; color: #fbbf24;"><i class="fa-solid fa-credit-card"></i> Resumen de Ventas por Medio de Pago</h3>
+            @if (summary != null && summary.Any())
+            {
+                <table class="table" style="font-size: 0.95rem;">
+                    <thead>
+                        <tr>
+                            <th>Medio de Pago</th>
+                            <th style="text-align: right;">Total Recaudado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in summary)
+                        {
+                            <tr>
+                                <td style="font-weight: 500;">@item.Method</td>
+                                <td style="text-align: right; font-weight: 600; color: var(--accent);">$@Convert.ToDecimal(item.Total).ToString("N2")</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr style="border-top: 2px solid var(--border); font-weight: 700;">
+                            <td style="font-size: 1.05rem;">TOTAL DE VENTAS (SISTEMA)</td>
+                            <td style="text-align: right; color: #10b981; font-size: 1.05rem;">$@Model.Sales.SelectMany(s => s.Payments).Sum(p => p.Amount).ToString("N2")</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            }
+            else
+            {
+                <p style="color: var(--text-muted); font-style: italic;">No se registraron ventas en este turno.</p>
+            }
         </div>
 
-        <div class="form-group" style="margin-top: 2rem; display: flex; gap: 1rem;">
-            <input type="submit" value="Finalizar Cierre de Caja" class="btn-danger" style="background: #ef4444;"
-                onclick="return confirm('¿Estás seguro de cerrar la caja definitivamente? Esta acción cortará el turno.')" />
-            <a asp-action="Index" class="btn-secondary">Cancelar (Volver)</a>
+        <!-- Arqueo de Productos -->
+        <div class="glass-panel">
+            <h3 style="margin-top: 0; color: #10b981;"><i class="fa-solid fa-boxes-stacked"></i> Arqueo de Mercadería (Productos Vendidos)</h3>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1rem;">Consolidado de unidades vendidas para cotejar con inventario físico.</p>
+            
+            @if (productSummary != null && productSummary.Any())
+            {
+                <table class="table" style="font-size: 0.9rem;">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th style="text-align: right; width: 120px;">Cantidad</th>
+                            <th style="text-align: right; width: 130px;">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in productSummary)
+                        {
+                            <tr>
+                                <td style="font-weight: 500;">@item.ProductName</td>
+                                <td style="text-align: right; font-weight: 600; color: #60a5fa;">@item.Quantity.ToString("G29")</td>
+                                <td style="text-align: right; font-weight: 600; color: #34d399;">$@item.Total.ToString("N2")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <p style="color: var(--text-muted); font-style: italic;">No hubo egreso de artículos en este turno.</p>
+            }
         </div>
-    </form>
+
+    </div>
 </div>
+
+<script>
+    document.getElementById('btnCerrar').addEventListener('click', function() {
+        var val = document.getElementById('finalCashBalance').value;
+        if (!val || isNaN(parseFloat(val.replace(',', '.')))) {
+            alert('Por favor ingrese un monto válido.');
+            return;
+        }
+        if (confirm('¿Estás seguro de cerrar la caja definitivamente? Esta acción cortará el turno.')) {
+            document.getElementById('closeForm').submit();
+        }
+    });
+</script>
