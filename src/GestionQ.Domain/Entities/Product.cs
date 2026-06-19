@@ -47,6 +47,7 @@ namespace GestionQ.Domain.Entities
         [Display(Name = "Días de Vencimiento")]
         public int ExpirationDays { get; set; } = 0;
 
+        public bool IsDepartment { get; set; } = false;
         public bool IsActive { get; set; } = true;
     }
 }

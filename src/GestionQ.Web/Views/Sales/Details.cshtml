@@ -59,7 +59,7 @@
             @foreach (var item in Model.Items)
             {
                 <tr>
-                    <td>@item.Product?.Name</td>
+                    <td>@((!string.IsNullOrEmpty(item.CustomName) ? item.CustomName : (item.Product?.Name ?? "Producto Sin Nombre")).ToUpper())</td>
                     <td>$@item.UnitPrice.ToString("N2")</td>
                     <td>@item.Quantity un.</td>
                     <td style="font-weight: 600; @(Model.IsCancelled ? "text-decoration: line-through; color: var(--text-muted);" : "")">

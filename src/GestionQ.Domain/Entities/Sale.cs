@@ -46,6 +46,9 @@ namespace GestionQ.Domain.Entities
         public decimal Quantity { get; set; }
         public decimal UnitPrice { get; set; }
         public decimal DiscountAmount { get; set; } = 0;
+
+        [System.ComponentModel.DataAnnotations.StringLength(150)]
+        public string? CustomName { get; set; }
     }
 
     public class SalePayment

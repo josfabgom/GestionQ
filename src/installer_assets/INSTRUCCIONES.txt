@@ -1,4 +1,4 @@
-========================================================================
+﻿========================================================================
              GUÍA DE INSTALACIÓN Y USO - SISTEMA GESTIONQ
 ========================================================================
 
@@ -75,6 +75,13 @@ AJUSTES AVANZADOS (OPCIONAL)
   y modifique la línea de "DefaultConnection" con sus datos. Luego, abra
   la ventana de Servicios de Windows (services.msc) y reinicie el servicio
   llamado 'GestionQ - Punto de Venta'.
+- INSTALACIÓN MANUAL DE LA BASE DE DATOS:
+  Si la instalación automatizada falla o prefiere instalar la base de datos manualmente:
+  1. Abra SQL Server Management Studio (SSMS) y conéctese a su servidor SQL.
+  2. Cree una base de datos llamada 'GestionQ'.
+  3. Abra y ejecute el script SQL 'C:\GestionQ\GestionQ_Schema.sql' en la base de datos 'GestionQ'.
+  4. Modifique la cadena de conexión en 'C:\GestionQ\appsettings.json' para que apunte a su SQL Server.
 - Para desinstalar el sistema por completo de forma limpia, haga doble
   clic en 'Desinstalar.bat'.
 ========================================================================
+

@@ -1,4 +1,32 @@
 @model GestionQ.Domain.Entities.Sale
+@functions {
+    public string CenterText(string text, int width = 40)
+    {
+        if (string.IsNullOrEmpty(text)) return "";
+        text = text.Trim();
+        if (text.Length >= width) return text.Substring(0, width);
+        int leftPadding = (width - text.Length) / 2;
+        return new string(' ', leftPadding) + text;
+    }
+
+    public string FormatLine(string leftText, string rightText, int width = 40)
+    {
+        leftText = leftText ?? "";
+        rightText = rightText ?? "";
+        int spacesNeeded = width - leftText.Length - rightText.Length;
+        if (spacesNeeded < 1)
+        {
+            int maxLeftLen = width - rightText.Length - 3;
+            if (maxLeftLen > 0 && leftText.Length > maxLeftLen)
+            {
+                leftText = leftText.Substring(0, maxLeftLen) + "...";
+            }
+            spacesNeeded = width - leftText.Length - rightText.Length;
+            if (spacesNeeded < 1) spacesNeeded = 1;
+        }
+        return leftText + new string(' ', spacesNeeded) + rightText;
+    }
+}
 @{
     Layout = null;
     var promoDict = ViewBag.PromoNames as Dictionary<int, string>;
@@ -10,6 +38,93 @@
         }
         return defaultName;
     }
+
+    // Generar contenido del ticket de texto plano para impresoras térmicas
+    var companyName = (string)ViewBag.CompanyName ?? "GestionQ";
+    var companyAddress = (string)ViewBag.CompanyAddress ?? "";
+    var companyPhone = (string)ViewBag.CompanyPhone ?? "";
+    var companyEmail = (string)ViewBag.CompanyEmail ?? "";
+    var posName = Model.PointOfSale?.Name ?? "General";
+    var ticketNo = Model.FormattedTicketNumber;
+    var dateStr = Model.Date.ToString("dd/MM/yyyy HH:mm");
+    var customerName = Model.Customer?.Name ?? "Consumidor Final";
+
+    var ticketText = new System.Text.StringBuilder();
+    ticketText.AppendLine(CenterText("DOCUMENTO NO VALIDO COMO FACTURA"));
+    ticketText.AppendLine(new string('-', 40));
+    ticketText.AppendLine(CenterText(companyName));
+    if (!string.IsNullOrEmpty(companyAddress)) ticketText.AppendLine(CenterText(companyAddress));
+    if (!string.IsNullOrEmpty(companyPhone)) ticketText.AppendLine(CenterText($"Tel: {companyPhone}"));
+    if (!string.IsNullOrEmpty(companyEmail)) ticketText.AppendLine(CenterText(companyEmail));
+    ticketText.AppendLine(new string('-', 40));
+    ticketText.AppendLine($"Punto de Venta: {posName}");
+    ticketText.AppendLine($"Ticket #:       {ticketNo}");
+    ticketText.AppendLine($"Fecha:          {dateStr}");
+    ticketText.AppendLine($"Cliente:        {customerName}");
+    ticketText.AppendLine(new string('-', 40));
+    ticketText.AppendLine(FormatLine("Descripcion", "Cant x Precio      Total", 40));
+    ticketText.AppendLine(new string('-', 40));
+
+    foreach (var item in Model.Items)
+    {
+        var prodName = (!string.IsNullOrEmpty(item.CustomName) ? item.CustomName : (item.Product?.Name ?? "Producto Sin Nombre")).ToUpper();
+        ticketText.AppendLine(prodName);
+        
+        string qtyPrice = $"  {item.Quantity.ToString(item.Quantity % 1 == 0 ? "F0" : "F3")} x ${item.UnitPrice.ToString("N2")}";
+        string totalStr = $"${(item.UnitPrice * item.Quantity).ToString("N2")}";
+        ticketText.AppendLine(FormatLine(qtyPrice, totalStr, 40));
+    }
+    
+    ticketText.AppendLine(new string('-', 40));
+    
+    var textPromoDiscount = Model.Items.Sum(i => i.DiscountAmount);
+    var textGeneralDiscount = Model.DiscountAmount - textPromoDiscount;
+    
+    if (Model.DiscountAmount > 0 || Model.PaymentDiscountAmount > 0)
+    {
+        ticketText.AppendLine(FormatLine("Subtotal Bruto:", $"${Model.SubTotal.ToString("N2")}", 40));
+        if (textPromoDiscount > 0)
+        {
+            var promoDiscounts = Model.Items
+                .Where(i => i.DiscountAmount > 0)
+                .GroupBy(i => GetPromoName(i.ProductId, "Descuento Promoción"))
+                .Select(g => new { Name = g.Key, Amount = g.Sum(i => i.DiscountAmount) });
+
+            foreach (var promo in promoDiscounts)
+            {
+                ticketText.AppendLine(FormatLine($" - {promo.Name}:", $"-${promo.Amount.ToString("N2")}", 40));
+            }
+        }
+        if (textGeneralDiscount > 0)
+        {
+            ticketText.AppendLine(FormatLine("Desct. General:", $"-${textGeneralDiscount.ToString("N2")}", 40));
+        }
+        if (Model.PaymentDiscountAmount > 0)
+        {
+            var discountedMethods = Model.Payments
+                .Where(p => p.PaymentMethod != null && p.PaymentMethod.DiscountPercentage > 0)
+                .Select(p => $"{p.PaymentMethod.Name} ({p.PaymentMethod.DiscountPercentage:F0}%)");
+            var methodNames = string.Join(" / ", discountedMethods);
+            if (string.IsNullOrEmpty(methodNames))
+            {
+                methodNames = "Medio de Pago";
+            }
+            ticketText.AppendLine(FormatLine($"Desct. {methodNames}:", $"-${Model.PaymentDiscountAmount.ToString("N2")}", 40));
+        }
+        ticketText.AppendLine(new string('-', 40));
+    }
+    
+    ticketText.AppendLine(FormatLine("TOTAL NETO:", $"${Model.TotalAmount.ToString("N2")}", 40));
+    ticketText.AppendLine();
+    ticketText.AppendLine("PAGOS:");
+    foreach (var p in Model.Payments)
+    {
+        ticketText.AppendLine(FormatLine($" - {p.PaymentMethod?.Name ?? "Otro"}:", $"${p.Amount.ToString("N2")}", 40));
+    }
+    ticketText.AppendLine(new string('-', 40));
+    ticketText.AppendLine(CenterText("DOCUMENTO NO VALIDO COMO FACTURA"));
+    ticketText.AppendLine(CenterText("*** GRACIAS POR SU COMPRA ***"));
+    ticketText.AppendLine(CenterText("Software de Gestión - GestionQ"));
 }
 
 <!DOCTYPE html>
@@ -100,14 +215,40 @@
             padding-top: 2mm;
         }
 
+        .text-receipt-container {
+            display: none;
+            width: 80mm;
+            max-width: 100%;
+            margin: 0;
+            padding: 0;
+            background-color: #fff;
+        }
+
+        .text-receipt {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 12px;
+            line-height: 1.2;
+            margin: 0;
+            white-space: pre-wrap;
+            word-break: break-all;
+            color: #000;
+        }
+
         @@media print {
             .no-print {
-                display: none;
+                display: none !important;
+            }
+            #ticket-content {
+                display: none !important;
             }
             body {
                 width: 80mm;
-                padding: 0;
-                margin: 0;
+                padding: 0 !important;
+                margin: 0 !important;
+                background: #fff;
+            }
+            .text-receipt-container {
+                display: block !important;
             }
         }
     </style>
@@ -160,7 +301,7 @@
                 {
                     <tr>
                         <td>
-                            @item.Product?.Name
+                            @((!string.IsNullOrEmpty(item.CustomName) ? item.CustomName : (item.Product?.Name ?? "Producto Sin Nombre")).ToUpper())
                         </td>
                         <td class="text-right">@item.Quantity.ToString(item.Quantity % 1 == 0 ? "F0" : "F3")</td>
                         <td class="text-right">
@@ -245,6 +386,10 @@
         </div>
     </div>
 
+    <div class="text-receipt-container">
+        <pre class="text-receipt">@ticketText.ToString()</pre>
+    </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script>
         function generatePDF() {
@@ -266,4 +411,4 @@
         };
     </script>
 </body>
-</html>
+</html>ml>

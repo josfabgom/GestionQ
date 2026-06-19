@@ -33,6 +33,7 @@ namespace GestionQ.Infrastructure.Data
         public DbSet<MercadoPagoConfig> MercadoPagoConfigs { get; set; }
         public DbSet<PromotionRule> PromotionRules { get; set; }
         public DbSet<PromotionRuleProduct> PromotionRuleProducts { get; set; }
+        public DbSet<Department> Departments { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -52,6 +53,12 @@ namespace GestionQ.Infrastructure.Data
 
             modelBuilder.Entity<PromotionRuleProduct>()
                 .HasKey(pr => new { pr.PromotionRuleId, pr.ProductId });
+
+            modelBuilder.Entity<Department>()
+                .HasOne(d => d.VirtualProduct)
+                .WithMany()
+                .HasForeignKey(d => d.VirtualProductId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

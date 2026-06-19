@@ -1,4 +1,4 @@
-$ErrorActionPreference = "Stop"
+﻿$ErrorActionPreference = "Stop"
 $ProjectPath = ".\src\GestionQ.Web\GestionQ.Web.csproj"
 $InstallerFolder = ".\out\GestionQ_Instalador"
 $AppFolder = "$InstallerFolder\app"
@@ -14,6 +14,15 @@ if (Test-Path $InstallerFolder) {
     Remove-Item -Path $InstallerFolder -Recurse -Force
 }
 New-Item -ItemType Directory -Path $InstallerFolder -Force | Out-Null
+
+# 1b. Generar script SQL de estructura de base de datos
+Write-Host "Generando script SQL de la base de datos..." -ForegroundColor Yellow
+dotnet ef migrations script --project src\GestionQ.Infrastructure --startup-project src\GestionQ.Web --output out\GestionQ_Schema.sql
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Advertencia: No se pudo generar el script de migración SQL." -ForegroundColor Red
+} else {
+    Copy-Item "out\GestionQ_Schema.sql" -Destination $AssetsFolder -Force
+}
 
 # 2. Publicar proyecto
 Write-Host "Ejecutando dotnet publish..." -ForegroundColor Yellow

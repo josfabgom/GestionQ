@@ -65,8 +65,9 @@ namespace GestionQ.Web.Controllers
             }
 
             ViewBag.Customers = await _context.Customers.Where(c => c.IsActive).ToListAsync();
-            ViewBag.Products = await _context.Products.Where(p => p.Stock > 0 && p.IsActive).ToListAsync();
+            ViewBag.Products = await _context.Products.Where(p => (p.Stock > 0 || p.IsDepartment) && p.IsActive).ToListAsync();
             ViewBag.PaymentMethods = await _context.PaymentMethods.Where(p => p.IsActive).ToListAsync();
+            ViewBag.Departments = await _context.Departments.Include(d => d.VatRate).ToListAsync();
             ViewBag.Promotions = await _context.PromotionRules
                 .Where(r => r.IsActive && r.StartDate <= DateTime.Now && r.EndDate >= DateTime.Now)
                 .Include(r => r.Products)
@@ -124,10 +125,22 @@ namespace GestionQ.Web.Controllers
                 {
                     var product = await _context.Products.FindAsync(item.ProductId);
                     if (product == null) return BadRequest("Producto no encontrado");
-                    if (product.Stock < item.Quantity)
-                        return BadRequest($"Stock insuficiente para {product.Name}");
 
-                    var itemBruto = product.Price * item.Quantity;
+                    decimal price = product.Price;
+                    string? customName = null;
+
+                    if (product.IsDepartment)
+                    {
+                        price = item.UnitPrice ?? product.Price;
+                        customName = item.CustomName?.ToUpper();
+                    }
+                    else
+                    {
+                        if (product.Stock < item.Quantity)
+                            return BadRequest($"Stock insuficiente para {product.Name}");
+                    }
+
+                    var itemBruto = price * item.Quantity;
                     subtotalBruto += itemBruto;
                     totalPromoDiscounts += item.DiscountAmount;
 
@@ -135,25 +148,29 @@ namespace GestionQ.Web.Controllers
                     {
                         ProductId = product.Id,
                         Quantity = item.Quantity,
-                        UnitPrice = product.Price,
-                        DiscountAmount = item.DiscountAmount
+                        UnitPrice = price,
+                        DiscountAmount = item.DiscountAmount,
+                        CustomName = customName
                     });
 
-                    decimal previousStock = product.Stock;
-                    product.Stock -= item.Quantity;
-                    _context.Products.Update(product);
-
-                    // Record Stock Movement
-                    _context.StockMovements.Add(new StockMovement
+                    if (!product.IsDepartment)
                     {
-                        Date = DateTime.Now,
-                        ProductId = product.Id,
-                        Quantity = -item.Quantity,
-                        Type = MovementType.Sale,
-                        Concept = $"Venta de {item.Quantity} un.",
-                        PreviousStock = previousStock,
-                        NewStock = product.Stock
-                    });
+                        decimal previousStock = product.Stock;
+                        product.Stock -= item.Quantity;
+                        _context.Products.Update(product);
+
+                        // Record Stock Movement
+                        _context.StockMovements.Add(new StockMovement
+                        {
+                            Date = DateTime.Now,
+                            ProductId = product.Id,
+                            Quantity = -item.Quantity,
+                            Type = MovementType.Sale,
+                            Concept = $"Venta de {item.Quantity} un.",
+                            PreviousStock = previousStock,
+                            NewStock = product.Stock
+                        });
+                    }
                 }
 
                 // Calcular descuento general (cliente o manual)
@@ -315,7 +332,7 @@ namespace GestionQ.Web.Controllers
             // Devolver Stock
             foreach (var item in sale.Items)
             {
-                if (item.Product != null)
+                if (item.Product != null && !item.Product.IsDepartment)
                 {
                     var previousStock = item.Product.Stock;
                     item.Product.Stock += item.Quantity;
@@ -427,6 +444,8 @@ namespace GestionQ.Web.Controllers
         public int ProductId { get; set; }
         public decimal Quantity { get; set; }
         public decimal DiscountAmount { get; set; }
+        public decimal? UnitPrice { get; set; }
+        public string? CustomName { get; set; }
     }
 
     public class SaleRequestPayment

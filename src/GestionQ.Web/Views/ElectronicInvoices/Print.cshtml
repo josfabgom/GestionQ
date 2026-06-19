@@ -428,7 +428,7 @@
 
                         <tr>
                             <td>@(item.Product != null ? item.Product.InternalCode.ToString() : item.ProductId.ToString())</td>
-                            <td>@(item.Product?.Name ?? "Producto Genérico")</td>
+                            <td>@((!string.IsNullOrEmpty(item.CustomName) ? item.CustomName : (item.Product?.Name ?? "Producto Genérico")).ToUpper())</td>
                             <td class="text-right">@item.Quantity.ToString("N2")</td>
                             <td>unidades</td>
                             <td class="text-right">@unitPriceNet.ToString("N2")</td>
@@ -441,7 +441,7 @@
                 {
                     <tr>
                         <td>1</td>
-                        <td>Operación Global s/ Venta #@Model.SaleId</td>
+                        <td>OPERACIÓN GLOBAL S/ VENTA #@Model.SaleId</td>
                         <td class="text-right">1.00</td>
                         <td>unidades</td>
                         <td class="text-right">@Model.NetAmount.ToString("N2")</td>

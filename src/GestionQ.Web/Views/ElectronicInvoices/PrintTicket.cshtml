@@ -1,6 +1,34 @@
 @model GestionQ.Domain.Entities.ElectronicInvoice
 @using System.Text
 @using System.Text.Json
+@functions {
+    public string CenterText(string text, int width = 40)
+    {
+        if (string.IsNullOrEmpty(text)) return "";
+        text = text.Trim();
+        if (text.Length >= width) return text.Substring(0, width);
+        int leftPadding = (width - text.Length) / 2;
+        return new string(' ', leftPadding) + text;
+    }
+
+    public string FormatLine(string leftText, string rightText, int width = 40)
+    {
+        leftText = leftText ?? "";
+        rightText = rightText ?? "";
+        int spacesNeeded = width - leftText.Length - rightText.Length;
+        if (spacesNeeded < 1)
+        {
+            int maxLeftLen = width - rightText.Length - 3;
+            if (maxLeftLen > 0 && leftText.Length > maxLeftLen)
+            {
+                leftText = leftText.Substring(0, maxLeftLen) + "...";
+            }
+            spacesNeeded = width - leftText.Length - rightText.Length;
+            if (spacesNeeded < 1) spacesNeeded = 1;
+        }
+        return leftText + new string(' ', spacesNeeded) + rightText;
+    }
+}
 @{
     Layout = null; // No MVC wrapper for printing view
     
@@ -25,6 +53,70 @@
     var base64Json = Convert.ToBase64String(Encoding.UTF8.GetBytes(jsonString));
     var afipQrUrl = $"https://www.afip.gob.ar/fe/qr/?p={base64Json}";
     var qrImageUrl = $"https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={Uri.EscapeDataString(afipQrUrl)}";
+
+    // Generar contenido del ticket fiscal en texto plano para impresoras térmicas
+    var invoiceText = new StringBuilder();
+    invoiceText.AppendLine(CenterText("GestionQ S.A."));
+    invoiceText.AppendLine(CenterText("Av. Corrientes 1234, CABA"));
+    invoiceText.AppendLine(CenterText("CUIT: 30-71234567-8"));
+    invoiceText.AppendLine(CenterText("IVA Responsable Inscripto"));
+    invoiceText.AppendLine(CenterText("Inicio Act.: 01/01/2020"));
+    invoiceText.AppendLine(new string('-', 40));
+    
+    invoiceText.AppendLine(CenterText(Model.InvoiceTypeDesc));
+    invoiceText.AppendLine(CenterText($"Cod. {Model.InvoiceTypeCode.ToString("D2")}"));
+    invoiceText.AppendLine(new string('-', 40));
+    
+    invoiceText.AppendLine($"Comp. Nro: {Model.PointOfSaleNumber.ToString("D5")}-{Model.InvoiceNumber.ToString("D8")}");
+    invoiceText.AppendLine($"Fecha:     {Model.IssueDate.ToString("dd/MM/yyyy HH:mm")}");
+    invoiceText.AppendLine(new string('-', 40));
+    
+    invoiceText.AppendLine($"Cliente:   {Model.CustomerName}");
+    invoiceText.AppendLine($"Cond. IVA: {Model.CustomerTaxCondition}");
+    string docType = Model.DocTypeCode == 80 ? "CUIT" : (Model.DocTypeCode == 96 ? "DNI" : "Doc");
+    invoiceText.AppendLine($"{docType}:      {Model.DocNumber}");
+    invoiceText.AppendLine(new string('-', 40));
+    
+    invoiceText.AppendLine(FormatLine("Cant  Producto", "Total", 40));
+    invoiceText.AppendLine(new string('-', 40));
+    
+    if (Model.Sale != null && Model.Sale.Items.Any())
+    {
+        foreach (var item in Model.Sale.Items)
+        {
+            decimal itemTotal = item.Quantity * item.UnitPrice;
+            string prodName = (!string.IsNullOrEmpty(item.CustomName) ? item.CustomName : (item.Product?.Name ?? "Producto Genérico")).ToUpper();
+            invoiceText.AppendLine(prodName);
+            
+            string qtyStr = $"  {item.Quantity.ToString("N0")} x ${item.UnitPrice.ToString("N2")}";
+            string totalStr = $"${itemTotal.ToString("N2")}";
+            invoiceText.AppendLine(FormatLine(qtyStr, totalStr, 40));
+        }
+    }
+    else
+    {
+        invoiceText.AppendLine("1 x OPERACIÓN GLOBAL");
+        invoiceText.AppendLine(FormatLine($"  VENTA #{Model.SaleId}", $"${Model.TotalAmount.ToString("N2")}", 40));
+    }
+    
+    invoiceText.AppendLine(new string('-', 40));
+    
+    invoiceText.AppendLine(FormatLine("Subtotal Neto:", Model.NetAmount.ToString("C"), 40));
+    invoiceText.AppendLine(FormatLine("IVA 21%/10.5%:", Model.VatAmount.ToString("C"), 40));
+    if (Model.ExemptAmount > 0)
+    {
+        invoiceText.AppendLine(FormatLine("Exento:", Model.ExemptAmount.ToString("C"), 40));
+    }
+    invoiceText.AppendLine(new string('=', 40));
+    invoiceText.AppendLine(FormatLine("TOTAL:", Model.TotalAmount.ToString("C"), 40));
+    invoiceText.AppendLine(new string('=', 40));
+    
+    var caeText = new StringBuilder();
+    caeText.AppendLine(CenterText($"CAE: {Model.CAE}"));
+    caeText.AppendLine(CenterText($"Vto CAE: {Model.CAEExpirationDate.ToString("dd/MM/yyyy")}"));
+    caeText.AppendLine();
+    caeText.AppendLine(CenterText("Comprobante Autorizado por ARCA"));
+    caeText.AppendLine(CenterText("Comprobante Electrónico (v4.0)"));
 }
 
 <!DOCTYPE html>
@@ -122,19 +214,39 @@
             font-size: 14px;
         }
 
+        .text-receipt-container {
+            display: none;
+            width: 80mm;
+            max-width: 100%;
+            margin: 0;
+            padding: 0;
+            background-color: #fff;
+        }
+
+        .text-receipt {
+            font-family: 'Courier Prime', 'Courier New', Courier, monospace;
+            font-size: 12px;
+            line-height: 1.2;
+            margin: 0;
+            white-space: pre-wrap;
+            word-break: break-all;
+            color: #000;
+        }
+
         @@media print {
             body {
                 background-color: #fff;
-                margin: 0;
-                padding: 0;
+                margin: 0 !important;
+                padding: 0 !important;
             }
             .ticket-box {
-                box-shadow: none;
-                margin: 0;
-                padding: 0;
+                display: none !important;
             }
             .no-print-area {
-                display: none;
+                display: none !important;
+            }
+            .text-receipt-container {
+                display: block !important;
             }
         }
     </style>
@@ -190,7 +302,7 @@
                         decimal itemTotal = item.Quantity * item.UnitPrice;
                         <tr>
                             <td class="text-left">@item.Quantity.ToString("N0")</td>
-                            <td class="text-left">@(item.Product?.Name ?? "Producto Genérico")</td>
+                            <td class="text-left">@((!string.IsNullOrEmpty(item.CustomName) ? item.CustomName : (item.Product?.Name ?? "Producto Genérico")).ToUpper())</td>
                             <td class="text-right">@itemTotal.ToString("N2")</td>
                         </tr>
                     }
@@ -199,7 +311,7 @@
                 {
                     <tr>
                         <td class="text-left">1</td>
-                        <td class="text-left">Op. s/ Venta #@Model.SaleId</td>
+                        <td class="text-left">OP. S/ VENTA #@Model.SaleId</td>
                         <td class="text-right">@Model.TotalAmount.ToString("N2")</td>
                     </tr>
                 }
@@ -245,6 +357,14 @@
             Comprobante Autorizado por ARCA<br/>
             Comprobante Electrónico (v4.0)
         </div>
+    </div>
+
+    <div class="text-receipt-container">
+        <pre class="text-receipt">@invoiceText.ToString()</pre>
+        <div style="text-align: center; margin: 10px 0;">
+            <img src="@qrImageUrl" alt="QR AFIP" style="width: 45mm; height: 45mm; display: inline-block;" />
+        </div>
+        <pre class="text-receipt">@caeText.ToString()</pre>
     </div>
 </body>
 </html>

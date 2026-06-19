@@ -1,0 +1,48 @@
+@model GestionQ.Domain.Entities.Department
+
+@{
+    ViewData["Title"] = "Nuevo Departamento";
+}
+
+<h1 class="page-title">Nuevo Departamento</h1>
+
+<div class="glass-panel" style="max-width: 500px;">
+    <form asp-action="Create">
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+        <div class="form-group" style="margin-bottom: 1rem;">
+            <label asp-for="Name" class="control-label">Nombre del Departamento</label>
+            <input asp-for="Name" class="form-control" placeholder="Ej: Carnicería, Verdulería..." />
+            <span asp-validation-for="Name" class="text-danger"></span>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 1rem;">
+            <label asp-for="Hotkey" class="control-label">Tecla Rápida (Hotkey)</label>
+            <select asp-for="Hotkey" class="form-control">
+                <option value="">-- Sin Tecla Rápida --</option>
+                <option value="F1">F1</option>
+                <option value="F2">F2</option>
+                <option value="F3">F3</option>
+                <option value="F4">F4</option>
+                <option value="F6">F6</option>
+                <option value="F7">F7</option>
+                <option value="F8">F8</option>
+                <option value="F9">F9</option>
+                <option value="F10">F10</option>
+            </select>
+            <span asp-validation-for="Hotkey" class="text-danger"></span>
+            <small style="color: #64748b; display: block; margin-top: 0.25rem;">Esta tecla agregará directamente artículos a este departamento en la pantalla de ventas.</small>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 1rem;">
+            <label asp-for="VatRateId" class="control-label">Alícuota IVA</label>
+            <select asp-for="VatRateId" class="form-control" asp-items="ViewBag.VatRates"></select>
+            <span asp-validation-for="VatRateId" class="text-danger"></span>
+        </div>
+
+        <div class="form-group" style="margin-top: 1.5rem; display: flex; gap: 1rem;">
+            <input type="submit" value="Guardar" class="btn-primary" />
+            <a asp-action="Index" class="btn-secondary">Volver</a>
+        </div>
+    </form>
+</div>
