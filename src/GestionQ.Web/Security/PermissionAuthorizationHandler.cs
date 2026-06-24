@@ -13,6 +13,12 @@ namespace GestionQ.Web.Security
                 return Task.CompletedTask;
             }
 
+            if (context.User.IsInRole("Admin"))
+            {
+                context.Succeed(requirement);
+                return Task.CompletedTask;
+            }
+
             var permissionssClaim = context.User.Claims.Where(x => x.Type == "Permission" &&
                                                                 x.Value == requirement.Permission &&
                                                                 x.Issuer == "LOCAL AUTHORITY");

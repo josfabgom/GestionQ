@@ -1,4 +1,4 @@
-﻿# Script de Instalación Automatizada para GestionQ
+# Script de Instalación Automatizada para GestionQ
 # Debe ejecutarse como Administrador
 
 $ErrorActionPreference = "Stop"
@@ -77,10 +77,19 @@ try {
         New-Item -ItemType Directory -Path $InstallPath -Force | Out-Null
     }
 
-    # Copiar archivos
+    # Copiar archivos (excluyendo appsettings.json para no sobrescribir configuraciones del usuario si ya existe)
     $appSource = Join-Path $PSScriptRoot "app"
     if (Test-Path $appSource) {
-        Copy-Item "$appSource\*" -Destination $InstallPath -Recurse -Force | Out-Null
+        Get-ChildItem -Path $appSource -Exclude "appsettings.json" | ForEach-Object {
+            Copy-Item -Path $_.FullName -Destination $InstallPath -Recurse -Force | Out-Null
+        }
+        
+        # Copiar appsettings.json solo si no existe en el destino
+        $destAppSettings = Join-Path $InstallPath "appsettings.json"
+        if (-not (Test-Path $destAppSettings)) {
+            Copy-Item -Path (Join-Path $appSource "appsettings.json") -Destination $destAppSettings -Force | Out-Null
+        }
+        
         Write-Host "Archivos copiados correctamente." -ForegroundColor Green
     } else {
         Write-Host "ERROR: No se encontró la carpeta 'app' con los archivos compilados del sistema." -ForegroundColor Red
@@ -130,22 +139,26 @@ try {
         Write-Host "Es posible que deba abrir los puertos $Port y 1433 manualmente para permitir el acceso desde la red." -ForegroundColor Yellow
     }
 
-    # 7. Crear acceso directo en el Escritorio
-    Write-Host "`n[6/6] Creando acceso directo en el Escritorio..." -ForegroundColor Yellow
+    # 7. Crear accesos directos en el Escritorio
+    Write-Host "`n[6/6] Creando accesos directos en el Escritorio..." -ForegroundColor Yellow
     try {
         $DesktopPath = [System.Environment]::GetFolderPath("Desktop")
-        $ShortcutPath = Join-Path $DesktopPath "Punto de Venta - GestionQ.lnk"
+        
+        # Eliminar el acceso directo anterior si existiera
+        $oldShortcut = Join-Path $DesktopPath "Punto de Venta - GestionQ.lnk"
+        if (Test-Path $oldShortcut) {
+            Remove-Item $oldShortcut -Force
+        }
 
-        $WshShell = New-Object -ComObject WScript.Shell
-        $Shortcut = $WshShell.CreateShortcut($ShortcutPath)
-        $Shortcut.TargetPath = "http://localhost:$Port"
-        $Shortcut.Description = "Iniciar Punto de Venta - GestionQ"
-        $Shortcut.IconLocation = "$InstallPath\wwwroot\favicon.ico"
-        $Shortcut.Save()
-
-        Write-Host "Acceso directo creado en el Escritorio." -ForegroundColor Green
+        # Ejecutar el script para crear los nuevos accesos directos
+        $crearAccesosScript = Join-Path $InstallPath "scripts\launcher\crear_accesos.ps1"
+        if (Test-Path $crearAccesosScript) {
+            powershell -NoProfile -ExecutionPolicy Bypass -File $crearAccesosScript
+        } else {
+            Write-Host "ADVERTENCIA: No se encontró el script de creación de accesos directos." -ForegroundColor Yellow
+        }
     } catch {
-        Write-Host "ADVERTENCIA: No se pudo crear el acceso directo en el Escritorio ($($_.Exception.Message))." -ForegroundColor Yellow
+        Write-Host "ADVERTENCIA: No se pudieron crear los accesos directos en el Escritorio ($($_.Exception.Message))." -ForegroundColor Yellow
     }
 
     # Finalización

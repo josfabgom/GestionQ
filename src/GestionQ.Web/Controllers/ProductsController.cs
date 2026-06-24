@@ -80,6 +80,7 @@ namespace GestionQ.Web.Controllers
                     Name = model.Name,
                     SubCategoryId = model.SubCategoryId,
                     IsPesable = model.IsPesable,
+                    IsFractionable = model.IsFractionable,
                     SendToScale = model.SendToScale,
                     Price = model.Price,
                     Stock = model.Stock,
@@ -87,7 +88,8 @@ namespace GestionQ.Web.Controllers
                     VatRateId = model.VatRateId,
                     IsActive = model.IsActive,
                     ExpirationDays = model.ExpirationDays,
-                    CreationDate = DateTime.Now
+                    CreationDate = DateTime.Now,
+                    NeedsLabelPrint = true
                 };
 
                 int maxCode = await _context.Products.AnyAsync() ? await _context.Products.MaxAsync(p => p.InternalCode) : 0;
@@ -161,6 +163,7 @@ namespace GestionQ.Web.Controllers
                 Name = product.Name,
                 SubCategoryId = product.SubCategoryId,
                 IsPesable = product.IsPesable,
+                IsFractionable = product.IsFractionable,
                 SendToScale = product.SendToScale,
                 BaseCost = latestPrice?.BaseCost ?? 0,
                 ProfitMargin = latestPrice?.ProfitMargin ?? 0,
@@ -209,6 +212,7 @@ namespace GestionQ.Web.Controllers
                     product.Name = model.Name;
                     product.SubCategoryId = model.SubCategoryId;
                     product.IsPesable = model.IsPesable;
+                    product.IsFractionable = model.IsFractionable;
                     product.SendToScale = model.SendToScale;
                     product.Price = model.Price;
                     product.Stock = model.Stock;
@@ -216,6 +220,7 @@ namespace GestionQ.Web.Controllers
                     product.VatRateId = model.VatRateId;
                     product.IsActive = model.IsActive;
                     product.ExpirationDays = model.ExpirationDays;
+                    product.NeedsLabelPrint = true;
 
                     var priceEntry = new ProductPrice
                     {

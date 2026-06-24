@@ -1,0 +1,610 @@
+@{
+    ViewData["Title"] = "Diseñador de Etiquetas";
+}
+
+<div class="glass-panel" style="display: flex; flex-direction: column; height: calc(100vh - 120px); overflow: hidden;">
+    
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h2 style="margin: 0; display: flex; align-items: center; gap: 0.5rem; color: #8b5cf6;">
+            <i class="fa-solid fa-pen-ruler"></i> Diseñador de Etiquetas
+        </h2>
+        
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <select id="formatSelector" class="form-control" style="width: auto;" onchange="window.location.href='/Labels/Designer?format=' + this.value">
+                <option value="50x35">50x35mm (Térmica)</option>
+                <option value="A4">A4 (Cartel Oferta)</option>
+                <option value="A4_Half">Media A4</option>
+            </select>
+            
+            <select id="insertSelector" class="form-control" style="width: auto;">
+                <option value="text">Texto Libre</option>
+                <option value="box">Recuadro / Línea</option>
+                <option disabled>──────────</option>
+                <option value="name">Nombre Producto</option>
+                <option value="price">Precio</option>
+                <option value="barcode">Código de Barras</option>
+                <option value="printDate">Fecha de Impresión</option>
+                <option value="banner">Cartel Oferta</option>
+            </select>
+            <button class="btn-primary" id="btnInsert" style="background: #3b82f6; border-color: #3b82f6; padding: 0.375rem 0.75rem;">
+                <i class="fa-solid fa-plus"></i> Añadir
+            </button>
+
+            <button class="btn-primary" id="btnSave" style="background: #10b981; border-color: #10b981; margin-left: 1rem;">
+                <i class="fa-solid fa-save"></i> Guardar Diseño
+            </button>
+        </div>
+    </div>
+
+    <div style="display: flex; gap: 1.5rem; flex: 1; overflow: hidden;">
+        
+        <!-- Left Panel: Properties -->
+        <div style="flex: 0 0 300px; background: rgba(0,0,0,0.2); padding: 1.25rem; border-radius: 12px; border: 1px solid var(--border); overflow-y: auto;">
+            <h4 style="margin-top: 0; color: var(--text-muted); font-size: 1.1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">Propiedades</h4>
+            
+            <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 1.5rem;">
+                Arrastra los elementos en el lienzo para moverlos. Haz clic en un elemento para editar sus propiedades aquí.
+            </p>
+
+            <div id="noSelectionMsg" style="color: #cbd5e1; font-style: italic;">Ningún elemento seleccionado.</div>
+
+            <div id="propsPanel" style="display: none; display: flex; flex-direction: column; gap: 1rem;">
+                <div>
+                    <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.2rem;">Elemento</label>
+                    <strong id="propElementName" style="color: #60a5fa; font-size: 1.1rem;">Nombre</strong>
+                </div>
+
+                <div class="form-group">
+                    <label>Visible</label>
+                    <select id="propVisible" class="form-control">
+                        <option value="true">Sí</option>
+                        <option value="false">No (Ocultar)</option>
+                    </select>
+                </div>
+
+                <div class="form-group text-prop custom-text-prop" style="display: none;">
+                    <label>Texto Libre</label>
+                    <input type="text" id="propCustomText" class="form-control" placeholder="Ej: Oferta, Vencimiento..." />
+                </div>
+
+                <div class="form-group text-prop">
+                    <label>Fuente</label>
+                    <select id="propFontFamily" class="form-control">
+                        <option value="Arial">Arial</option>
+                        <option value="'Times New Roman'">Times New Roman</option>
+                        <option value="Verdana">Verdana</option>
+                        <option value="Tahoma">Tahoma</option>
+                        <option value="'Courier New'">Courier New</option>
+                        <option value="Impact">Impact</option>
+                        <option value="system-ui">Sistema</option>
+                    </select>
+                </div>
+
+                <div class="form-group text-prop">
+                    <label>Tamaño de Fuente (pt/px)</label>
+                    <input type="number" id="propFontSize" class="form-control" />
+                </div>
+                
+                <div class="form-group text-prop">
+                    <label>Color de Texto</label>
+                    <input type="color" id="propTextColor" class="form-control" />
+                </div>
+                
+                <div class="form-group text-prop">
+                    <label>Grosor</label>
+                    <select id="propFontWeight" class="form-control">
+                        <option value="normal">Normal</option>
+                        <option value="bold">Negrita (Bold)</option>
+                        <option value="900">Extrafuerte (Black)</option>
+                    </select>
+                </div>
+
+                <div class="form-group text-prop">
+                    <label>Alineación</label>
+                    <select id="propTextAlign" class="form-control">
+                        <option value="left">Izquierda</option>
+                        <option value="center">Centro</option>
+                        <option value="right">Derecha</option>
+                    </select>
+                </div>
+
+                <div class="form-group box-prop" style="display: none;">
+                    <label>Grosor de Borde (px)</label>
+                    <input type="number" id="propBorderWidth" class="form-control" />
+                </div>
+                <div class="form-group box-prop" style="display: none;">
+                    <label>Color de Borde</label>
+                    <input type="color" id="propBorderColor" class="form-control" />
+                </div>
+                <div class="form-group box-prop" style="display: none;">
+                    <label>Color de Fondo</label>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <input type="color" id="propBgColor" class="form-control" style="flex: 1;" />
+                        <label style="font-size: 0.8rem; display: flex; align-items: center; gap: 0.2rem; cursor: pointer;">
+                            <input type="checkbox" id="propBgTransparent" /> Transparente
+                        </label>
+                    </div>
+                </div>
+
+                <div style="margin-top: 1rem; border-top: 1px solid var(--border); padding-top: 1rem;">
+                    <button id="btnDeleteElement" class="btn-danger" style="width: 100%; padding: 0.5rem; font-size: 0.9rem; border-radius: 6px;">
+                        <i class="fa-solid fa-trash"></i> Eliminar Elemento
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel: Canvas -->
+        <div style="flex: 1; background: #e2e8f0; border-radius: 12px; display: flex; justify-content: center; align-items: center; overflow: auto; position: relative;">
+            
+            <!-- The Canvas -->
+            <div id="labelCanvas" style="background: white; position: relative; box-shadow: 0 10px 25px rgba(0,0,0,0.2); transform-origin: center center;">
+                
+                <!-- Elements -->
+                <div class="draggable-elem" data-id="banner" style="position: absolute; background: red; color: white; padding: 2px 10px; border-radius: 4px; text-transform: uppercase;">OFERTA</div>
+                <div class="draggable-elem" data-id="name" style="position: absolute; color: #000; line-height: 1.1;">PRODUCTO DE PRUEBA LARGO</div>
+                <div class="draggable-elem" data-id="price" style="position: absolute; color: #000; line-height: 1;">$999.99</div>
+                <div class="draggable-elem" data-id="barcode" style="position: absolute; border: 1px solid #ccc; background: #f8fafc; color: #64748b; display: flex; align-items: center; justify-content: center; font-size: 0.7rem;">[CÓDIGO DE BARRAS]</div>
+                <div class="draggable-elem" data-id="printDate" style="position: absolute; color: #000; line-height: 1;">24/05/2024</div>
+
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <!-- CDN interact.js for drag and resize -->
+    <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
+
+    <script>
+        const format = '@Html.Raw(ViewBag.Format)';
+        const savedTemplateRaw = @Html.Raw(ViewBag.TemplateJson == "null" ? "null" : ViewBag.TemplateJson);
+        
+        document.getElementById('formatSelector').value = format;
+
+        // Configure Canvas sizes based on format
+        // We will scale them up visually for the editor.
+        // Let's assume 1mm = 3.78px
+        const canvas = document.getElementById('labelCanvas');
+        
+        let canvasW, canvasH;
+        let visualScale = 1;
+
+        if (format === '50x35') {
+            canvasW = 50 * 3.78; // 189px
+            canvasH = 35 * 3.78; // 132.3px
+            visualScale = 3; // Make it 3x bigger on screen
+        } else if (format === 'A4') {
+            canvasW = 210 * 3.78; // 793.8px
+            canvasH = 297 * 3.78; // 1122.6px
+            visualScale = 0.6; // Scale down
+        } else if (format === 'A4_Half') {
+            canvasW = 210 * 3.78;
+            canvasH = 148 * 3.78;
+            visualScale = 0.8;
+        }
+
+        canvas.style.width = canvasW + 'px';
+        canvas.style.height = canvasH + 'px';
+        canvas.style.transform = `scale(${visualScale})`;
+
+        // Default properties if no template exists
+        let defaultProps = {
+            '50x35': {
+                'banner': { x: 5, y: -20, visible: false, fontSize: 10, fontWeight: 'bold', fontFamily: 'Arial', textAlign: 'center', w: 90, h: 15 }, 
+                'name': { x: 5, y: 5, visible: true, fontSize: 10, fontWeight: 'bold', fontFamily: 'Arial', textAlign: 'center', w: 90, h: 25 },
+                'price': { x: 5, y: 35, visible: true, fontSize: 18, fontWeight: '900', fontFamily: 'Arial', textAlign: 'center', w: 90, h: 25 },
+                'barcode': { x: 5, y: 70, visible: true, fontSize: 10, fontWeight: 'normal', fontFamily: 'Arial', textAlign: 'center', w: 90, h: 25 },
+                'printDate': { x: 50, y: 90, visible: false, fontSize: 7, fontWeight: 'normal', fontFamily: 'Arial', textAlign: 'right', w: 45, h: 10 }
+            },
+            'A4': {
+                'banner': { x: 25, y: 5, visible: true, fontSize: 60, fontWeight: '900', fontFamily: 'Arial', textAlign: 'center', w: 50, h: 10 },
+                'name': { x: 10, y: 20, visible: true, fontSize: 50, fontWeight: 'bold', fontFamily: 'Arial', textAlign: 'center', w: 80, h: 20 },
+                'price': { x: 10, y: 50, visible: true, fontSize: 140, fontWeight: '900', fontFamily: 'Arial', textAlign: 'center', w: 80, h: 30 },
+                'barcode': { x: 20, y: 85, visible: true, fontSize: 20, fontWeight: 'normal', fontFamily: 'Arial', textAlign: 'center', w: 60, h: 10 },
+                'printDate': { x: 75, y: 95, visible: false, fontSize: 16, fontWeight: 'normal', fontFamily: 'Arial', textAlign: 'right', w: 20, h: 5 }
+            },
+            'A4_Half': {
+                'banner': { x: 30, y: 5, visible: true, fontSize: 40, fontWeight: '900', fontFamily: 'Arial', textAlign: 'center', w: 40, h: 10 },
+                'name': { x: 10, y: 25, visible: true, fontSize: 30, fontWeight: 'bold', fontFamily: 'Arial', textAlign: 'center', w: 80, h: 20 },
+                'price': { x: 10, y: 50, visible: true, fontSize: 90, fontWeight: '900', fontFamily: 'Arial', textAlign: 'center', w: 80, h: 25 },
+                'barcode': { x: 25, y: 80, visible: true, fontSize: 16, fontWeight: 'normal', fontFamily: 'Arial', textAlign: 'center', w: 50, h: 15 },
+                'printDate': { x: 75, y: 95, visible: false, fontSize: 14, fontWeight: 'normal', fontFamily: 'Arial', textAlign: 'right', w: 20, h: 5 }
+            }
+        };
+
+        // Load current state
+        let elementsState = savedTemplateRaw ? savedTemplateRaw : JSON.parse(JSON.stringify(defaultProps[format]));
+
+        let selectedId = null;
+
+        // Apply state to DOM
+        function applyStateToDOM() {
+            // First, make sure all elements in state exist in DOM
+            for (let id in elementsState) {
+                if (!document.querySelector(`[data-id="${id}"]`)) {
+                    let el = document.createElement('div');
+                    el.className = 'draggable-elem';
+                    el.setAttribute('data-id', id);
+                    el.style.position = 'absolute';
+                    
+                    // Restore default styling for specific elements so they are visible!
+                    if (id === 'banner') {
+                        el.style.background = 'red';
+                        el.style.color = 'white';
+                        el.style.padding = '2px 10px';
+                        el.style.borderRadius = '4px';
+                        el.style.textTransform = 'uppercase';
+                    } else if (id === 'barcode') {
+                        el.style.border = '1px solid #ccc';
+                        el.style.background = '#f8fafc';
+                        el.style.color = '#64748b';
+                        el.style.display = 'flex';
+                        el.style.alignItems = 'center';
+                        el.style.justifyContent = 'center';
+                        el.style.fontSize = '0.7rem';
+                    } else {
+                        // Standard text, name, price, custom text
+                        el.style.color = '#000000';
+                        el.style.lineHeight = '1.1';
+                    }
+
+                    canvas.appendChild(el);
+                }
+            }
+
+            document.querySelectorAll('.draggable-elem').forEach(el => {
+                const id = el.getAttribute('data-id');
+                const state = elementsState[id];
+                if (!state) return;
+
+                el.style.left = state.x + '%';
+                el.style.top = state.y + '%';
+                el.style.width = state.w + '%';
+                el.style.height = state.h + '%';
+                
+                if (state.isBox) {
+                    el.style.border = `${state.borderWidth || 0}px solid ${state.borderColor || '#000'}`;
+                    el.style.backgroundColor = state.backgroundColor || 'transparent';
+                    // clear text styles
+                    el.style.fontSize = '';
+                    el.innerText = '';
+                } else {
+                    el.style.fontSize = (state.fontSize || 10) + 'pt';
+                    el.style.fontWeight = state.fontWeight || 'normal';
+                    el.style.fontFamily = state.fontFamily || 'Arial';
+                    el.style.textAlign = state.textAlign || 'center';
+                    if (state.textColor) {
+                        el.style.color = state.textColor;
+                    } else if (id !== 'banner' && id !== 'barcode') {
+                        // Ensure standard elements fall back to black
+                        el.style.color = '#000000';
+                    }
+                    
+                    if (state.isCustomText) {
+                        el.innerText = state.text || 'Nuevo Texto';
+                    } else if (!el.innerText) {
+                        // Keep original hardcoded text if it's a standard element and currently empty
+                        const defaultTexts = { 'banner': 'OFERTA', 'name': 'PRODUCTO', 'price': '$999.99', 'barcode': '[CÓDIGO DE BARRAS]', 'printDate': '24/05/2024' };
+                        el.innerText = defaultTexts[id] || id;
+                    }
+                }
+                
+                if (state.visible === false || state.visible === 'false') {
+                    el.style.opacity = '0.3'; // In designer, show it faded
+                    el.style.pointerEvents = 'auto'; // Still clickable
+                } else {
+                    el.style.opacity = '1';
+                }
+            });
+        }
+
+        applyStateToDOM();
+
+        // Dragging logic
+        interact('.draggable-elem')
+            .draggable({
+                modifiers: [
+                    interact.modifiers.restrictRect({
+                        restriction: 'parent'
+                    })
+                ],
+                listeners: {
+                    move(event) {
+                        selectElement(event.target);
+                        const id = event.target.getAttribute('data-id');
+                        const state = elementsState[id];
+
+                        // Convert dx/dy (pixels) scaled to unscaled, then to percentage
+                        const unscaledDx = event.dx / visualScale;
+                        const unscaledDy = event.dy / visualScale;
+
+                        const percentX = (unscaledDx / canvasW) * 100;
+                        const percentY = (unscaledDy / canvasH) * 100;
+
+                        state.x += percentX;
+                        state.y += percentY;
+
+                        event.target.style.left = state.x + '%';
+                        event.target.style.top = state.y + '%';
+                    }
+                }
+            })
+            .resizable({
+                edges: { left: true, right: true, bottom: true, top: true },
+                modifiers: [
+                    interact.modifiers.restrictEdges({
+                        outer: 'parent'
+                    })
+                ],
+                listeners: {
+                    move: function (event) {
+                        selectElement(event.target);
+                        const id = event.target.getAttribute('data-id');
+                        const state = elementsState[id];
+
+                        // Use deltas divided by visualScale to avoid jump from scaled absolute width
+                        const unscaledDeltaW = event.deltaRect.width / visualScale;
+                        const unscaledDeltaH = event.deltaRect.height / visualScale;
+                        const unscaledDeltaX = event.deltaRect.left / visualScale;
+                        const unscaledDeltaY = event.deltaRect.top / visualScale;
+
+                        const percentW = (unscaledDeltaW / canvasW) * 100;
+                        const percentH = (unscaledDeltaH / canvasH) * 100;
+                        const percentX = (unscaledDeltaX / canvasW) * 100;
+                        const percentY = (unscaledDeltaY / canvasH) * 100;
+
+                        state.w += percentW;
+                        state.h += percentH;
+                        state.x += percentX;
+                        state.y += percentY;
+
+                        event.target.style.width = state.w + '%';
+                        event.target.style.height = state.h + '%';
+                        event.target.style.left = state.x + '%';
+                        event.target.style.top = state.y + '%';
+                    }
+                }
+            })
+            .on('tap', function (event) {
+                selectElement(event.target);
+            });
+
+        function selectElement(el) {
+            document.querySelectorAll('.draggable-elem').forEach(e => {
+                const isBarcode = e.getAttribute('data-id') === 'barcode';
+                e.style.outline = 'none'; // Clear all outlines
+                if (!elementsState[e.getAttribute('data-id')]?.isBox) {
+                    e.style.border = isBarcode ? '1px solid #ccc' : 'none'; // Restore normal borders
+                }
+            });
+
+            const state = elementsState[el.getAttribute('data-id')];
+            el.style.outline = '2px dashed #3b82f6';
+            el.style.outlineOffset = (state && state.isBox) ? '2px' : '-2px';
+            
+            selectedId = el.getAttribute('data-id');
+
+            document.getElementById('noSelectionMsg').style.display = 'none';
+            document.getElementById('propsPanel').style.display = 'flex';
+            
+            const names = { 'banner': 'Cartel Oferta', 'name': 'Nombre Producto', 'price': 'Precio', 'barcode': 'Código de Barras', 'printDate': 'Fecha de Impresión' };
+            if (state.isBox) {
+                document.getElementById('propElementName').textContent = 'Recuadro/Línea';
+            } else if (state.isCustomText) {
+                document.getElementById('propElementName').textContent = 'Texto Libre';
+            } else {
+                document.getElementById('propElementName').textContent = names[selectedId] || 'Elemento';
+            }
+
+            document.getElementById('propVisible').value = (state.visible === false || state.visible === 'false') ? "false" : "true";
+            
+            if (state.isBox) {
+                document.querySelectorAll('.text-prop').forEach(e => e.style.display = 'none');
+                document.querySelectorAll('.box-prop').forEach(e => e.style.display = 'block');
+                
+                document.getElementById('propBorderWidth').value = state.borderWidth || 0;
+                document.getElementById('propBorderColor').value = state.borderColor || '#000000';
+                
+                if (!state.backgroundColor || state.backgroundColor === 'transparent') {
+                    document.getElementById('propBgTransparent').checked = true;
+                    document.getElementById('propBgColor').disabled = true;
+                } else {
+                    document.getElementById('propBgTransparent').checked = false;
+                    document.getElementById('propBgColor').disabled = false;
+                    document.getElementById('propBgColor').value = state.backgroundColor;
+                }
+            } else {
+                document.querySelectorAll('.text-prop').forEach(e => e.style.display = 'block');
+                document.querySelectorAll('.box-prop').forEach(e => e.style.display = 'none');
+                
+                if (state.isCustomText) {
+                    document.querySelectorAll('.custom-text-prop').forEach(e => e.style.display = 'block');
+                    document.getElementById('propCustomText').value = state.text || '';
+                } else {
+                    document.querySelectorAll('.custom-text-prop').forEach(e => e.style.display = 'none');
+                }
+                
+                document.getElementById('propFontSize').value = state.fontSize || 10;
+                document.getElementById('propTextColor').value = state.textColor || (selectedId === 'banner' ? '#ffffff' : '#000000');
+                document.getElementById('propFontWeight').value = state.fontWeight || 'normal';
+                document.getElementById('propFontFamily').value = state.fontFamily || 'Arial';
+                document.getElementById('propTextAlign').value = state.textAlign || 'center';
+            }
+        }
+
+        // Handle Property changes
+        document.getElementById('propCustomText').addEventListener('input', function(e) {
+            if(!selectedId || !elementsState[selectedId].isCustomText) return;
+            elementsState[selectedId].text = e.target.value;
+            applyStateToDOM();
+        });
+        document.getElementById('propTextColor').addEventListener('change', function(e) {
+            if(!selectedId || elementsState[selectedId].isBox) return;
+            elementsState[selectedId].textColor = e.target.value;
+            applyStateToDOM();
+        });
+        document.getElementById('propVisible').addEventListener('change', function(e) {
+            if(!selectedId) return;
+            elementsState[selectedId].visible = e.target.value === 'true';
+            applyStateToDOM();
+        });
+        document.getElementById('propFontSize').addEventListener('change', function(e) {
+            if(!selectedId) return;
+            elementsState[selectedId].fontSize = parseInt(e.target.value);
+            applyStateToDOM();
+        });
+        document.getElementById('propFontWeight').addEventListener('change', function(e) {
+            if(!selectedId) return;
+            elementsState[selectedId].fontWeight = e.target.value;
+            applyStateToDOM();
+        });
+        document.getElementById('propFontFamily').addEventListener('change', function(e) {
+            if(!selectedId) return;
+            elementsState[selectedId].fontFamily = e.target.value;
+            applyStateToDOM();
+        });
+        document.getElementById('propTextAlign').addEventListener('change', function(e) {
+            if(!selectedId) return;
+            elementsState[selectedId].textAlign = e.target.value;
+            applyStateToDOM();
+        });
+
+        // Box properties
+        document.getElementById('propBorderWidth').addEventListener('change', function(e) {
+            if(!selectedId || !elementsState[selectedId].isBox) return;
+            elementsState[selectedId].borderWidth = parseInt(e.target.value);
+            applyStateToDOM();
+        });
+        document.getElementById('propBorderColor').addEventListener('change', function(e) {
+            if(!selectedId || !elementsState[selectedId].isBox) return;
+            elementsState[selectedId].borderColor = e.target.value;
+            applyStateToDOM();
+        });
+        document.getElementById('propBgColor').addEventListener('change', function(e) {
+            if(!selectedId || !elementsState[selectedId].isBox) return;
+            elementsState[selectedId].backgroundColor = e.target.value;
+            applyStateToDOM();
+        });
+        document.getElementById('propBgTransparent').addEventListener('change', function(e) {
+            if(!selectedId || !elementsState[selectedId].isBox) return;
+            document.getElementById('propBgColor').disabled = e.target.checked;
+            elementsState[selectedId].backgroundColor = e.target.checked ? 'transparent' : document.getElementById('propBgColor').value;
+            applyStateToDOM();
+        });
+
+        // Delete Element
+        document.getElementById('btnDeleteElement').addEventListener('click', function() {
+            if(!selectedId) return;
+            
+            // Remove from state
+            delete elementsState[selectedId];
+            
+            // Remove from DOM
+            const el = document.querySelector(`[data-id="${selectedId}"]`);
+            if(el) el.remove();
+            
+            // Hide properties panel
+            document.getElementById('noSelectionMsg').style.display = 'block';
+            document.getElementById('propsPanel').style.display = 'none';
+            selectedId = null;
+        });
+
+        // Insert Element
+        document.getElementById('btnInsert').addEventListener('click', function() {
+            const type = document.getElementById('insertSelector').value;
+            
+            if (type === 'box') {
+                const newId = 'box_' + Date.now();
+                elementsState[newId] = {
+                    x: 10, y: 10, w: 50, h: 5,
+                    visible: true,
+                    isBox: true,
+                    borderWidth: 2,
+                    borderColor: '#000000',
+                    backgroundColor: 'transparent'
+                };
+            } else if (type === 'text') {
+                const newId = 'text_' + Date.now();
+                elementsState[newId] = {
+                    x: 10, y: 10, w: 50, h: 10,
+                    visible: true,
+                    isBox: false,
+                    isCustomText: true,
+                    text: 'Nuevo Texto',
+                    fontSize: 12,
+                    fontWeight: 'normal',
+                    fontFamily: 'Arial',
+                    textAlign: 'center',
+                    textColor: '#000000'
+                };
+            } else {
+                // Standard elements (name, price, barcode, banner)
+                if (elementsState[type]) {
+                    // Already exists, just make it visible
+                    elementsState[type].visible = true;
+                    // Optionally reset position so they can see it
+                    elementsState[type].x = 10;
+                    elementsState[type].y = 10;
+                } else {
+                    // Re-add from default props
+                    // Create a deep copy of the default prop so we don't mutate defaults
+                    elementsState[type] = JSON.parse(JSON.stringify(defaultProps[format][type]));
+                    elementsState[type].visible = true;
+                }
+            }
+            
+            applyStateToDOM();
+        });
+
+        // Save
+        document.getElementById('btnSave').addEventListener('click', function() {
+            const formData = new FormData();
+            formData.append('format', format);
+            formData.append('templateJson', JSON.stringify(elementsState));
+
+            fetch('/Labels/SaveTemplate', {
+                method: 'POST',
+                body: formData
+            }).then(res => {
+                if(res.ok) {
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'success',
+                        title: 'Plantilla guardada',
+                        showConfirmButton: false,
+                        timer: 2000
+                    });
+                }
+            });
+        });
+
+        // Deselect when clicking outside
+        canvas.addEventListener('click', function(e) {
+            if (e.target === canvas) {
+                document.querySelectorAll('.draggable-elem').forEach(el => {
+                    const isBarcode = el.getAttribute('data-id') === 'barcode';
+                    el.style.outline = 'none';
+                    if (!elementsState[el.getAttribute('data-id')]?.isBox) {
+                        el.style.border = isBarcode ? '1px solid #ccc' : 'none';
+                    }
+                });
+                document.getElementById('noSelectionMsg').style.display = 'block';
+                document.getElementById('propsPanel').style.display = 'none';
+                selectedId = null;
+            }
+        });
+    </script>
+
+    <style>
+        .draggable-elem {
+            touch-action: none;
+            user-select: none;
+            box-sizing: border-box;
+            overflow: hidden;
+            cursor: move;
+        }
+    </style>
+}

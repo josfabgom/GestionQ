@@ -75,7 +75,7 @@
                         <i class="fa-solid fa-chart-line"></i> Dashboard
                     </a>
                 </li>
-                @if (User.HasClaim("Permission", Permissions.Sales.View))
+                @if (User.IsInRole("Admin") || User.HasClaim("Permission", Permissions.Sales.View))
                 {
                 <li>
                     <a asp-controller="Sales" asp-action="Index" style="font-weight: 600;">
@@ -83,7 +83,7 @@
                     </a>
                 </li>
                 }
-                @if (User.HasClaim("Permission", Permissions.CashRegisters.View))
+                @if (User.IsInRole("Admin") || User.HasClaim("Permission", Permissions.CashRegisters.View))
                 {
                 <li>
                     <a asp-controller="CashRegisters" asp-action="Index" style="color: #fbbf24; font-weight: 600;">
@@ -91,7 +91,7 @@
                     </a>
                 </li>
                 }
-                @if (User.HasClaim("Permission", Permissions.Customers.View))
+                @if (User.IsInRole("Admin") || User.HasClaim("Permission", Permissions.Customers.View))
                 {
                 <li>
                     <a asp-controller="Customers" asp-action="Index">
@@ -99,15 +99,20 @@
                     </a>
                 </li>
                 }
-                @if (User.HasClaim("Permission", Permissions.Products.View))
+                @if (User.IsInRole("Admin") || User.HasClaim("Permission", Permissions.Products.View))
                 {
                 <li>
                     <a asp-controller="Products" asp-action="Index">
                         <i class="fa-solid fa-box"></i> Stock (Productos)
                     </a>
                 </li>
+                <li>
+                    <a asp-controller="Labels" asp-action="Index" style="color: #ec4899;">
+                        <i class="fa-solid fa-barcode"></i> Imprimir Etiquetas
+                    </a>
+                </li>
                 }
-                @if (User.HasClaim("Permission", Permissions.Config.View))
+                @if (User.IsInRole("Admin") || User.HasClaim("Permission", Permissions.Config.View))
                 {
                 <li>
                     <a asp-controller="Prices" asp-action="Index" style="color: #60a5fa;">
@@ -120,7 +125,7 @@
                     </a>
                 </li>
                 }
-                @if (User.HasClaim("Permission", Permissions.Promotions.View))
+                @if (User.IsInRole("Admin") || User.HasClaim("Permission", Permissions.Promotions.View))
                 {
                 <li>
                     <a asp-controller="Promotions" asp-action="Index" style="color: #10b981;">
@@ -128,7 +133,7 @@
                     </a>
                 </li>
                 }
-                @if (User.HasClaim("Permission", Permissions.Purchases.View))
+                @if (User.IsInRole("Admin") || User.HasClaim("Permission", Permissions.Purchases.View))
                 {
                     <li>
                         <a asp-controller="Purchases" asp-action="Index" style="color: #60a5fa;">
@@ -136,7 +141,7 @@
                         </a>
                     </li>
                 }
-                @if (User.HasClaim("Permission", Permissions.ElectronicInvoices.View))
+                @if (User.IsInRole("Admin") || User.HasClaim("Permission", Permissions.ElectronicInvoices.View))
                 {
 
                 <li>
@@ -145,15 +150,10 @@
                     </a>
                 </li>
                 }
-                @if (User.HasClaim("Permission", Permissions.Config.View))
+                @if (User.IsInRole("Admin") || User.HasClaim("Permission", Permissions.Config.View))
                 {
                     <li style="margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1.5rem;">
                         <span style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); padding-left: 1rem; margin-bottom: 0.5rem; display: block;">Configuración</span>
-                    </li>
-                    <li>
-                        <a asp-controller="Departments" asp-action="Index" style="color: #10b981; font-weight: 600;">
-                            <i class="fa-solid fa-store"></i> Departamentos
-                        </a>
                     </li>
                     <li>
                         <a asp-controller="Configuration" asp-action="Index" style="color: #a78bfa; font-weight: 600;">

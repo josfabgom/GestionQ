@@ -1,4 +1,4 @@
-﻿$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Stop"
 $ProjectPath = ".\src\GestionQ.Web\GestionQ.Web.csproj"
 $InstallerFolder = ".\out\GestionQ_Instalador"
 $AppFolder = "$InstallerFolder\app"
@@ -33,6 +33,17 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
+# 2b. Copiar lanzadores silenciosos al directorio de la app
+Write-Host "Copiando lanzadores silenciosos al directorio de la app..." -ForegroundColor Yellow
+Copy-Item ".\Iniciar-GestionQ.vbs" -Destination $AppFolder -Force
+Copy-Item ".\Detener-GestionQ.vbs" -Destination $AppFolder -Force
+
+$DestLauncherScripts = Join-Path $AppFolder "scripts\launcher"
+if (-not (Test-Path $DestLauncherScripts)) {
+    New-Item -ItemType Directory -Path $DestLauncherScripts -Force | Out-Null
+}
+Copy-Item ".\scripts\launcher\*" -Destination $DestLauncherScripts -Force
+
 # 3. Copiar instalador de SQL Server Express
 if (Test-Path $SqlBootstrapper) {
     Write-Host "Copiando SQL Server Express bootstrapper..." -ForegroundColor Yellow
@@ -57,8 +68,30 @@ if (Test-Path $ZipPath) {
 }
 Compress-Archive -Path "$InstallerFolder\*" -DestinationPath $ZipPath
 
+# 5b. Generar zip de actualización (liviano, sin SQL Server Express)
+Write-Host "Creando paquete de actualización liviano..." -ForegroundColor Yellow
+$UpdateTmpFolder = ".\out\GestionQ_Actualizacion_Tmp"
+if (Test-Path $UpdateTmpFolder) {
+    Remove-Item $UpdateTmpFolder -Recurse -Force | Out-Null
+}
+New-Item -ItemType Directory -Path $UpdateTmpFolder -Force | Out-Null
+
+# Copiar carpeta de app y los scripts de actualización
+Copy-Item "$AppFolder" -Destination $UpdateTmpFolder -Recurse -Force
+Copy-Item "$InstallerFolder\Actualizar.bat" -Destination $UpdateTmpFolder -Force
+Copy-Item "$InstallerFolder\Actualizar.ps1" -Destination $UpdateTmpFolder -Force
+
+$UpdateZipPath = ".\out\GestionQ_Actualizacion.zip"
+if (Test-Path $UpdateZipPath) {
+    Remove-Item $UpdateZipPath -Force
+}
+Compress-Archive -Path "$UpdateTmpFolder\*" -DestinationPath $UpdateZipPath
+Remove-Item $UpdateTmpFolder -Recurse -Force | Out-Null
+Write-Host "Paquete de actualización creado en: $UpdateZipPath" -ForegroundColor Green
+
 Write-Host "========================================================" -ForegroundColor Green
 Write-Host "Instalador empaquetado con éxito." -ForegroundColor Green
 Write-Host "Carpeta del instalador: $InstallerFolder" -ForegroundColor Green
-Write-Host "Archivo zip para transferir: $ZipPath" -ForegroundColor Green
+Write-Host "Archivo zip completo: $ZipPath" -ForegroundColor Green
+Write-Host "Archivo zip de actualización: $UpdateZipPath" -ForegroundColor Green
 Write-Host "========================================================" -ForegroundColor Green

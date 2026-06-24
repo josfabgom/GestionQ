@@ -26,6 +26,9 @@ namespace GestionQ.Web.Models
         [Display(Name = "¿Es Pesable?")]
         public bool IsPesable { get; set; }
 
+        [Display(Name = "¿Es Fraccionable?")]
+        public bool IsFractionable { get; set; }
+
         [Display(Name = "Enviar a Balanza")]
         public bool SendToScale { get; set; }
 

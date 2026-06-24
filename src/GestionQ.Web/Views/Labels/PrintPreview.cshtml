@@ -1,0 +1,240 @@
+@model List<GestionQ.Web.Controllers.LabelPrintModel>
+@using System.Text.Json
+@{
+    Layout = null; // No layout, pure HTML for printing
+    var templatesDict = ViewBag.TemplatesDict as Dictionary<string, string>;
+}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <title>Imprimir Etiquetas</title>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #f0f0f0;
+            font-family: 'Arial', sans-serif;
+            color: #000;
+        }
+
+        .preview-controls {
+            background: #1e293b;
+            color: white;
+            padding: 1rem;
+            text-align: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 1000;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        
+        .preview-controls button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 0.5rem 1.5rem;
+            border-radius: 4px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .preview-controls button:hover {
+            background: #2563eb;
+        }
+
+        .labels-container {
+            margin-top: 80px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            padding-bottom: 2rem;
+        }
+
+        @@media print {
+            .preview-controls {
+                display: none !important;
+            }
+            body {
+                background: white;
+                margin: 0;
+            }
+            .labels-container {
+                margin-top: 0;
+                gap: 0;
+            }
+        }
+
+        .lbl-base {
+            background: white;
+            box-sizing: border-box;
+            border: 1px dashed #ccc;
+            position: relative;
+            page-break-after: always;
+            overflow: hidden;
+        }
+        
+        @@media print {
+            .lbl-base {
+                border: none;
+            }
+        }
+
+        .lbl-50x35 { width: 50mm; height: 35mm; }
+        .lbl-A4 { width: 210mm; height: 297mm; }
+        .lbl-A4_Half { width: 210mm; height: 148mm; }
+
+        .elem-base {
+            position: absolute;
+            box-sizing: border-box;
+        }
+
+        .banner-oferta {
+            background: red;
+            color: white;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+        .lbl-A4 .banner-oferta, .lbl-A4_Half .banner-oferta {
+            border-radius: 15px;
+        }
+        .barcode-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .barcode-container svg {
+            max-width: 100%;
+            max-height: 100%;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="preview-controls">
+        <p style="margin-top: 0; margin-bottom: 0.5rem; font-size: 0.9rem; color: #cbd5e1;">Asegúrate de configurar correctamente los márgenes en cero ("Ninguno") desde la ventana de impresión.</p>
+        <button onclick="window.print()">
+            <svg style="width:16px;height:16px;vertical-align:middle;margin-right:5px;" fill="currentColor" viewBox="0 0 512 512"><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM512 256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v160c0 17.7 14.3 32 32 32h32v32c0 17.7 14.3 32 32 32h288c17.7 0 32-14.3 32-32v-32h32c17.7 0 32-14.3 32-32V256zM352 448H160V320h192v128zm104-128c-13.3 0-24-10.7-24-24s10.7-24 24-24 24 10.7 24 24-10.7 24-24 24z"/></svg>
+            Imprimir Etiquetas
+        </button>
+        <button onclick="window.close()" style="background: #475569; margin-left: 10px;">Cerrar</button>
+    </div>
+
+    <div class="labels-container">
+        @foreach (var item in Model)
+        {
+            var format = item.Format;
+            var jsonStr = templatesDict != null && templatesDict.ContainsKey(format) ? templatesDict[format] : "null";
+            
+            for (int i = 0; i < item.Quantity; i++)
+            {
+                var barcodeVal = !string.IsNullOrEmpty(item.Product.Barcode) ? item.Product.Barcode : item.Product.InternalCode.ToString();
+                
+                <div class="lbl-base lbl-@format" data-json="@jsonStr">
+                    <div class="elem-base banner-oferta" data-id="banner">OFERTA</div>
+                    <div class="elem-base prod-name" data-id="name">@item.Product.Name</div>
+                    <div class="elem-base prod-price" data-id="price">$@item.Product.Price.ToString("N2")</div>
+                    <div class="elem-base barcode-container" data-id="barcode">
+                        <svg class="barcode" jsbarcode-value="@barcodeVal" jsbarcode-displayvalue="true" jsbarcode-height="40" jsbarcode-width="2" jsbarcode-margin="0" jsbarcode-fontsize="14"></svg>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+
+    <script>
+        // Default properties if no template exists
+        const defaultProps = {
+            '50x35': {
+                'banner': { x: 5, y: -20, visible: false, fontSize: 10, fontWeight: 'bold', textAlign: 'center', w: 90, h: 15 }, 
+                'name': { x: 5, y: 5, visible: true, fontSize: 10, fontWeight: 'bold', textAlign: 'center', w: 90, h: 25 },
+                'price': { x: 5, y: 35, visible: true, fontSize: 18, fontWeight: '900', textAlign: 'center', w: 90, h: 25 },
+                'barcode': { x: 5, y: 70, visible: true, fontSize: 10, fontWeight: 'normal', textAlign: 'center', w: 90, h: 25 }
+            },
+            'A4': {
+                'banner': { x: 25, y: 5, visible: true, fontSize: 60, fontWeight: '900', textAlign: 'center', w: 50, h: 10 },
+                'name': { x: 10, y: 20, visible: true, fontSize: 50, fontWeight: 'bold', textAlign: 'center', w: 80, h: 20 },
+                'price': { x: 10, y: 50, visible: true, fontSize: 140, fontWeight: '900', textAlign: 'center', w: 80, h: 30 },
+                'barcode': { x: 20, y: 85, visible: true, fontSize: 20, fontWeight: 'normal', textAlign: 'center', w: 60, h: 10 }
+            },
+            'A4_Half': {
+                'banner': { x: 30, y: 5, visible: true, fontSize: 40, fontWeight: '900', textAlign: 'center', w: 40, h: 10 },
+                'name': { x: 10, y: 25, visible: true, fontSize: 30, fontWeight: 'bold', textAlign: 'center', w: 80, h: 20 },
+                'price': { x: 10, y: 50, visible: true, fontSize: 90, fontWeight: '900', textAlign: 'center', w: 80, h: 25 },
+                'barcode': { x: 25, y: 80, visible: true, fontSize: 16, fontWeight: 'normal', textAlign: 'center', w: 50, h: 15 }
+            }
+        };
+
+        document.querySelectorAll('.lbl-base').forEach(lbl => {
+            let formatClass = Array.from(lbl.classList).find(c => c.startsWith('lbl-') && c !== 'lbl-base');
+            let formatName = formatClass.replace('lbl-', '');
+
+            let jsonStr = lbl.getAttribute('data-json');
+            let state = jsonStr !== "null" ? JSON.parse(jsonStr) : defaultProps[formatName];
+
+            // Render custom elements dynamically
+            for (let id in state) {
+                if (!lbl.querySelector(`[data-id="${id}"]`)) {
+                    let el = document.createElement('div');
+                    el.className = 'elem-base';
+                    el.setAttribute('data-id', id);
+                    lbl.appendChild(el);
+                }
+            }
+
+            lbl.querySelectorAll('.elem-base').forEach(el => {
+                let id = el.getAttribute('data-id');
+                let elState = state[id];
+
+                if (!elState) return;
+
+                if (elState.visible === false || elState.visible === 'false') {
+                    el.style.display = 'none';
+                    return;
+                }
+
+                el.style.left = elState.x + '%';
+                el.style.top = elState.y + '%';
+                el.style.width = elState.w + '%';
+                el.style.height = elState.h + '%';
+                
+                if (elState.isBox) {
+                    el.style.border = `${elState.borderWidth || 0}px solid ${elState.borderColor || '#000'}`;
+                    el.style.backgroundColor = elState.backgroundColor || 'transparent';
+                    el.style.fontSize = '';
+                    el.innerText = '';
+                } else {
+                    el.style.fontSize = (elState.fontSize || 10) + 'pt';
+                    el.style.fontWeight = elState.fontWeight || 'normal';
+                    el.style.fontFamily = elState.fontFamily || 'Arial';
+                    el.style.textAlign = elState.textAlign || 'center';
+                    
+                    if (elState.textColor) {
+                        el.style.color = elState.textColor;
+                    } else if (id !== 'banner' && id !== 'barcode') {
+                        el.style.color = '#000000';
+                    }
+                    
+                    if (elState.isCustomText) {
+                        el.innerText = elState.text || '';
+                    } else if (id === 'printDate') {
+                        let today = new Date();
+                        let dd = String(today.getDate()).padStart(2, '0');
+                        let mm = String(today.getMonth() + 1).padStart(2, '0');
+                        let yyyy = today.getFullYear();
+                        el.innerText = dd + '/' + mm + '/' + yyyy;
+                    }
+                }
+            });
+        });
+
+        // Init barcodes
+        JsBarcode(".barcode").init();
+    </script>
+</body>
+</html>

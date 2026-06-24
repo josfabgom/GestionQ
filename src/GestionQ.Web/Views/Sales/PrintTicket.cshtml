@@ -121,6 +121,13 @@
     {
         ticketText.AppendLine(FormatLine($" - {p.PaymentMethod?.Name ?? "Otro"}:", $"${p.Amount.ToString("N2")}", 40));
     }
+    
+    decimal totalPaymentsText = Model.Payments.Sum(p => p.Amount);
+    if (totalPaymentsText > Model.TotalAmount)
+    {
+        ticketText.AppendLine(FormatLine("VUELTO:", $"${(totalPaymentsText - Model.TotalAmount).ToString("N2")}", 40));
+    }
+
     ticketText.AppendLine(new string('-', 40));
     ticketText.AppendLine(CenterText("DOCUMENTO NO VALIDO COMO FACTURA"));
     ticketText.AppendLine(CenterText("*** GRACIAS POR SU COMPRA ***"));
@@ -376,6 +383,16 @@
                     <span> - @p.PaymentMethod?.Name:</span>
                     <span>$@p.Amount.ToString("N2")</span>
                 </div>
+            }
+            @{
+                decimal totalPaymentsHtml = Model.Payments.Sum(p => p.Amount);
+                if (totalPaymentsHtml > Model.TotalAmount)
+                {
+                    <div style="margin-top: 1mm; font-weight: bold;">
+                        <span>VUELTO:</span>
+                        <span>$@((totalPaymentsHtml - Model.TotalAmount).ToString("N2"))</span>
+                    </div>
+                }
             }
         </div>
 

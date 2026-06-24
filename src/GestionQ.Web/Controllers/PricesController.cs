@@ -74,6 +74,7 @@ namespace GestionQ.Web.Controllers
 
             product.Price = finalPrice;
             if (product.IsPesable) product.SendToScale = true;
+            product.NeedsLabelPrint = true;
 
             var priceEntry = new ProductPrice
             {
@@ -141,6 +142,7 @@ namespace GestionQ.Web.Controllers
                 }
 
                 if (product.IsPesable) product.SendToScale = true;
+                product.NeedsLabelPrint = true;
 
                 var priceEntry = new ProductPrice
                 {

@@ -1,4 +1,4 @@
-﻿# Script de Desinstalación para GestionQ
+# Script de Desinstalación para GestionQ
 # Debe ejecutarse como Administrador
 
 $ErrorActionPreference = "Stop"
@@ -46,19 +46,26 @@ try {
         Write-Host "No se pudieron remover las reglas del Firewall automáticamente. Puede ignorar esto." -ForegroundColor Yellow
     }
 
-    # 4. Eliminar acceso directo del Escritorio
-    Write-Host "`nEliminando acceso directo del Escritorio..." -ForegroundColor Yellow
+    # 4. Eliminar accesos directos del Escritorio
+    Write-Host "`nEliminando accesos directos del Escritorio..." -ForegroundColor Yellow
     try {
         $DesktopPath = [System.Environment]::GetFolderPath("Desktop")
-        $ShortcutPath = Join-Path $DesktopPath "Punto de Venta - GestionQ.lnk"
-        if (Test-Path $ShortcutPath) {
-            Remove-Item $ShortcutPath -Force
-            Write-Host "Acceso directo eliminado." -ForegroundColor Green
+        $Shortcut1 = Join-Path $DesktopPath "Iniciar GestionQ.lnk"
+        $Shortcut2 = Join-Path $DesktopPath "Detener GestionQ.lnk"
+        $ShortcutOld = Join-Path $DesktopPath "Punto de Venta - GestionQ.lnk"
+        
+        $deleted = $false
+        if (Test-Path $Shortcut1) { Remove-Item $Shortcut1 -Force; $deleted = $true }
+        if (Test-Path $Shortcut2) { Remove-Item $Shortcut2 -Force; $deleted = $true }
+        if (Test-Path $ShortcutOld) { Remove-Item $ShortcutOld -Force; $deleted = $true }
+        
+        if ($deleted) {
+            Write-Host "Accesos directos eliminados." -ForegroundColor Green
         } else {
-            Write-Host "No se encontró el acceso directo en el Escritorio." -ForegroundColor Yellow
+            Write-Host "No se encontraron accesos directos en el Escritorio." -ForegroundColor Yellow
         }
     } catch {
-        Write-Host "No se pudo eliminar el acceso directo automáticamente." -ForegroundColor Yellow
+        Write-Host "No se pudieron eliminar los accesos directos automáticamente." -ForegroundColor Yellow
     }
 
     # 5. Preguntar si eliminar carpeta de instalación

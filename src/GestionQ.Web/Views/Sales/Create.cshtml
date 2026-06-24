@@ -144,7 +144,7 @@
 
     <!-- Panel Derecho: Pagos, Totales y Búsqueda -->
     <div class="pos-right-panel">
-        <!-- Visor LED Gigante del Total -->
+        <!-- 1. Visor LED Gigante del Total -->
         <div class="pos-led-visor">
             <div class="led-label">Total a Cobrar</div>
             <div id="cartTotalGigante" class="led-value">$0,00</div>
@@ -156,16 +156,27 @@
             </div>
         </div>
 
-        <!-- Visor de Vuelto / Diferencia -->
+        <!-- 2. Visor de Vuelto / Diferencia -->
         <div id="differenceVisor" class="pos-difference-visor">
             <span class="diff-label">Vuelto / Diferencia:</span>
             <span id="paymentDifferenceGigante" class="diff-value">$0,00</span>
         </div>
 
-        
+        <!-- 3. Cliente -->
+        <div class="glass-panel pos-payment-panel" style="margin-bottom: 0.75rem;">
+            <div class="form-group" style="margin-bottom: 0;">
+                <label style="font-weight: bold; margin-bottom: 0.4rem; display: block;">Cliente</label>
+                <select id="customerId" class="form-control">
+                    <option value="" data-discount="0">Consumidor Final</option>
+                    @foreach (var cus in ViewBag.Customers as IEnumerable<GestionQ.Domain.Entities.Customer>)
+                    {
+                        <option value="@cus.Id" data-discount="@cus.DiscountPercentage.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)">[@cus.InternalCode] @cus.Name</option>
+                    }
+                </select>
+            </div>
+        </div>
 
-
-        <!-- Panel de Entrada de Búsqueda / Scanner -->
+        <!-- 4. Escáner de artículos -->
         <div class="glass-panel pos-input-panel">
             <div class="form-group" style="margin-bottom: 0;">
                 <label style="font-weight: bold; margin-bottom: 0.5rem; display: flex; justify-content: space-between;">
@@ -213,21 +224,27 @@
             </div>
         </div>
 
-        <!-- Panel de Selección de Cliente y Pagos -->
-        <div class="glass-panel pos-payment-panel">
-            <!-- Selector de Cliente (F2) -->
-            <div class="form-group" style="margin-bottom: 0.75rem;">
-                <label style="font-weight: bold; margin-bottom: 0.4rem; display: block;">Cliente</label>
-                <select id="customerId" class="form-control">
-                    <option value="" data-discount="0">Consumidor Final</option>
-                    @foreach (var cus in ViewBag.Customers as IEnumerable<GestionQ.Domain.Entities.Customer>)
+        <!-- 5. Botones rápidos de departamentos -->
+        <div class="glass-panel pos-departments-panel" style="margin-bottom: 0.75rem;">
+            <label style="font-weight: bold; margin-bottom: 0.5rem; display: block;">Venta Rápida por Departamento</label>
+            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                @if (ViewBag.Departments != null)
+                {
+                    foreach (var dept in ViewBag.Departments as IEnumerable<GestionQ.Domain.Entities.Department>)
                     {
-                        <option value="@cus.Id" data-discount="@cus.DiscountPercentage.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)">[@cus.InternalCode] @cus.Name</option>
+                        <button type="button" class="btn btn-secondary btn-sm" 
+                            style="flex: 1 1 calc(33.333% - 0.5rem); min-width: 80px; padding: 0.5rem;"
+                            onclick="handleDepartmentSale(@dept.Id, '@dept.Name', @dept.VirtualProductId, @dept.VatRateId)">
+                            @dept.Name.ToUpper() <br/>
+                            <small style="color: var(--accent); font-weight: bold;">[@dept.Hotkey]</small>
+                        </button>
                     }
-                </select>
+                }
             </div>
+        </div>
 
-            <!-- Descuento Manual / Cliente (F4) -->
+        <!-- 6. Descuentos -->
+        <div class="glass-panel pos-payment-panel">
             <div class="form-group" style="margin-bottom: 1rem;">
                 <label style="font-weight: bold; margin-bottom: 0.4rem; display: flex; justify-content: space-between;">
                     <span>Descuento Manual / Cliente</span>
@@ -266,15 +283,14 @@
                 <input type="number" id="paymentAmount2" />
                 <div id="splitPaymentPanel" style="display: none;"></div>
             </div>
-                <input type="hidden" id="cartTotalRaw" value="0" />
-                <input type="hidden" id="paymentDiscountRaw" value="0" />
-            </div>
-
-            <!-- Botón Finalizar Venta Gigante -->
-            <button id="btnCompleteSale" class="btn-primary btn-complete-pos" onclick="completeSale()" disabled>
-                <i class="fa-solid fa-check-double"></i> FINALIZAR VENTA [F12]
-            </button>
+            <input type="hidden" id="cartTotalRaw" value="0" />
+            <input type="hidden" id="paymentDiscountRaw" value="0" />
         </div>
+
+        <!-- 7. Botón Finalizar Venta Gigante -->
+        <button id="btnCompleteSale" class="btn-primary btn-complete-pos" onclick="completeSale()" disabled>
+            <i class="fa-solid fa-check-double"></i> FINALIZAR VENTA [F12]
+        </button>
     </div>
 </div>
 
@@ -326,6 +342,16 @@
 
 <!-- Estilos Específicos del Punto de Venta -->
 <style>
+    /* Ocultar scroll global y ajustar contenedor principal SOLO para esta vista */
+    body {
+        overflow: hidden !important;
+    }
+    .main-content {
+        padding: 1rem !important;
+        height: 100vh !important;
+        overflow: hidden !important;
+    }
+
     .text-accent {
         color: var(--accent) !important;
     }
@@ -410,9 +436,10 @@
     .pos-container {
         display: flex;
         gap: 1.5rem;
-        align-items: flex-start;
+        align-items: stretch;
         width: 100%;
-        margin-bottom: 1rem;
+        margin-bottom: 0;
+        height: calc(100vh - 2.5rem); /* Fill the screen precisely considering padding */
     }
 
     .pos-left-panel {
@@ -420,6 +447,8 @@
         display: flex;
         flex-direction: column;
         gap: 1rem;
+        height: 100%;
+        overflow: hidden;
     }
 
     .pos-right-panel {
@@ -427,8 +456,8 @@
         display: flex;
         flex-direction: column;
         gap: 1rem;
-        position: sticky;
-        top: 1rem;
+        height: 100%;
+        overflow-y: auto;
     }
 
     /* Encabezado */
@@ -504,11 +533,14 @@
     /* Carrito de Compras */
     .pos-cart-panel {
         padding: 1.25rem;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
     }
 
     .pos-table-wrapper {
-        min-height: 380px;
-        max-height: 520px;
+        flex: 1;
         overflow-y: auto;
         position: relative;
     }
@@ -1018,6 +1050,7 @@
                     internalCode: "@p.InternalCode.ToString("D5")",
                     internalCodeShort: "@p.InternalCode",
                     isPesable: @p.IsPesable.ToString().ToLower(),
+                    isFractionable: @p.IsFractionable.ToString().ToLower(),
                     isDepartment: @p.IsDepartment.ToString().ToLower()
                 },</text>
             }
@@ -1525,6 +1558,11 @@
                 updateMultiplierBadge();
             }
 
+            if (!isDepartment && prodInfo && !prodInfo.isFractionable && (quantity % 1 !== 0)) {
+                Swal.fire('Venta Restringida', 'Este producto no se puede vender en cantidades decimales.', 'warning');
+                return;
+            }
+
             const finalName = (customName || name).toUpperCase();
             const finalCustomName = isDepartment ? finalName : null;
 
@@ -1617,19 +1655,53 @@
                 const { value: formValues } = await Swal.fire({
                     title: 'Venta por Departamento',
                     html:
-                        `<p style="margin-bottom:10px; font-size:1.1rem;">Ingresando en <b>${promptTitle}</b></p>` +
-                        `<input id="swal-input-price" class="swal2-input" type="number" placeholder="Precio ($)" step="0.01" style="margin-top:0; color:#000;" autofocus>` +
-                        (customText === "" ? `<input id="swal-input-desc" class="swal2-input" type="text" placeholder="Descripción opcional" style="color:#000;">` : ''),
+                        `<p style="margin-bottom:15px; font-size:1.1rem; color: #e2e8f0;">Ingresando en <b style="color: var(--accent);">${promptTitle}</b></p>` +
+                        `<div style="display:flex; flex-direction:column; gap:1rem; text-align:left; padding: 0 0.5rem;">` +
+                            `<div>` +
+                                `<label for="swal-input-price" style="font-size:0.9rem; color:#94a3b8; font-weight:bold; margin-bottom:0.4rem; display:block;"><i class="fa-solid fa-tag"></i> Precio a Cobrar ($)</label>` +
+                                `<input id="swal-input-price" class="form-control" type="number" placeholder="0.00" step="0.01" style="width:100%; height:3rem; font-size:1.2rem; background: rgba(15, 23, 42, 0.6); color: #fff; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;">` +
+                            `</div>` +
+                            (customText === "" ? `
+                            <div>
+                                <label for="swal-input-desc" style="font-size:0.9rem; color:#94a3b8; font-weight:bold; margin-bottom:0.4rem; display:block;"><i class="fa-solid fa-comment-dots"></i> Descripción</label>
+                                <input id="swal-input-desc" class="form-control" type="text" value="${deptName}" placeholder="Ej. colita de cuadril..." style="width:100%; height:3rem; font-size:1rem; background: rgba(15, 23, 42, 0.6); color: #fff; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;">
+                            </div>` : '') +
+                        `</div>`,
                     focusConfirm: false,
+                    allowEnterKey: false, /* Desactiva el auto-confirm de SweetAlert con Enter */
                     showCancelButton: true,
-                    confirmButtonText: 'Agregar',
-                    cancelButtonText: 'Cancelar',
+                    confirmButtonText: '<i class="fa-solid fa-plus"></i> Agregar',
+                    cancelButtonText: '<i class="fa-solid fa-xmark"></i> Cancelar',
                     confirmButtonColor: '#10b981',
-                    cancelButtonColor: '#ef4444',
+                    cancelButtonColor: '#475569',
+                    customClass: {
+                        popup: 'glass-panel',
+                        title: 'text-accent'
+                    },
+                    background: 'transparent',
                     didOpen: () => {
                         const priceInput = document.getElementById('swal-input-price');
+                        const descInput = document.getElementById('swal-input-desc');
                         if (priceInput) {
                             priceInput.focus();
+                            priceInput.addEventListener('keydown', (e) => {
+                                if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    if (descInput) {
+                                        descInput.focus();
+                                    } else {
+                                        Swal.clickConfirm();
+                                    }
+                                }
+                            });
+                        }
+                        if (descInput) {
+                            descInput.addEventListener('keydown', (e) => {
+                                if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    Swal.clickConfirm();
+                                }
+                            });
                         }
                     },
                     preConfirm: () => {
@@ -1654,7 +1726,7 @@
             }
 
             let customName = deptName;
-            if (customText !== "") {
+            if (customText !== "" && customText !== deptName) {
                 customName = `${deptName} - ${customText}`;
             }
 

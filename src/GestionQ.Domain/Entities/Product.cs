@@ -22,6 +22,9 @@ namespace GestionQ.Domain.Entities
         [Display(Name = "¿Es Pesable?")]
         public bool IsPesable { get; set; } = false;
 
+        [Display(Name = "¿Es Fraccionable?")]
+        public bool IsFractionable { get; set; } = false;
+
         [Display(Name = "Enviar a Balanza")]
         public bool SendToScale { get; set; } = false;
 
@@ -49,5 +52,7 @@ namespace GestionQ.Domain.Entities
 
         public bool IsDepartment { get; set; } = false;
         public bool IsActive { get; set; } = true;
+        
+        public bool NeedsLabelPrint { get; set; } = false;
     }
 }

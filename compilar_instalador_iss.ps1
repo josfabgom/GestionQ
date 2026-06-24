@@ -1,4 +1,4 @@
-﻿$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Stop"
 
 $ProjectPath = ".\src\GestionQ.Web\GestionQ.Web.csproj"
 $InstallerFolder = ".\out\GestionQ_Instalador"
@@ -32,6 +32,17 @@ if ($LASTEXITCODE -ne 0) {
     Write-Host "Error durante dotnet publish." -ForegroundColor Red
     exit 1
 }
+
+# 2b. Copiar lanzadores silenciosos al directorio de la app
+Write-Host "Copiando lanzadores silenciosos al directorio de la app..." -ForegroundColor Yellow
+Copy-Item ".\Iniciar-GestionQ.vbs" -Destination $AppFolder -Force
+Copy-Item ".\Detener-GestionQ.vbs" -Destination $AppFolder -Force
+
+$DestLauncherScripts = Join-Path $AppFolder "scripts\launcher"
+if (-not (Test-Path $DestLauncherScripts)) {
+    New-Item -ItemType Directory -Path $DestLauncherScripts -Force | Out-Null
+}
+Copy-Item ".\scripts\launcher\*" -Destination $DestLauncherScripts -Force
 
 # 3. Verificar SQL Express Bootstrapper
 if (-not (Test-Path $SqlBootstrapper)) {

@@ -1,4 +1,4 @@
-﻿; Script de Inno Setup para GestionQ - Punto de Venta en Red
+; Script de Inno Setup para GestionQ - Punto de Venta en Red
 
 [Setup]
 AppId={{9F7B910A-3755-4927-B67B-60C1E55E1C38}
@@ -15,6 +15,7 @@ OutputDir=out
 OutputBaseFilename=GestionQ_Setup_1.0
 Compression=lzma2/ultra64
 SolidCompression=yes
+SetupIconFile=src\GestionQ.Web\wwwroot\favicon.ico
 PrivilegesRequired=admin
 ArchitecturesInstallIn64BitMode=x64
 CloseApplications=yes
@@ -25,8 +26,9 @@ UpdateUninstallLogAppName=yes
 Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
 
 [Files]
-; Archivos de la aplicación recopilados en dotnet publish
-Source: "out\GestionQ_Instalador\app\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+; Archivos de la aplicación recopilados en dotnet publish (excluyendo appsettings.json para no pisar configuraciones)
+Source: "out\GestionQ_Instalador\app\*"; DestDir: "{app}"; Excludes: "appsettings.json"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "out\GestionQ_Instalador\app\appsettings.json"; DestDir: "{app}"; Flags: onlyifdoesntexist uninsneveruninstall
 ; Instalador de SQL Server Express local (se conserva para configuración manual)
 Source: "out\SQL2022-SSEI-Expr.exe"; DestDir: "{app}"; Flags: ignoreversion
 ; Script de PowerShell para configuracion de DB e idiomas (se conserva en C:\GestionQ)
@@ -39,13 +41,15 @@ Source: "out\GestionQ_Instalador\GestionQ_Schema.sql"; DestDir: "{app}"; Flags: 
 Source: "out\GestionQ_Instalador\GestionQ_Datos_Basicos.sql"; DestDir: "{app}"; Flags: ignoreversion
 ; Script de lote para registrar servicio y abrir puertos de forma manual
 Source: "out\GestionQ_Instalador\registrar_servicio.bat"; DestDir: "{app}"; Flags: ignoreversion
-
-
+; Scripts del Actualizador
+Source: "out\GestionQ_Instalador\Actualizar.ps1"; DestDir: "{app}"; Flags: ignoreversion
+Source: "out\GestionQ_Instalador\Actualizar.bat"; DestDir: "{app}"; Flags: ignoreversion
 
 
 [Icons]
-; Acceso directo en el Escritorio
-Name: "{userdesktop}\Punto de Venta - GestionQ"; Filename: "http://localhost:5144"; IconFilename: "{app}\wwwroot\favicon.ico"; Comment: "Iniciar Punto de Venta - GestionQ"
+; Accesos directos en el Escritorio
+Name: "{userdesktop}\Iniciar GestionQ"; Filename: "{app}\Iniciar-GestionQ.vbs"; IconFilename: "{app}\wwwroot\favicon.ico"; Comment: "Iniciar Punto de Venta - GestionQ"
+Name: "{userdesktop}\Detener GestionQ"; Filename: "{app}\Detener-GestionQ.vbs"; IconFilename: "shell32.dll"; IconIndex: 131; Comment: "Detener Punto de Venta - GestionQ"
 
 [Run]
 ; 1. Ejecutar script de PowerShell que realiza todo el proceso de instalación y configuración de base de datos, servicio y firewall.
@@ -61,3 +65,13 @@ Filename: "{sys}\sc.exe"; Parameters: "delete GestionQ_Web_Service"; Flags: runh
 ; 3. Remover las reglas del Firewall
 Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""GestionQ Web App (TCP 5144)"""; Flags: runhidden; RunOnceId: "DeleteFirewallRule1"
 Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""SQL Server (TCP 1433)"""; Flags: runhidden; RunOnceId: "DeleteFirewallRule2"
+
+[Code]
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+var
+  ResultCode: Integer;
+begin
+  // Detener el servicio si está corriendo para evitar bloqueo de archivos en actualización
+  Exec('net.exe', 'stop GestionQ_Web_Service', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Result := '';
+end;

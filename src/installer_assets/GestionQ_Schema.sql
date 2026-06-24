@@ -677,6 +677,33 @@ ALTER TABLE [MercadoPagoConfigs] ADD [RefreshToken] nvarchar(255) NULL;
 INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
 VALUES (N'20260616020222_AddMercadoPagoOAuthFields', N'9.0.15');
 
+ALTER TABLE [SaleItems] ADD [CustomName] nvarchar(150) NULL;
+
+ALTER TABLE [Products] ADD [IsDepartment] bit NOT NULL DEFAULT CAST(0 AS bit);
+
+CREATE TABLE [Departments] (
+    [Id] int NOT NULL IDENTITY,
+    [Name] nvarchar(100) NOT NULL,
+    [Hotkey] nvarchar(10) NULL,
+    [VatRateId] int NOT NULL,
+    [VirtualProductId] int NOT NULL,
+    CONSTRAINT [PK_Departments] PRIMARY KEY ([Id]),
+    CONSTRAINT [FK_Departments_Products_VirtualProductId] FOREIGN KEY ([VirtualProductId]) REFERENCES [Products] ([Id]) ON DELETE NO ACTION,
+    CONSTRAINT [FK_Departments_VatRates_VatRateId] FOREIGN KEY ([VatRateId]) REFERENCES [VatRates] ([Id]) ON DELETE CASCADE
+);
+
+CREATE INDEX [IX_Departments_VatRateId] ON [Departments] ([VatRateId]);
+
+CREATE INDEX [IX_Departments_VirtualProductId] ON [Departments] ([VirtualProductId]);
+
+INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+VALUES (N'20260619021826_AddDepartmentsAndCustomSaleItemName', N'9.0.15');
+
+ALTER TABLE [Products] ADD [NeedsLabelPrint] bit NOT NULL DEFAULT CAST(0 AS bit);
+
+INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+VALUES (N'20260621020239_AddNeedsLabelPrint', N'9.0.15');
+
 COMMIT;
 GO
 
