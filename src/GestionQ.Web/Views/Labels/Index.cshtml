@@ -55,6 +55,8 @@
                             <label>Formato de Etiqueta</label>
                             <select id="labelFormat" class="form-control">
                                 <option value="50x35">Estándar Térmica (50x35mm)</option>
+                                <option value="80x33">Góndola Térmica (80x33mm)</option>
+                                <option value="A4_Sheet_50x35">Hoja A4 (Varias etiquetas 55x35mm)</option>
                                 <option value="A4">A4 Completo (Para Ofertas/Carteles)</option>
                                 <option value="A4_Half">Media A4 (Cartel Mediano)</option>
                             </select>
@@ -97,7 +99,7 @@
                 </div>
 
                 <div style="margin-top: 1rem;">
-                    <form id="printForm" method="post" action="/Labels/PrintPreview" target="_blank">
+                    <form id="printForm" method="post" action="/Labels/PrintPreview">
                         <input type="hidden" name="printQueueJson" id="printQueueJson" value="[]" />
                         <button type="submit" class="btn-primary" id="btnPrint" style="width: 100%; font-size: 1.1rem; padding: 0.75rem; background: #ec4899; border-color: #ec4899;" disabled>
                             <i class="fa-solid fa-print"></i> Generar y Previsualizar Etiquetas
@@ -173,10 +175,44 @@
         let selectedProduct = null;
         let searchTimeout = null;
 
+        let currentFocus = -1;
         const searchInput = document.getElementById('productSearch');
         const searchResults = document.getElementById('searchResults');
         
+        searchInput.addEventListener('keydown', function(e) {
+            let items = searchResults.getElementsByClassName('search-item');
+            if (e.key === "ArrowDown") {
+                currentFocus++;
+                addActive(items);
+            } else if (e.key === "ArrowUp") {
+                currentFocus--;
+                addActive(items);
+            } else if (e.key === "Enter") {
+                e.preventDefault();
+                if (currentFocus > -1 && items.length > 0) {
+                    items[currentFocus].click();
+                } else if (items.length > 0) {
+                    items[0].click();
+                }
+            }
+        });
+
+        function addActive(items) {
+            if (!items || items.length === 0) return false;
+            removeActive(items);
+            if (currentFocus >= items.length) currentFocus = 0;
+            if (currentFocus < 0) currentFocus = (items.length - 1);
+            items[currentFocus].style.backgroundColor = 'rgba(255,255,255,0.1)';
+        }
+
+        function removeActive(items) {
+            for (let i = 0; i < items.length; i++) {
+                items[i].style.backgroundColor = '';
+            }
+        }
+        
         searchInput.addEventListener('input', function(e) {
+            currentFocus = -1;
             clearTimeout(searchTimeout);
             const q = e.target.value.trim();
             if (q.length < 2) {
@@ -206,6 +242,10 @@
                                     </div>
                                 `;
                                 div.onclick = () => selectProduct(p);
+                                div.onmouseover = () => {
+                                    currentFocus = Array.from(searchResults.children).indexOf(div);
+                                    addActive(searchResults.getElementsByClassName('search-item'));
+                                };
                                 searchResults.appendChild(div);
                             });
                         }

@@ -377,5 +377,61 @@ namespace GestionQ.Web.Controllers
 
             return decimal.TryParse(cleaned, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out value);
         }
+
+        public async Task<IActionResult> Print(int id)
+        {
+            var register = await _context.CashRegisters
+                .Include(c => c.User)
+                .Include(c => c.Movements)
+                .Include(c => c.Sales)
+                    .ThenInclude(s => s.Payments)
+                    .ThenInclude(p => p.PaymentMethod)
+                .Include(c => c.Sales)
+                    .ThenInclude(s => s.Items)
+                    .ThenInclude(i => i.Product)
+                .FirstOrDefaultAsync(c => c.Id == id);
+
+            if (register == null) return NotFound();
+
+            if (register.IsOpen)
+            {
+                decimal totalEfectivoVentas = register.Sales
+                    .SelectMany(s => s.Payments)
+                    .Where(p => p.PaymentMethod?.Name == "Efectivo")
+                    .Sum(p => p.Amount);
+
+                decimal totalIngresos = register.Movements
+                    .Where(m => m.Type == "Ingreso")
+                    .Sum(m => m.Amount);
+
+                decimal totalEgresos = register.Movements
+                    .Where(m => m.Type == "Egreso")
+                    .Sum(m => m.Amount);
+
+                register.ExpectedCashBalance = register.InitialBalance + totalEfectivoVentas + totalIngresos - totalEgresos;
+            }
+
+            var paymentSummary = register.Sales
+                .SelectMany(s => s.Payments)
+                .GroupBy(p => p.PaymentMethod?.Name ?? "Desconocido")
+                .Select(g => new { Method = g.Key, Total = g.Sum(x => x.Amount) })
+                .ToList();
+            ViewBag.PaymentSummary = paymentSummary;
+
+            var productSummary = register.Sales
+                .SelectMany(s => s.Items)
+                .GroupBy(i => i.Product?.Name ?? "Desconocido")
+                .Select(g => new ProductSalesSummaryViewModel
+                {
+                    ProductName = g.Key,
+                    Quantity = g.Sum(x => x.Quantity),
+                    Total = g.Sum(x => x.Quantity * x.UnitPrice)
+                })
+                .OrderByDescending(p => p.Quantity)
+                .ToList();
+            ViewBag.ProductSummary = productSummary;
+
+            return View(register);
+        }
     }
 }

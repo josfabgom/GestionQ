@@ -1,27 +1,28 @@
 @model GestionQ.Domain.Entities.ElectronicInvoice
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 @using System.Text
 @using System.Text.Json
 @functions {
-    public string CenterText(string text, int width = 40)
+    public string CenterText(string text, int width = 35)
     {
         if (string.IsNullOrEmpty(text)) return "";
         text = text.Trim();
         if (text.Length >= width) return text.Substring(0, width);
-        int leftPadding = (width - text.Length) / 2;
-        return new string(' ', leftPadding) + text;
+        int spaces = (width - text.Length) / 2;
+        return text.PadLeft(text.Length + spaces).PadRight(width);
     }
 
-    public string FormatLine(string leftText, string rightText, int width = 40)
+    public string FormatLine(string leftText, string rightText, int width = 35)
     {
         leftText = leftText ?? "";
         rightText = rightText ?? "";
         int spacesNeeded = width - leftText.Length - rightText.Length;
         if (spacesNeeded < 1)
         {
-            int maxLeftLen = width - rightText.Length - 3;
+            int maxLeftLen = width - rightText.Length - 2;
             if (maxLeftLen > 0 && leftText.Length > maxLeftLen)
             {
-                leftText = leftText.Substring(0, maxLeftLen) + "...";
+                leftText = leftText.Substring(0, maxLeftLen);
             }
             spacesNeeded = width - leftText.Length - rightText.Length;
             if (spacesNeeded < 1) spacesNeeded = 1;
@@ -30,13 +31,92 @@
     }
 }
 @{
-    Layout = null; // No MVC wrapper for printing view
+    Layout = null;
+
+    var companyName = Configuration["CompanyInfo:Name"] ?? "GestionQ";
+    var fantasyName = Configuration["CompanyInfo:FantasyName"];
+    if (string.IsNullOrWhiteSpace(fantasyName)) fantasyName = companyName;
+    var companyAddress = Configuration["CompanyInfo:Address"] ?? "";
+    var companyPhone = Configuration["CompanyInfo:Phone"] ?? "";
+    var companyEmail = Configuration["CompanyInfo:Email"] ?? "";
+
+    var invoiceText = new StringBuilder();
+    invoiceText.AppendLine(CenterText("FACTURA ELECTRÓNICA"));
+    invoiceText.AppendLine(new string('-', 35));
+    invoiceText.AppendLine(CenterText(fantasyName));
+    if (fantasyName != companyName) invoiceText.AppendLine(CenterText($"de {companyName}"));
+    if (!string.IsNullOrEmpty(companyAddress)) invoiceText.AppendLine(CenterText(companyAddress));
+    if (!string.IsNullOrEmpty(companyPhone)) invoiceText.AppendLine(CenterText($"Tel: {companyPhone}"));
+    if (!string.IsNullOrEmpty(companyEmail)) invoiceText.AppendLine(CenterText(companyEmail));
+    invoiceText.AppendLine(new string('-', 35));
+    
+    invoiceText.AppendLine(CenterText(Model.InvoiceTypeDesc));
+    invoiceText.AppendLine(CenterText($"Cod. {Model.InvoiceTypeCode.ToString("D2")}"));
+    invoiceText.AppendLine(new string('-', 35));
+    
+    invoiceText.AppendLine($"Comp. Nro: {Model.PointOfSaleNumber.ToString("D5")}-{Model.InvoiceNumber.ToString("D8")}");
+    invoiceText.AppendLine($"Fecha:     {Model.IssueDate.ToString("dd/MM/yyyy HH:mm")}");
+    invoiceText.AppendLine(new string('-', 35));
+    
+    invoiceText.AppendLine($"Cliente:   {Model.CustomerName}");
+    invoiceText.AppendLine($"Cond. IVA: {Model.CustomerTaxCondition}");
+    string docType = Model.DocTypeCode == 80 ? "CUIT" : (Model.DocTypeCode == 96 ? "DNI" : "Doc");
+    invoiceText.AppendLine($"{docType}:      {Model.DocNumber}");
+    invoiceText.AppendLine(new string('-', 35));
+    
+    invoiceText.AppendLine(FormatLine("Cant Descripcion", "Total", 35));
+    invoiceText.AppendLine(new string('-', 35));
+
+    if (Model.Sale != null && Model.Sale.Items.Any())
+    {
+        foreach (var item in Model.Sale.Items)
+        {
+            decimal itemTotal = item.Quantity * item.UnitPrice;
+            string prodName = (!string.IsNullOrEmpty(item.CustomName) ? item.CustomName : (item.Product?.Name ?? "Producto Genérico")).ToUpper();
+            
+            string qtyStr = item.Quantity.ToString(item.Quantity % 1 == 0 ? "F0" : "F3");
+            string totalStr = $"${itemTotal.ToString("N2")}";
+            
+            string leftText = $"{qtyStr} {prodName}";
+            invoiceText.AppendLine(FormatLine(leftText, totalStr, 35));
+            
+            if (item.Quantity != 1)
+            {
+                invoiceText.AppendLine($"  ({qtyStr} x ${item.UnitPrice.ToString("N2")})");
+            }
+        }
+    }
+    else
+    {
+        invoiceText.AppendLine("1 OPERACIÓN GLOBAL");
+        invoiceText.AppendLine(FormatLine($"  VENTA #{Model.SaleId}", $"${Model.TotalAmount.ToString("N2")}", 35));
+    }
+    
+    invoiceText.AppendLine(new string('-', 35));
+    
+    invoiceText.AppendLine(FormatLine("Subtotal Neto:", Model.NetAmount.ToString("C"), 35));
+    invoiceText.AppendLine(FormatLine("IVA 21%/10.5%:", Model.VatAmount.ToString("C"), 35));
+    if (Model.ExemptAmount > 0)
+    {
+        invoiceText.AppendLine(FormatLine("Exento:", Model.ExemptAmount.ToString("C"), 35));
+    }
+    invoiceText.AppendLine(new string('=', 35));
+    invoiceText.AppendLine(FormatLine("TOTAL:", Model.TotalAmount.ToString("C"), 35));
+    invoiceText.AppendLine(new string('=', 35));
+    
+    var caeText = new StringBuilder();
+    caeText.AppendLine(CenterText($"CAE: {Model.CAE}"));
+    caeText.AppendLine(CenterText($"Vto CAE: {Model.CAEExpirationDate.ToString("dd/MM/yyyy")}"));
+    caeText.AppendLine();
+    caeText.AppendLine(CenterText("Comprobante Autorizado por ARCA"));
+    caeText.AppendLine(CenterText("Comprobante Electrónico (v4.0)"));
+
     
     // Generate AFIP QR Code Base64 Data
     var qrObj = new {
         ver = 1,
         fecha = Model.IssueDate.ToString("yyyy-MM-dd"),
-        cuit = 30712345678L, // Simulated company CUIT (GestionQ)
+        cuit = 30712345678L, 
         ptoVta = Model.PointOfSaleNumber,
         tipoCmp = Model.InvoiceTypeCode,
         nroCmp = Model.InvoiceNumber,
@@ -54,69 +134,6 @@
     var afipQrUrl = $"https://www.afip.gob.ar/fe/qr/?p={base64Json}";
     var qrImageUrl = $"https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={Uri.EscapeDataString(afipQrUrl)}";
 
-    // Generar contenido del ticket fiscal en texto plano para impresoras térmicas
-    var invoiceText = new StringBuilder();
-    invoiceText.AppendLine(CenterText("GestionQ S.A."));
-    invoiceText.AppendLine(CenterText("Av. Corrientes 1234, CABA"));
-    invoiceText.AppendLine(CenterText("CUIT: 30-71234567-8"));
-    invoiceText.AppendLine(CenterText("IVA Responsable Inscripto"));
-    invoiceText.AppendLine(CenterText("Inicio Act.: 01/01/2020"));
-    invoiceText.AppendLine(new string('-', 40));
-    
-    invoiceText.AppendLine(CenterText(Model.InvoiceTypeDesc));
-    invoiceText.AppendLine(CenterText($"Cod. {Model.InvoiceTypeCode.ToString("D2")}"));
-    invoiceText.AppendLine(new string('-', 40));
-    
-    invoiceText.AppendLine($"Comp. Nro: {Model.PointOfSaleNumber.ToString("D5")}-{Model.InvoiceNumber.ToString("D8")}");
-    invoiceText.AppendLine($"Fecha:     {Model.IssueDate.ToString("dd/MM/yyyy HH:mm")}");
-    invoiceText.AppendLine(new string('-', 40));
-    
-    invoiceText.AppendLine($"Cliente:   {Model.CustomerName}");
-    invoiceText.AppendLine($"Cond. IVA: {Model.CustomerTaxCondition}");
-    string docType = Model.DocTypeCode == 80 ? "CUIT" : (Model.DocTypeCode == 96 ? "DNI" : "Doc");
-    invoiceText.AppendLine($"{docType}:      {Model.DocNumber}");
-    invoiceText.AppendLine(new string('-', 40));
-    
-    invoiceText.AppendLine(FormatLine("Cant  Producto", "Total", 40));
-    invoiceText.AppendLine(new string('-', 40));
-    
-    if (Model.Sale != null && Model.Sale.Items.Any())
-    {
-        foreach (var item in Model.Sale.Items)
-        {
-            decimal itemTotal = item.Quantity * item.UnitPrice;
-            string prodName = (!string.IsNullOrEmpty(item.CustomName) ? item.CustomName : (item.Product?.Name ?? "Producto Genérico")).ToUpper();
-            invoiceText.AppendLine(prodName);
-            
-            string qtyStr = $"  {item.Quantity.ToString("N0")} x ${item.UnitPrice.ToString("N2")}";
-            string totalStr = $"${itemTotal.ToString("N2")}";
-            invoiceText.AppendLine(FormatLine(qtyStr, totalStr, 40));
-        }
-    }
-    else
-    {
-        invoiceText.AppendLine("1 x OPERACIÓN GLOBAL");
-        invoiceText.AppendLine(FormatLine($"  VENTA #{Model.SaleId}", $"${Model.TotalAmount.ToString("N2")}", 40));
-    }
-    
-    invoiceText.AppendLine(new string('-', 40));
-    
-    invoiceText.AppendLine(FormatLine("Subtotal Neto:", Model.NetAmount.ToString("C"), 40));
-    invoiceText.AppendLine(FormatLine("IVA 21%/10.5%:", Model.VatAmount.ToString("C"), 40));
-    if (Model.ExemptAmount > 0)
-    {
-        invoiceText.AppendLine(FormatLine("Exento:", Model.ExemptAmount.ToString("C"), 40));
-    }
-    invoiceText.AppendLine(new string('=', 40));
-    invoiceText.AppendLine(FormatLine("TOTAL:", Model.TotalAmount.ToString("C"), 40));
-    invoiceText.AppendLine(new string('=', 40));
-    
-    var caeText = new StringBuilder();
-    caeText.AppendLine(CenterText($"CAE: {Model.CAE}"));
-    caeText.AppendLine(CenterText($"Vto CAE: {Model.CAEExpirationDate.ToString("dd/MM/yyyy")}"));
-    caeText.AppendLine();
-    caeText.AppendLine(CenterText("Comprobante Autorizado por ARCA"));
-    caeText.AppendLine(CenterText("Comprobante Electrónico (v4.0)"));
 }
 
 <!DOCTYPE html>
@@ -129,6 +146,11 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     
     <style>
+        @@page {
+            margin: 0;
+            size: 80mm auto;
+        }
+
         body {
             font-family: 'Courier Prime', monospace;
             color: #000;
@@ -216,28 +238,35 @@
 
         .text-receipt-container {
             display: none;
-            width: 80mm;
-            max-width: 100%;
+            width: 100%;
             margin: 0;
-            padding: 0;
+            padding: 0 5mm;
             background-color: #fff;
+            box-sizing: border-box;
         }
 
         .text-receipt {
             font-family: 'Courier Prime', 'Courier New', Courier, monospace;
-            font-size: 12px;
+            font-size: 11px;
             line-height: 1.2;
             margin: 0;
-            white-space: pre-wrap;
-            word-break: break-all;
-            color: #000;
+            white-space: pre;
+            overflow: hidden;
+            color: #000000 !important;
+            font-weight: bold !important;
+            text-rendering: optimizeSpeed;
         }
 
         @@media print {
             body {
-                background-color: #fff;
-                margin: 0 !important;
+                width: 100% !important;
+                max-width: 80mm !important;
                 padding: 0 !important;
+                margin: 0 auto !important;
+                background: #fff;
+                font-size: 11px !important;
+                color: #000000 !important;
+                font-weight: bold !important;
             }
             .ticket-box {
                 display: none !important;
@@ -259,11 +288,12 @@
 
     <div class="ticket-box">
         <div class="text-center ticket-header">
-            <div class="company-name">GestionQ S.A.</div>
-            <div>Av. Corrientes 1234, CABA</div>
-            <div>CUIT: 30-71234567-8</div>
+            <div class="company-name" style="font-size: 1.2em;">@fantasyName</div>
+            @if (fantasyName != companyName) { <div style="font-size: 0.8em; margin-top: -3px; margin-bottom: 5px;">de @companyName</div> }
+            @if (!string.IsNullOrEmpty(companyAddress)) { <div>@companyAddress</div> }
+            @if (!string.IsNullOrEmpty(companyPhone)) { <div>Tel: @companyPhone</div> }
+            @if (!string.IsNullOrEmpty(companyEmail)) { <div>@companyEmail</div> }
             <div>IVA Responsable Inscripto</div>
-            <div>Inicio Act.: 01/01/2020</div>
         </div>
         
         <div class="divider"></div>
@@ -366,5 +396,30 @@
         </div>
         <pre class="text-receipt">@caeText.ToString()</pre>
     </div>
+    <script>
+        window.onload = function() {
+            setTimeout(function() { 
+                var textBlocks = document.querySelectorAll('.text-receipt');
+                var fullText = "";
+                for(var i=0; i<textBlocks.length; i++) {
+                    fullText += textBlocks[i].innerText + "\n";
+                }
+                var payload = JSON.stringify({
+                    command: 'print',
+                    printerName: '@Html.Raw(Model.PointOfSale?.PrinterName ?? "")',
+                    copies: @(Model.PointOfSale?.PrintCopies ?? 1),
+                    text: fullText
+                });
+
+                if (window.parent && window.parent !== window) {
+                    window.parent.postMessage({ type: 'PRINT_TICKET', payload: payload }, '*');
+                } else if (window.chrome && window.chrome.webview) {
+                    window.chrome.webview.postMessage(payload);
+                } else {
+                    window.print(); 
+                }
+            }, 500);
+        };
+    </script>
 </body>
 </html>

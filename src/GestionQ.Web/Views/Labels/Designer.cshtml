@@ -12,6 +12,7 @@
         <div style="display: flex; gap: 0.5rem; align-items: center;">
             <select id="formatSelector" class="form-control" style="width: auto;" onchange="window.location.href='/Labels/Designer?format=' + this.value">
                 <option value="50x35">50x35mm (Térmica)</option>
+                <option value="80x33">Góndola Térmica (80x33mm)</option>
                 <option value="A4">A4 (Cartel Oferta)</option>
                 <option value="A4_Half">Media A4</option>
             </select>
@@ -175,6 +176,10 @@
             canvasW = 50 * 3.78; // 189px
             canvasH = 35 * 3.78; // 132.3px
             visualScale = 3; // Make it 3x bigger on screen
+        } else if (format === '80x33') {
+            canvasW = 80 * 3.78;
+            canvasH = 33 * 3.78;
+            visualScale = 3;
         } else if (format === 'A4') {
             canvasW = 210 * 3.78; // 793.8px
             canvasH = 297 * 3.78; // 1122.6px
@@ -196,6 +201,13 @@
                 'name': { x: 5, y: 5, visible: true, fontSize: 10, fontWeight: 'bold', fontFamily: 'Arial', textAlign: 'center', w: 90, h: 25 },
                 'price': { x: 5, y: 35, visible: true, fontSize: 18, fontWeight: '900', fontFamily: 'Arial', textAlign: 'center', w: 90, h: 25 },
                 'barcode': { x: 5, y: 70, visible: true, fontSize: 10, fontWeight: 'normal', fontFamily: 'Arial', textAlign: 'center', w: 90, h: 25 },
+                'printDate': { x: 50, y: 90, visible: false, fontSize: 7, fontWeight: 'normal', fontFamily: 'Arial', textAlign: 'right', w: 45, h: 10 }
+            },
+            '80x33': {
+                'banner': { x: 5, y: -20, visible: false, fontSize: 10, fontWeight: 'bold', fontFamily: 'Arial', textAlign: 'center', w: 90, h: 15 }, 
+                'name': { x: 5, y: 5, visible: true, fontSize: 14, fontWeight: 'bold', fontFamily: 'Arial', textAlign: 'center', w: 90, h: 30 },
+                'price': { x: 5, y: 35, visible: true, fontSize: 24, fontWeight: '900', fontFamily: 'Arial', textAlign: 'center', w: 90, h: 40 },
+                'barcode': { x: 5, y: 75, visible: true, fontSize: 10, fontWeight: 'normal', fontFamily: 'Arial', textAlign: 'center', w: 90, h: 20 },
                 'printDate': { x: 50, y: 90, visible: false, fontSize: 7, fontWeight: 'normal', fontFamily: 'Arial', textAlign: 'right', w: 45, h: 10 }
             },
             'A4': {

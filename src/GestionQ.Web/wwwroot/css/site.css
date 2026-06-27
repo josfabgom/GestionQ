@@ -1,4 +1,4 @@
-/* Custom Dark Mode UI with Glassmorphism */
+/* Custom Dark Mode UI with Glassmorphism - v2 */
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap');
 
 * {
@@ -199,6 +199,48 @@ h3 {
     background: rgba(255, 255, 255, 0.05);
     color: white;
 }
+
+/* Action Buttons for Dashboard */
+.btn-action {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 1rem 1.5rem;
+    border-radius: 12px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: white;
+    text-decoration: none;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.btn-action:hover {
+    transform: translateY(-4px);
+    color: white;
+}
+
+.btn-action i {
+    font-size: 1.4rem;
+}
+
+.btn-action.sales {
+    background: linear-gradient(135deg, #10b981, #059669);
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+}
+.btn-action.sales:hover { box-shadow: 0 8px 25px rgba(16, 185, 129, 0.5); border-color: rgba(255,255,255,0.4); }
+
+.btn-action.product {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+}
+.btn-action.product:hover { box-shadow: 0 8px 25px rgba(59, 130, 246, 0.5); border-color: rgba(255,255,255,0.4); }
+
+.btn-action.customer {
+    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+    box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+}
+.btn-action.customer:hover { box-shadow: 0 8px 25px rgba(139, 92, 246, 0.5); border-color: rgba(255,255,255,0.4); }
 
 /* Forms */
 .form-group {

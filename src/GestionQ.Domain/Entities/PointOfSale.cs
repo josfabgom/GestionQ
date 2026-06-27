@@ -20,6 +20,12 @@ namespace GestionQ.Domain.Entities
         [Display(Name = "Descripción/Ubicación")]
         public string? Description { get; set; }
 
+        [Display(Name = "Impresora de Tickets Predeterminada")]
+        public string? PrinterName { get; set; }
+
+        [Display(Name = "Número de Copias")]
+        public int PrintCopies { get; set; } = 1;
+
         public bool IsActive { get; set; } = true;
 
         public List<CashRegister> CashRegisters { get; set; } = new();

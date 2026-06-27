@@ -10,6 +10,7 @@ using System.Security.Claims;
 using GestionQ.Domain.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.WebHost.UseUrls("http://*:5144");
 builder.Host.UseWindowsService();
 
 // Add services to the container.
@@ -125,12 +126,11 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-app.MapStaticAssets();
+app.UseStaticFiles();
 
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}")
-    .WithStaticAssets();
+    pattern: "{controller=Home}/{action=Index}/{id?}");
 
 
 app.Run();

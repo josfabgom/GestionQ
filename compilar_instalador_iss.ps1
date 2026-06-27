@@ -24,9 +24,12 @@ if ($LASTEXITCODE -ne 0) {
     Copy-Item "out\GestionQ_Schema.sql" -Destination $AssetsFolder -Force
 }
 
-# 2. Publicar proyecto
-Write-Host "Ejecutando dotnet publish..." -ForegroundColor Yellow
+# 2. Publicar proyecto Web
+Write-Host "Ejecutando dotnet publish (Web)..." -ForegroundColor Yellow
 dotnet publish $ProjectPath -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o $AppFolder
+
+Write-Host "Ejecutando dotnet publish (Desktop)..." -ForegroundColor Yellow
+dotnet publish ".\src\GestionQ.Desktop\GestionQ.Desktop.csproj" -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o $AppFolder
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Error durante dotnet publish." -ForegroundColor Red

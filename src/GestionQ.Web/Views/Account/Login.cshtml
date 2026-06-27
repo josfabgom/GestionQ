@@ -1,6 +1,7 @@
 @model GestionQ.Web.Controllers.LoginViewModel
 @using Microsoft.AspNetCore.Hosting
 @inject IWebHostEnvironment Env
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 @{
     ViewData["Title"] = "Iniciar Sesión";
     Layout = null;
@@ -11,7 +12,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - GestionQ</title>
+    <title>@ViewData["Title"] - @(Configuration["CompanyInfo:FantasyName"] ?? Configuration["CompanyInfo:Name"] ?? "GestionQ")</title>
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
 
@@ -23,9 +24,10 @@
                 var logoPath = System.IO.Path.Combine(Env.WebRootPath, "images", "logo.png");
                 var hasLogo = System.IO.File.Exists(logoPath);
             }
-            @if (hasLogo)
+                @if (hasLogo)
             {
                 <img src="~/images/logo.png?v=@DateTime.Now.Ticks" style="max-height: 55px;" alt="Logo" />
+                <span>@(Configuration["CompanyInfo:FantasyName"] ?? Configuration["CompanyInfo:Name"] ?? "GestionQ")</span>
             }
             else
             {
@@ -35,7 +37,7 @@
                     <path d="M2 17l10 5 10-5"></path>
                     <path d="M2 12l10 5 10-5"></path>
                 </svg>
-                <span>GestionQ</span>
+                <span>@(Configuration["CompanyInfo:FantasyName"] ?? Configuration["CompanyInfo:Name"] ?? "GestionQ")</span>
             }
         </h2>
         <form asp-action="Login" asp-route-returnurl="@ViewData["ReturnUrl"]" method="post" style="text-align: left;">

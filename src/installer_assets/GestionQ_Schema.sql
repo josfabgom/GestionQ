@@ -704,6 +704,23 @@ ALTER TABLE [Products] ADD [NeedsLabelPrint] bit NOT NULL DEFAULT CAST(0 AS bit)
 INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
 VALUES (N'20260621020239_AddNeedsLabelPrint', N'9.0.15');
 
+ALTER TABLE [Products] ADD [IsFractionable] bit NOT NULL DEFAULT CAST(0 AS bit);
+
+UPDATE Products SET IsFractionable = 1 WHERE IsPesable = 1
+
+INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+VALUES (N'20260624024200_AddIsFractionableToProduct', N'9.0.15');
+
+ALTER TABLE [PointsOfSale] ADD [PrinterName] nvarchar(max) NULL;
+
+INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+VALUES (N'20260626082413_AddPrinterNameToPos', N'9.0.15');
+
+ALTER TABLE [PointsOfSale] ADD [PrintCopies] int NOT NULL DEFAULT 0;
+
+INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+VALUES (N'20260626090146_AddPrintCopiesToPointOfSale', N'9.0.15');
+
 COMMIT;
 GO
 

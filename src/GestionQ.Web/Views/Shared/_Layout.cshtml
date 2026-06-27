@@ -3,8 +3,9 @@
 @using GestionQ.Domain.Constants
 @inject SignInManager<IdentityUser> SignInManager
 @inject UserManager<IdentityUser> UserManager
-@inject IWebHostEnvironment Env
+@inject Microsoft.AspNetCore.Hosting.IWebHostEnvironment Env
 @inject Microsoft.AspNetCore.Authorization.IAuthorizationService AuthorizationService
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 
 <!DOCTYPE html>
 <html lang="es">
@@ -12,7 +13,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - GestionQ Web</title>
+    <title>@ViewData["Title"] - @(Configuration["CompanyInfo:FantasyName"] ?? Configuration["CompanyInfo:Name"] ?? "GestionQ")</title>
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@@sweetalert2/theme-dark@5/dark.min.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
@@ -45,6 +46,7 @@
                 {
                     <img src="~/images/logo.png?v=@DateTime.Now.Ticks" style="max-height: 45px; margin-right: 10px;"
                         alt="Logo" />
+                    <span>@(Configuration["CompanyInfo:FantasyName"] ?? Configuration["CompanyInfo:Name"] ?? "GestionQ")</span>
                 }
                 else
                 {
@@ -54,7 +56,7 @@
                         <path d="M2 17l10 5 10-5"></path>
                         <path d="M2 12l10 5 10-5"></path>
                     </svg>
-                    <span>GestionQ</span>
+                    <span>@(Configuration["CompanyInfo:FantasyName"] ?? Configuration["CompanyInfo:Name"] ?? "GestionQ")</span>
                 }
             </a>
 
@@ -195,6 +197,14 @@
             const isCollapsed = body.classList.contains('sidebar-collapsed');
             localStorage.setItem('sidebarCollapsed', isCollapsed ? 'true' : 'false');
         }
+
+        window.addEventListener('message', function(event) {
+            if (event.data && event.data.type === 'PRINT_TICKET') {
+                if (window.chrome && window.chrome.webview) {
+                    window.chrome.webview.postMessage(event.data.payload);
+                }
+            }
+        });
     </script>
 
     @await RenderSectionAsync("Scripts", required: false)

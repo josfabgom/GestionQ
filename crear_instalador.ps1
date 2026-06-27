@@ -2,6 +2,7 @@ $ErrorActionPreference = "Stop"
 $ProjectPath = ".\src\GestionQ.Web\GestionQ.Web.csproj"
 $InstallerFolder = ".\out\GestionQ_Instalador"
 $AppFolder = "$InstallerFolder\app"
+$ClientAppFolder = "$InstallerFolder\app_cliente"
 $SqlBootstrapper = ".\out\SQL2022-SSEI-Expr.exe"
 $AssetsFolder = ".\src\installer_assets"
 $ZipPath = ".\out\GestionQ_Instalador_Completo.zip"
@@ -24,9 +25,15 @@ if ($LASTEXITCODE -ne 0) {
     Copy-Item "out\GestionQ_Schema.sql" -Destination $AssetsFolder -Force
 }
 
-# 2. Publicar proyecto
-Write-Host "Ejecutando dotnet publish..." -ForegroundColor Yellow
+# 2. Publicar proyecto Web
+Write-Host "Ejecutando dotnet publish (Web)..." -ForegroundColor Yellow
 dotnet publish $ProjectPath -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o $AppFolder
+
+Write-Host "Ejecutando dotnet publish (Desktop para Cliente)..." -ForegroundColor Yellow
+dotnet publish ".\src\GestionQ.Desktop\GestionQ.Desktop.csproj" -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o $ClientAppFolder
+
+Write-Host "Ejecutando dotnet publish (ServerMonitor)..." -ForegroundColor Yellow
+dotnet publish ".\src\GestionQ.ServerMonitor\GestionQ.ServerMonitor.csproj" -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o $AppFolder
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Error durante dotnet publish." -ForegroundColor Red
@@ -37,6 +44,9 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "Copiando lanzadores silenciosos al directorio de la app..." -ForegroundColor Yellow
 Copy-Item ".\Iniciar-GestionQ.vbs" -Destination $AppFolder -Force
 Copy-Item ".\Detener-GestionQ.vbs" -Destination $AppFolder -Force
+Copy-Item ".\Iniciar-Monitor.vbs" -Destination $AppFolder -Force
+Copy-Item ".\Iniciar-GestionQ.vbs" -Destination $ClientAppFolder -Force
+Copy-Item ".\src\GestionQ.Web\wwwroot\favicon.ico" -Destination $ClientAppFolder -Force
 
 $DestLauncherScripts = Join-Path $AppFolder "scripts\launcher"
 if (-not (Test-Path $DestLauncherScripts)) {
@@ -90,8 +100,19 @@ Remove-Item $UpdateTmpFolder -Recurse -Force | Out-Null
 Write-Host "Paquete de actualización creado en: $UpdateZipPath" -ForegroundColor Green
 
 Write-Host "========================================================" -ForegroundColor Green
-Write-Host "Instalador empaquetado con éxito." -ForegroundColor Green
-Write-Host "Carpeta del instalador: $InstallerFolder" -ForegroundColor Green
-Write-Host "Archivo zip completo: $ZipPath" -ForegroundColor Green
-Write-Host "Archivo zip de actualización: $UpdateZipPath" -ForegroundColor Green
+Write-Host "Iniciando compilacion de instaladores con Inno Setup..." -ForegroundColor Cyan
+
+$IsccPath = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+if (Test-Path $IsccPath) {
+    Write-Host "Compilando instalador de Servidor..." -ForegroundColor Yellow
+    & $IsccPath ".\gestionq_servidor.iss"
+    
+    Write-Host "Compilando instalador de Cliente..." -ForegroundColor Yellow
+    & $IsccPath ".\gestionq_cliente.iss"
+} else {
+    Write-Host "ADVERTENCIA: No se encontro Inno Setup en $IsccPath. Deberas compilar los .iss a mano." -ForegroundColor Red
+}
+
+Write-Host "========================================================" -ForegroundColor Green
+Write-Host "Empaquetado finalizado con éxito." -ForegroundColor Green
 Write-Host "========================================================" -ForegroundColor Green

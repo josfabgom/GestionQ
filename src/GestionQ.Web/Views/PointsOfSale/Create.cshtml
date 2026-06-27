@@ -59,6 +59,18 @@
             <span asp-validation-for="Description" class="text-danger"></span>
         </div>
 
+        <div class="form-group" style="margin-top: 1rem;">
+            <label asp-for="PrinterName" class="control-label">Impresora de Tickets Predeterminada</label>
+            <input asp-for="PrinterName" class="form-control" placeholder="Ej. POS-80C, EPSON TM-T20II..." />
+            <span asp-validation-for="PrinterName" class="text-danger"></span>
+        </div>
+
+        <div class="form-group" style="margin-top: 1rem;">
+            <label asp-for="PrintCopies" class="control-label">Número de Copias de Impresión Automática</label>
+            <input asp-for="PrintCopies" class="form-control" type="number" min="1" max="10" value="1" required />
+            <span asp-validation-for="PrintCopies" class="text-danger"></span>
+        </div>
+
         <div class="form-group" style="margin-top: 2rem; display: flex; gap: 1rem;">
             <button type="submit" class="btn-primary">Guardar Punto de Venta</button>
             <a asp-action="Index" class="btn-secondary">Volver al Listado</a>

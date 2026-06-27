@@ -1,4 +1,5 @@
 @model GestionQ.Domain.Entities.ElectronicInvoice
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 @using System.Text
 @using System.Text.Json
 @{
@@ -341,16 +342,37 @@
             <tr>
                 <!-- Left Header: Issuer Info -->
                 <td class="header-cell header-left">
-                    <h1>GestionQ S.A.</h1>
+                    @{
+                        var eCompanyName = Configuration["CompanyInfo:Name"] ?? "GestionQ";
+                        var eFantasyName = Configuration["CompanyInfo:FantasyName"];
+                        if (string.IsNullOrWhiteSpace(eFantasyName)) eFantasyName = eCompanyName;
+                    }
+                    <h1>@eFantasyName</h1>
+                    @if (eFantasyName != eCompanyName)
+                    {
+                        <div style="font-size: 0.8em; margin-top: -8px; margin-bottom: 10px;">de @eCompanyName</div>
+                    }
                     <div class="header-info-row">
-                        <span class="header-info-label">Razón Social:</span> GestionQ S.A.
+                        <span class="header-info-label">Razón Social:</span> @(Configuration["CompanyInfo:Name"] ?? "GestionQ S.A.")
                     </div>
                     <div class="header-info-row">
-                        <span class="header-info-label">Domicilio Comercial:</span> Av. Corrientes 1234, CABA
+                        <span class="header-info-label">Domicilio Comercial:</span> @(Configuration["CompanyInfo:Address"] ?? "Av. Corrientes 1234, CABA")
                     </div>
                     <div class="header-info-row">
                         <span class="header-info-label">Condición ante el IVA:</span> IVA Responsable Inscripto
                     </div>
+                    @if (!string.IsNullOrEmpty(Configuration["CompanyInfo:Phone"]))
+                    {
+                        <div class="header-info-row">
+                            <span class="header-info-label">Teléfono:</span> @Configuration["CompanyInfo:Phone"]
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(Configuration["CompanyInfo:Email"]))
+                    {
+                        <div class="header-info-row">
+                            <span class="header-info-label">Email:</span> @Configuration["CompanyInfo:Email"]
+                        </div>
+                    }
                 </td>
                 
                 <!-- Right Header: Voucher Info -->

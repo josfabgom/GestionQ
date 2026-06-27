@@ -1,0 +1,287 @@
+@model GestionQ.Domain.Entities.CashRegister
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
+@functions {
+    public string CenterText(string text, int width = 40)
+    {
+        if (string.IsNullOrEmpty(text)) return "";
+        text = text.Trim();
+        if (text.Length >= width) return text.Substring(0, width);
+        int spaces = (width - text.Length) / 2;
+        return text.PadLeft(text.Length + spaces).PadRight(width);
+    }
+
+    public string FormatLine(string leftText, string rightText, int width = 40)
+    {
+        leftText = leftText ?? "";
+        rightText = rightText ?? "";
+        if (leftText.Length + rightText.Length > width)
+        {
+            int maxLeft = width - rightText.Length - 1;
+            if (maxLeft > 0) leftText = leftText.Substring(0, maxLeft);
+        }
+        return leftText.PadRight(width - rightText.Length) + rightText;
+    }
+}
+@{
+    Layout = null;
+
+    var companyName = Configuration["CompanyInfo:Name"] ?? "GestionQ";
+    var fantasyName = Configuration["CompanyInfo:FantasyName"];
+    if (string.IsNullOrWhiteSpace(fantasyName)) fantasyName = companyName;
+    var companyAddress = Configuration["CompanyInfo:Address"] ?? "";
+    var companyPhone = Configuration["CompanyInfo:Phone"] ?? "";
+
+    decimal salesInCash = Model.Sales
+        .SelectMany(s => s.Payments)
+        .Where(p => p.PaymentMethod?.Name == "Efectivo")
+        .Sum(p => p.Amount);
+
+    decimal manualInflows = Model.Movements
+        .Where(m => m.Type == "Ingreso")
+        .Sum(m => m.Amount);
+
+    decimal manualOutflows = Model.Movements
+        .Where(m => m.Type == "Egreso")
+        .Sum(m => m.Amount);
+
+    decimal calculatedExpectedCash = Model.InitialBalance + salesInCash + manualInflows - manualOutflows;
+
+    var ticketText = new System.Text.StringBuilder();
+    ticketText.AppendLine(CenterText("CIERRE DE CAJA"));
+    ticketText.AppendLine(new string('=', 40));
+    ticketText.AppendLine(CenterText(fantasyName));
+    if (fantasyName != companyName) ticketText.AppendLine(CenterText($"de {companyName}"));
+    if (!string.IsNullOrEmpty(companyAddress)) ticketText.AppendLine(CenterText(companyAddress));
+    ticketText.AppendLine(new string('-', 40));
+    ticketText.AppendLine($"Apertura: {Model.OpeningDate.ToString("dd/MM/yy HH:mm")}");
+    ticketText.AppendLine($"Cierre:   {(Model.ClosingDate.HasValue ? Model.ClosingDate.Value.ToString("dd/MM/yy HH:mm") : "Aún Abierta")}");
+    ticketText.AppendLine($"Operador: {Model.User?.UserName}");
+    ticketText.AppendLine(new string('-', 40));
+    
+    ticketText.AppendLine(CenterText("CONCILIACION DE EFECTIVO"));
+    ticketText.AppendLine(new string('-', 40));
+    ticketText.AppendLine(FormatLine("Saldo Inicial:", $"${Model.InitialBalance.ToString("N2")}", 40));
+    ticketText.AppendLine(FormatLine("(+) Ventas Efectivo:", $"${salesInCash.ToString("N2")}", 40));
+    ticketText.AppendLine(FormatLine("(+) Ingresos Manuales:", $"${manualInflows.ToString("N2")}", 40));
+    ticketText.AppendLine(FormatLine("(-) Egresos Manuales:", $"${manualOutflows.ToString("N2")}", 40));
+    ticketText.AppendLine(new string('-', 40));
+    ticketText.AppendLine(FormatLine("Efectivo Calculado:", $"${calculatedExpectedCash.ToString("N2")}", 40));
+    
+    if (!Model.IsOpen)
+    {
+        ticketText.AppendLine(FormatLine("Efectivo Fisico:", $"${Model.FinalCashBalance?.ToString("N2")}", 40));
+        ticketText.AppendLine(new string('-', 40));
+        ticketText.AppendLine(FormatLine("DIFERENCIA:", $"${Model.Difference?.ToString("N2")}", 40));
+    }
+    
+    ticketText.AppendLine(new string('=', 40));
+    ticketText.AppendLine(CenterText("VENTAS POR METODO DE PAGO"));
+    ticketText.AppendLine(new string('-', 40));
+    
+    var paymentSummary = ViewBag.PaymentSummary as IEnumerable<dynamic>;
+    if (paymentSummary != null)
+    {
+        foreach(var p in paymentSummary)
+        {
+            ticketText.AppendLine(FormatLine((string)p.Method, $"${((decimal)p.Total).ToString("N2")}", 40));
+        }
+    }
+    
+    ticketText.AppendLine(new string('-', 40));
+    ticketText.AppendLine(CenterText("*** FIN DEL REPORTE ***", 40));
+}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Cierre de Caja - GestionQ</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #0f172a;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .ticket-box {
+            background-color: #fff;
+            padding: 10px;
+            width: 80mm;
+            box-sizing: border-box;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .text-receipt-container {
+            display: none;
+            width: 100%;
+            margin: 0;
+            padding: 0 5mm;
+            background-color: #fff;
+            box-sizing: border-box;
+        }
+
+        .text-receipt {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 11px;
+            line-height: 1.2;
+            margin: 0;
+            white-space: pre;
+            overflow: hidden;
+            color: #000000 !important;
+            font-weight: bold !important;
+            text-rendering: optimizeSpeed;
+        }
+
+        @@media print {
+            .no-print {
+                display: none !important;
+            }
+
+            /* Estilos para impresión térmica */
+            body.print-thermal {
+                width: 100% !important;
+                max-width: 80mm !important;
+                padding: 0 !important;
+                margin: 0 auto !important;
+                background: #fff;
+                font-size: 11px !important;
+                color: #000000 !important;
+                font-weight: bold !important;
+            }
+            body.print-thermal #ticket-content {
+                display: none !important;
+            }
+            body.print-thermal .text-receipt-container {
+                display: block !important;
+            }
+
+            /* Estilos para impresión A4 (Chorro a tinta) */
+            body.print-a4 {
+                width: 100% !important;
+                max-width: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                background: #fff;
+            }
+            body.print-a4 #ticket-content {
+                display: block !important;
+                width: 100% !important;
+                max-width: 210mm !important; /* A4 Width */
+                margin: 0 auto !important;
+                box-shadow: none !important;
+                border-radius: 0 !important;
+            }
+            body.print-a4 .text-receipt-container {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body class="print-thermal"> <!-- Por defecto térmica si usa Ctrl+P -->
+    <div class="no-print" style="margin-bottom: 20px; text-align: center; display: flex; flex-direction: column; gap: 10px; background: white; padding: 15px; border-radius: 8px;">
+        <div style="font-weight: bold; font-size: 16px;">Opciones de Impresión</div>
+        <div style="display: flex; gap: 10px; justify-content: center;">
+            <button onclick="printThermal()" style="padding: 10px 20px; cursor: pointer; background: #000000; color: white; border: none; border-radius: 5px; font-weight: bold;">🖨️ IMPRIMIR TÉRMICA</button>
+            <button onclick="printA4()" style="padding: 10px 20px; cursor: pointer; background: #0284c7; color: white; border: none; border-radius: 5px; font-weight: bold;">📄 IMPRIMIR A4</button>
+        </div>
+        <div style="display: flex; gap: 10px; justify-content: center;">
+            <button onclick="generatePDF()" style="padding: 10px 20px; cursor: pointer; background: #ea580c; color: white; border: none; border-radius: 5px; font-weight: bold;">📥 DESCARGAR PDF</button>
+            <button onclick="window.close()" style="padding: 10px 20px; cursor: pointer; background: #64748b; color: white; border: none; border-radius: 5px; font-weight: bold;">❌ CERRAR</button>
+        </div>
+    </div>
+
+    <div class="ticket-box" id="ticket-content">
+        <h3 style="text-align: center; margin: 0 0 10px 0;">CIERRE DE CAJA</h3>
+        <p style="text-align: center; margin: 0 0 10px 0; font-size: 12px; border-bottom: 1px dashed #000; padding-bottom: 5px;">
+            <strong>@fantasyName</strong><br>
+            @if(fantasyName != companyName) { <span>de @companyName<br></span> }
+            @companyAddress
+        </p>
+        <div style="font-size: 12px; margin-bottom: 10px; border-bottom: 1px dashed #000; padding-bottom: 5px;">
+            <div><strong>Apertura:</strong> @Model.OpeningDate.ToString("dd/MM/yyyy HH:mm")</div>
+            <div><strong>Cierre:</strong> @(Model.ClosingDate.HasValue ? Model.ClosingDate.Value.ToString("dd/MM/yyyy HH:mm") : "Aún Abierta")</div>
+            <div><strong>Operador:</strong> @Model.User?.UserName</div>
+        </div>
+
+        <h4 style="margin: 0 0 5px 0; font-size: 13px;">Conciliación de Efectivo</h4>
+        <table style="width: 100%; font-size: 12px; margin-bottom: 10px;">
+            <tr><td>Saldo Inicial:</td><td style="text-align: right;">$@Model.InitialBalance.ToString("N2")</td></tr>
+            <tr><td>(+) Ventas Efectivo:</td><td style="text-align: right;">$@salesInCash.ToString("N2")</td></tr>
+            <tr><td>(+) Ingresos Manuales:</td><td style="text-align: right;">$@manualInflows.ToString("N2")</td></tr>
+            <tr><td>(-) Egresos Manuales:</td><td style="text-align: right;">$@manualOutflows.ToString("N2")</td></tr>
+            <tr style="font-weight: bold;"><td>Calculado:</td><td style="text-align: right;">$@calculatedExpectedCash.ToString("N2")</td></tr>
+            @if (!Model.IsOpen)
+            {
+                <tr><td>Declarado:</td><td style="text-align: right;">$@Model.FinalCashBalance?.ToString("N2")</td></tr>
+                <tr style="font-weight: bold;"><td>Diferencia:</td><td style="text-align: right;">$@Model.Difference?.ToString("N2")</td></tr>
+            }
+        </table>
+
+        <h4 style="margin: 0 0 5px 0; font-size: 13px; border-top: 1px dashed #000; padding-top: 5px;">Ventas por Método de Pago</h4>
+        <table style="width: 100%; font-size: 12px; border-bottom: 1px dashed #000; margin-bottom: 10px; padding-bottom: 5px;">
+            @if (paymentSummary != null)
+            {
+                foreach(var p in paymentSummary)
+                {
+                    <tr><td>@p.Method:</td><td style="text-align: right;">$@(((decimal)p.Total).ToString("N2"))</td></tr>
+                }
+            }
+        </table>
+
+        <div style="text-align: center; font-size: 10px; margin-top: 5px;">
+            *** FIN DEL REPORTE ***
+        </div>
+    </div>
+
+    <!-- Contenedor Impresión Térmica Directa -->
+    <div class="text-receipt-container">
+        <pre class="text-receipt">@ticketText.ToString()</pre>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script>
+        function printThermal() {
+            if (window.chrome && window.chrome.webview) {
+                var ticketContent = document.querySelector('.text-receipt').innerText;
+                window.chrome.webview.postMessage(JSON.stringify({
+                    command: 'print',
+                    text: ticketContent
+                }));
+            } else {
+                document.body.classList.remove('print-a4');
+                document.body.classList.add('print-thermal');
+                window.print();
+            }
+        }
+
+        function printA4() {
+            document.body.classList.remove('print-thermal');
+            document.body.classList.add('print-a4');
+            window.print();
+        }
+
+        function generatePDF() {
+            const element = document.getElementById('ticket-content');
+            const opt = {
+                margin: 5,
+                filename: 'CierreCaja_@(Model.Id).pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'mm', format: [80, 297], orientation: 'portrait' }
+            };
+
+            html2pdf().set(opt).from(element).save();
+        }
+
+        window.onload = function() {
+            setTimeout(function() { printThermal(); }, 500);
+        };
+    </script>
+</body>
+</html>

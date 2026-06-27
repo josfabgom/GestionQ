@@ -75,6 +75,12 @@
             </div>
 
             <div class="form-group" style="margin-top: 1rem;">
+                <label asp-for="CompanyFantasyName" class="control-label"></label>
+                <input asp-for="CompanyFantasyName" class="form-control" />
+                <span asp-validation-for="CompanyFantasyName" class="text-danger"></span>
+            </div>
+
+            <div class="form-group" style="margin-top: 1rem;">
                 <label asp-for="CompanyAddress" class="control-label"></label>
                 <input asp-for="CompanyAddress" class="form-control" />
                 <span asp-validation-for="CompanyAddress" class="text-danger"></span>
@@ -91,6 +97,44 @@
                     <input asp-for="CompanyEmail" type="email" class="form-control" />
                     <span asp-validation-for="CompanyEmail" class="text-danger"></span>
                 </div>
+            </div>
+
+            <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                <div class="form-group" style="flex: 1;">
+                    <label asp-for="CompanyCuit" class="control-label"></label>
+                    <input asp-for="CompanyCuit" class="form-control" placeholder="Ej: 30-12345678-9" />
+                    <span asp-validation-for="CompanyCuit" class="text-danger"></span>
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label asp-for="CompanyTaxCondition" class="control-label"></label>
+                    <select asp-for="CompanyTaxCondition" class="form-control" style="background: rgba(0,0,0,0.2);">
+                        <option value="">Seleccione Condición</option>
+                        <option value="Responsable Inscripto">Responsable Inscripto</option>
+                        <option value="Monotributista">Monotributista</option>
+                        <option value="IVA Exento">IVA Exento</option>
+                        <option value="Consumidor Final">Consumidor Final</option>
+                    </select>
+                    <span asp-validation-for="CompanyTaxCondition" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                <div class="form-group" style="flex: 1;">
+                    <label asp-for="CompanyStartOfActivities" class="control-label"></label>
+                    <input asp-for="CompanyStartOfActivities" class="form-control" />
+                    <span asp-validation-for="CompanyStartOfActivities" class="text-danger"></span>
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label asp-for="CompanyIIBB" class="control-label"></label>
+                    <input asp-for="CompanyIIBB" class="form-control" placeholder="Número o 'Exento'" />
+                    <span asp-validation-for="CompanyIIBB" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 1.5rem; display: flex; justify-content: flex-end;">
+                <button type="submit" asp-action="UpdateCompanyIdentity" class="btn-primary" style="padding: 0.6rem 1.2rem;">
+                    <i class="fa-solid fa-save"></i> Guardar Identidad
+                </button>
             </div>
 
             <h3

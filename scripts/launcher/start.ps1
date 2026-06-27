@@ -25,29 +25,13 @@ function Launch-WebApp {
 
 # 1. Verificar si el puerto ya está ocupado (la aplicación ya está corriendo)
 $connection = Get-NetTCPConnection -LocalPort $Port -ErrorAction SilentlyContinue
-if ($connection) {
-    # Ya está corriendo, simplemente abrimos la aplicación en el navegador
-    Launch-WebApp "http://localhost:$Port"
-    exit 0
+
+$ProdDesktopExe = Join-Path $AppPath "GestionQ.Desktop.exe"
+if (Test-Path $ProdDesktopExe) {
+    $DesktopExe = $ProdDesktopExe
+} else {
+    $DesktopExe = "d:\Antigravity Proyectos\GestionQ\src\GestionQ.Desktop\bin\Debug\net9.0-windows\GestionQ.Desktop.exe"
 }
 
-# 2. Iniciar el servidor dotnet de forma completamente oculta
-Start-Process -FilePath "dotnet" -ArgumentList "run" -WorkingDirectory $AppPath -WindowStyle Hidden
-
-# 3. Esperar dinámicamente a que el puerto responda
-$Timeout = 15 # segundos
-$Elapsed = 0
-$Ready = $false
-
-while ($Elapsed -lt $Timeout) {
-    $connection = Get-NetTCPConnection -LocalPort $Port -ErrorAction SilentlyContinue
-    if ($connection) {
-        $Ready = $true
-        break
-    }
-    Start-Sleep -Seconds 1
-    $Elapsed++
-}
-
-# 4. Abrir la interfaz web
-Launch-WebApp "http://localhost:$Port"
+# Abrir la interfaz web (Aplicación de Escritorio)
+Start-Process $DesktopExe

@@ -25,6 +25,9 @@
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
     <h1 class="page-title">Resumen de Turno / Caja</h1>
     <div style="display: flex; gap: 1rem;">
+        <a asp-action="Print" asp-route-id="@Model.Id" target="_blank" class="btn-primary" style="background: #3b82f6; display: flex; align-items: center; gap: 0.5rem; font-weight: 600;">
+            <i class="fa-solid fa-print"></i> Imprimir / PDF
+        </a>
         @if (Model.IsOpen)
         {
             <a asp-action="Close" asp-route-id="@Model.Id" class="btn-danger" style="background: #ef4444; display: flex; align-items: center; gap: 0.5rem; font-weight: 600;">

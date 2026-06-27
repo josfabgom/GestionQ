@@ -1111,6 +1111,16 @@
 
         // 2. Inicialización de eventos
         document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const printSaleId = urlParams.get('printSaleId');
+            if (printSaleId) {
+                const iframe = document.createElement('iframe');
+                iframe.style.display = 'none';
+                iframe.src = `/Sales/PrintTicket/${printSaleId}?autoPrint=true`;
+                document.body.appendChild(iframe);
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+
             const searchInput = document.getElementById('searchProduct');
             if (!searchInput) return;
 
@@ -2454,25 +2464,15 @@
                 if (response.ok) {
                     const saleId = await response.text();
 
-                    const result = await Swal.fire({
+                    await Swal.fire({
                         title: '¡Venta Registrada!',
-                        text: 'La venta se ha guardado con éxito. ¿Deseas ver el ticket para imprimir?',
+                        text: 'La venta se ha guardado con éxito. Preparando ticket...',
                         icon: 'success',
-                        showCancelButton: true,
-                        confirmButtonText: 'Ver Ticket / Imprimir',
-                        cancelButtonText: 'Nueva Venta',
-                        confirmButtonColor: '#10b981',
-                        cancelButtonColor: '#3b82f6'
+                        timer: 1000,
+                        showConfirmButton: false
                     });
 
-                    if (result.isConfirmed) {
-                        const printWindow = window.open(`/Sales/PrintTicket/${saleId}`, '_blank');
-                        if (printWindow) {
-                            printWindow.focus();
-                        }
-                    }
-
-                    window.location.href = '/Sales/Create';
+                    window.location.href = `/Sales/Create?printSaleId=${saleId}`;
                 } else {
                     const err = await response.text();
                     Swal.fire('Error al procesar', err, 'error');

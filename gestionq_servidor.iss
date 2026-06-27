@@ -12,7 +12,7 @@ DefaultDirName=C:\GestionQ
 DefaultGroupName=GestionQ
 DisableProgramGroupPage=yes
 OutputDir=out
-OutputBaseFilename=GestionQ_Setup_1.0
+OutputBaseFilename=GestionQ_Servidor_Setup_1.0
 Compression=lzma2/ultra64
 SolidCompression=yes
 SetupIconFile=src\GestionQ.Web\wwwroot\favicon.ico
@@ -50,6 +50,7 @@ Source: "out\GestionQ_Instalador\Actualizar.bat"; DestDir: "{app}"; Flags: ignor
 ; Accesos directos en el Escritorio
 Name: "{userdesktop}\Iniciar GestionQ"; Filename: "{app}\Iniciar-GestionQ.vbs"; IconFilename: "{app}\wwwroot\favicon.ico"; Comment: "Iniciar Punto de Venta - GestionQ"
 Name: "{userdesktop}\Detener GestionQ"; Filename: "{app}\Detener-GestionQ.vbs"; IconFilename: "shell32.dll"; IconIndex: 131; Comment: "Detener Punto de Venta - GestionQ"
+Name: "{userdesktop}\Monitor Servidor GestionQ"; Filename: "{app}\Iniciar-Monitor.vbs"; IconFilename: "{app}\GestionQ.ServerMonitor.exe"; Comment: "Monitor de Servidor - GestionQ"
 
 [Run]
 ; 1. Ejecutar script de PowerShell que realiza todo el proceso de instalación y configuración de base de datos, servicio y firewall.

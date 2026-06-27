@@ -17,8 +17,11 @@ namespace GestionQ.Web.Models
         [Required, Display(Name = "Contraseña SQL"), DataType(DataType.Password)]
         public string Password { get; set; } = string.Empty;
 
-        [Required, Display(Name = "Nombre de la Empresa")]
+        [Required, Display(Name = "Nombre Fiscal (Razón Social)")]
         public string CompanyName { get; set; } = string.Empty;
+
+        [Display(Name = "Nombre de Fantasía")]
+        public string CompanyFantasyName { get; set; } = string.Empty;
 
         [Display(Name = "Dirección")]
         public string CompanyAddress { get; set; } = string.Empty;
@@ -28,6 +31,19 @@ namespace GestionQ.Web.Models
 
         [Display(Name = "Email de Contacto")]
         public string CompanyEmail { get; set; } = string.Empty;
+
+        [Display(Name = "CUIT de la Empresa")]
+        public string CompanyCuit { get; set; } = string.Empty;
+
+        [Display(Name = "Condición frente al IVA")]
+        public string CompanyTaxCondition { get; set; } = string.Empty;
+
+        [Display(Name = "Fecha de Inicio de Actividades")]
+        [DataType(DataType.Date)]
+        public DateTime? CompanyStartOfActivities { get; set; }
+
+        [Display(Name = "Ingresos Brutos (IIBB)")]
+        public string CompanyIIBB { get; set; } = string.Empty;
 
         [Display(Name = "Logo de la Empresa")]
         public IFormFile? LogoFile { get; set; }

@@ -53,8 +53,9 @@
                             <span style="background: rgba(239, 68, 68, 0.2); color: #ef4444; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 600; font-size: 0.8rem;">CERRADA</span>
                         }
                     </td>
-                    <td>
+                    <td style="display: flex; gap: 0.5rem;">
                         <a asp-action="Details" asp-route-id="@item.Id" class="btn-secondary" style="font-size: 0.8rem;">Ver Detalle</a>
+                        <a asp-action="Print" asp-route-id="@item.Id" target="_blank" class="btn-primary" style="background: #3b82f6; font-size: 0.8rem;"><i class="fa-solid fa-print"></i></a>
                     </td>
                 </tr>
             }

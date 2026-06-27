@@ -11,6 +11,7 @@
     <meta charset="utf-8" />
     <title>Imprimir Etiquetas</title>
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         body {
             margin: 0;
@@ -68,6 +69,14 @@
                 margin-top: 0;
                 gap: 0;
             }
+            @{
+                var firstNormalStyle = Model.FirstOrDefault(m => m.Format != "A4_Sheet_50x35")?.Format;
+                if (firstNormalStyle == "50x35") { <text>@@page { size: 50mm 35mm; margin: 0; }</text> }
+                else if (firstNormalStyle == "55x35") { <text>@@page { size: 55mm 35mm; margin: 0; }</text> }
+                else if (firstNormalStyle == "80x33") { <text>@@page { size: 80mm 33mm; margin: 0; }</text> }
+                else if (firstNormalStyle == "A4" || firstNormalStyle == "A4_Half") { <text>@@page { size: A4; margin: 0; }</text> }
+                else { <text>@@page { margin: 0; }</text> }
+            }
         }
 
         .lbl-base {
@@ -86,8 +95,47 @@
         }
 
         .lbl-50x35 { width: 50mm; height: 35mm; }
+        .lbl-55x35 { width: 55mm; height: 35mm; }
+        .lbl-80x33 { width: 80mm; height: 33mm; }
         .lbl-A4 { width: 210mm; height: 297mm; }
         .lbl-A4_Half { width: 210mm; height: 148mm; }
+
+        .a4-sheet-wrapper {
+            display: flex;
+            flex-wrap: wrap;
+            width: 210mm;
+            background: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            padding: 5mm; /* Typical A4 margins, e.g., 5mm all around */
+            box-sizing: border-box;
+            gap: 2mm;
+            justify-content: flex-start;
+            align-content: flex-start;
+            page-break-after: always; /* If mixed with normal labels */
+        }
+        
+        @@media print {
+            .a4-sheet-wrapper {
+                box-shadow: none;
+                padding: 0;
+                gap: 2mm; /* 2mm depending on the label paper */
+            }
+        }
+
+        .lbl-sheet-item {
+            background: white;
+            box-sizing: border-box;
+            border: 1px dashed #ccc;
+            position: relative;
+            overflow: hidden;
+            page-break-inside: avoid;
+        }
+
+        @@media print {
+            .lbl-sheet-item {
+                border: 1px dashed #eee; /* Light border or none */
+            }
+        }
 
         .elem-base {
             position: absolute;
@@ -118,15 +166,45 @@
 
     <div class="preview-controls">
         <p style="margin-top: 0; margin-bottom: 0.5rem; font-size: 0.9rem; color: #cbd5e1;">Asegúrate de configurar correctamente los márgenes en cero ("Ninguno") desde la ventana de impresión.</p>
-        <button onclick="window.print()">
+        <button onclick="printLabelsDirectly()">
             <svg style="width:16px;height:16px;vertical-align:middle;margin-right:5px;" fill="currentColor" viewBox="0 0 512 512"><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM512 256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v160c0 17.7 14.3 32 32 32h32v32c0 17.7 14.3 32 32 32h288c17.7 0 32-14.3 32-32v-32h32c17.7 0 32-14.3 32-32V256zM352 448H160V320h192v128zm104-128c-13.3 0-24-10.7-24-24s10.7-24 24-24 24 10.7 24 24-10.7 24-24 24z"/></svg>
             Imprimir Etiquetas
         </button>
-        <button onclick="window.close()" style="background: #475569; margin-left: 10px;">Cerrar</button>
+        <button onclick="window.chrome && window.chrome.webview ? window.history.back() : window.close()" style="background: #475569; margin-left: 10px;">Cerrar/Volver</button>
     </div>
 
     <div class="labels-container">
-        @foreach (var item in Model)
+        @{
+            var sheetItems = Model.Where(m => m.Format == "A4_Sheet_50x35").ToList();
+            var normalItems = Model.Where(m => m.Format != "A4_Sheet_50x35").ToList();
+        }
+
+        @if (sheetItems.Any())
+        {
+            <div class="a4-sheet-wrapper">
+                @foreach (var item in sheetItems)
+                {
+                    var templateFormat = "50x35";
+                    var jsonStr = templatesDict != null && templatesDict.ContainsKey(templateFormat) ? templatesDict[templateFormat] : "null";
+                    
+                    for (int i = 0; i < item.Quantity; i++)
+                    {
+                        var barcodeVal = !string.IsNullOrEmpty(item.Product.Barcode) ? item.Product.Barcode : item.Product.InternalCode.ToString();
+                        
+                        <div class="lbl-sheet-item lbl-55x35" data-json="@jsonStr">
+                            <div class="elem-base banner-oferta" data-id="banner">OFERTA</div>
+                            <div class="elem-base prod-name" data-id="name">@item.Product.Name</div>
+                            <div class="elem-base prod-price" data-id="price">$@item.Product.Price.ToString("N2")</div>
+                            <div class="elem-base barcode-container" data-id="barcode">
+                                <svg class="barcode" jsbarcode-value="@barcodeVal" jsbarcode-displayvalue="true" jsbarcode-height="40" jsbarcode-width="2" jsbarcode-margin="0" jsbarcode-fontsize="14"></svg>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        }
+
+        @foreach (var item in normalItems)
         {
             var format = item.Format;
             var jsonStr = templatesDict != null && templatesDict.ContainsKey(format) ? templatesDict[format] : "null";
@@ -156,6 +234,12 @@
                 'price': { x: 5, y: 35, visible: true, fontSize: 18, fontWeight: '900', textAlign: 'center', w: 90, h: 25 },
                 'barcode': { x: 5, y: 70, visible: true, fontSize: 10, fontWeight: 'normal', textAlign: 'center', w: 90, h: 25 }
             },
+            '80x33': {
+                'banner': { x: 5, y: -20, visible: false, fontSize: 10, fontWeight: 'bold', textAlign: 'center', w: 90, h: 15 }, 
+                'name': { x: 5, y: 5, visible: true, fontSize: 14, fontWeight: 'bold', textAlign: 'center', w: 90, h: 25 },
+                'price': { x: 5, y: 35, visible: true, fontSize: 28, fontWeight: '900', textAlign: 'center', w: 90, h: 30 },
+                'barcode': { x: 5, y: 70, visible: true, fontSize: 12, fontWeight: 'normal', textAlign: 'center', w: 90, h: 25 }
+            },
             'A4': {
                 'banner': { x: 25, y: 5, visible: true, fontSize: 60, fontWeight: '900', textAlign: 'center', w: 50, h: 10 },
                 'name': { x: 10, y: 20, visible: true, fontSize: 50, fontWeight: 'bold', textAlign: 'center', w: 80, h: 20 },
@@ -170,12 +254,12 @@
             }
         };
 
-        document.querySelectorAll('.lbl-base').forEach(lbl => {
-            let formatClass = Array.from(lbl.classList).find(c => c.startsWith('lbl-') && c !== 'lbl-base');
-            let formatName = formatClass.replace('lbl-', '');
+        document.querySelectorAll('.lbl-base, .lbl-sheet-item').forEach(lbl => {
+            let formatClass = Array.from(lbl.classList).find(c => c.startsWith('lbl-') && c !== 'lbl-base' && c !== 'lbl-sheet-item');
+            let formatName = formatClass ? formatClass.replace('lbl-', '') : '50x35';
 
             let jsonStr = lbl.getAttribute('data-json');
-            let state = jsonStr !== "null" ? JSON.parse(jsonStr) : defaultProps[formatName];
+            let state = jsonStr !== "null" ? JSON.parse(jsonStr) : (defaultProps[formatName] || defaultProps['50x35']);
 
             // Render custom elements dynamically
             for (let id in state) {
@@ -235,6 +319,46 @@
 
         // Init barcodes
         JsBarcode(".barcode").init();
+
+        async function printLabelsDirectly() {
+            try {
+                const labels = document.querySelectorAll('.lbl-base, .lbl-sheet-item');
+                if (labels.length === 0) return;
+                
+                let is80x33 = labels[0].classList.contains('lbl-80x33');
+                
+                if (window.chrome && window.chrome.webview && is80x33) {
+                    let printerName = localStorage.getItem('printerName') || '';
+                    
+                    const originalStyles = [];
+                    labels.forEach(lbl => {
+                        originalStyles.push(lbl.style.border);
+                        lbl.style.border = 'none';
+                    });
+                    
+                    for (let i = 0; i < labels.length; i++) {
+                        const lbl = labels[i];
+                        const canvas = await html2canvas(lbl, { scale: 2 });
+                        const dataUrl = canvas.toDataURL('image/png');
+                        
+                        window.chrome.webview.postMessage(JSON.stringify({
+                            command: 'printImage',
+                            base64Image: dataUrl,
+                            printerName: printerName,
+                            copies: 1
+                        }));
+                    }
+                    
+                    labels.forEach((lbl, i) => {
+                        lbl.style.border = originalStyles[i];
+                    });
+                } else {
+                    window.print();
+                }
+            } catch (err) {
+                console.error("Error al intentar imprimir: ", err);
+            }
+        }
     </script>
 </body>
 </html>

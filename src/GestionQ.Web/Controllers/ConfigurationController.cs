@@ -46,9 +46,14 @@ namespace GestionQ.Web.Controllers
                 User = builder.UserID,
                 Password = builder.Password,
                 CompanyName = _config["CompanyInfo:Name"] ?? "",
+                CompanyFantasyName = _config["CompanyInfo:FantasyName"] ?? "",
                 CompanyAddress = _config["CompanyInfo:Address"] ?? "",
                 CompanyPhone = _config["CompanyInfo:Phone"] ?? "",
                 CompanyEmail = _config["CompanyInfo:Email"] ?? "",
+                CompanyCuit = _config["CompanyInfo:Cuit"] ?? "",
+                CompanyTaxCondition = _config["CompanyInfo:TaxCondition"] ?? "",
+                CompanyStartOfActivities = DateTime.TryParse(_config["CompanyInfo:StartOfActivities"], out var date) ? date : null,
+                CompanyIIBB = _config["CompanyInfo:IIBB"] ?? "",
                 JDataGateFolderPath = _config["Scale:JDataGateFolderPath"] ?? @"C:\JDataGate\IN\"
             };
 
@@ -142,9 +147,14 @@ namespace GestionQ.Web.Controllers
                         node["CompanyInfo"] = new JsonObject();
                     }
                     node["CompanyInfo"]!["Name"] = model.CompanyName;
+                    node["CompanyInfo"]!["FantasyName"] = model.CompanyFantasyName;
                     node["CompanyInfo"]!["Address"] = model.CompanyAddress;
                     node["CompanyInfo"]!["Phone"] = model.CompanyPhone;
                     node["CompanyInfo"]!["Email"] = model.CompanyEmail;
+                    node["CompanyInfo"]!["Cuit"] = model.CompanyCuit;
+                    node["CompanyInfo"]!["TaxCondition"] = model.CompanyTaxCondition;
+                    node["CompanyInfo"]!["StartOfActivities"] = model.CompanyStartOfActivities?.ToString("yyyy-MM-dd");
+                    node["CompanyInfo"]!["IIBB"] = model.CompanyIIBB;
 
                     if (node["Scale"] == null)
                     {
@@ -173,6 +183,60 @@ namespace GestionQ.Web.Controllers
             {
                 ModelState.AddModelError(string.Empty, "Ocurrió un error al guardar la configuración: " + ex.Message);
                 return View(model);
+            }
+        }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateCompanyIdentity(ConfigurationViewModel model)
+        {
+            ModelState.Remove("Server");
+            ModelState.Remove("Database");
+            ModelState.Remove("User");
+            ModelState.Remove("Password");
+
+            if (!ModelState.IsValid)
+            {
+                var connString = _config.GetConnectionString("DefaultConnection");
+                var builder = new SqlConnectionStringBuilder(connString);
+                model.Server = builder.DataSource;
+                model.Database = builder.InitialCatalog;
+                model.User = builder.UserID;
+                model.Password = builder.Password;
+                return View("SystemSettings", model);
+            }
+
+            try
+            {
+                var appSettingsPath = Path.Combine(_env.ContentRootPath, "appsettings.json");
+                var json = await System.IO.File.ReadAllTextAsync(appSettingsPath);
+                var node = JsonNode.Parse(json);
+                if (node != null)
+                {
+                    if (node["CompanyInfo"] == null)
+                    {
+                        node["CompanyInfo"] = new JsonObject();
+                    }
+                    node["CompanyInfo"]!["Name"] = model.CompanyName;
+                    node["CompanyInfo"]!["FantasyName"] = model.CompanyFantasyName;
+                    node["CompanyInfo"]!["Address"] = model.CompanyAddress;
+                    node["CompanyInfo"]!["Phone"] = model.CompanyPhone;
+                    node["CompanyInfo"]!["Email"] = model.CompanyEmail;
+                    node["CompanyInfo"]!["Cuit"] = model.CompanyCuit;
+                    node["CompanyInfo"]!["TaxCondition"] = model.CompanyTaxCondition;
+                    node["CompanyInfo"]!["StartOfActivities"] = model.CompanyStartOfActivities?.ToString("yyyy-MM-dd");
+                    node["CompanyInfo"]!["IIBB"] = model.CompanyIIBB;
+
+                    var options = new JsonSerializerOptions { WriteIndented = true };
+                    await System.IO.File.WriteAllTextAsync(appSettingsPath, node.ToJsonString(options));
+                }
+
+                TempData["SuccessMessage"] = "Identidad de la empresa actualizada correctamente.";
+                return RedirectToAction(nameof(SystemSettings));
+            }
+            catch (Exception ex)
+            {
+                ModelState.AddModelError(string.Empty, "Ocurrió un error al guardar la identidad: " + ex.Message);
+                return View("SystemSettings", model);
             }
         }
     }

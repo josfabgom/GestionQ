@@ -1,25 +1,26 @@
 @model GestionQ.Domain.Entities.Sale
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 @functions {
-    public string CenterText(string text, int width = 40)
+    public string CenterText(string text, int width = 35)
     {
         if (string.IsNullOrEmpty(text)) return "";
         text = text.Trim();
         if (text.Length >= width) return text.Substring(0, width);
-        int leftPadding = (width - text.Length) / 2;
-        return new string(' ', leftPadding) + text;
+        int spaces = (width - text.Length) / 2;
+        return text.PadLeft(text.Length + spaces).PadRight(width);
     }
 
-    public string FormatLine(string leftText, string rightText, int width = 40)
+    public string FormatLine(string leftText, string rightText, int width = 35)
     {
         leftText = leftText ?? "";
         rightText = rightText ?? "";
         int spacesNeeded = width - leftText.Length - rightText.Length;
         if (spacesNeeded < 1)
         {
-            int maxLeftLen = width - rightText.Length - 3;
+            int maxLeftLen = width - rightText.Length - 2;
             if (maxLeftLen > 0 && leftText.Length > maxLeftLen)
             {
-                leftText = leftText.Substring(0, maxLeftLen) + "...";
+                leftText = leftText.Substring(0, maxLeftLen);
             }
             spacesNeeded = width - leftText.Length - rightText.Length;
             if (spacesNeeded < 1) spacesNeeded = 1;
@@ -40,10 +41,12 @@
     }
 
     // Generar contenido del ticket de texto plano para impresoras térmicas
-    var companyName = (string)ViewBag.CompanyName ?? "GestionQ";
-    var companyAddress = (string)ViewBag.CompanyAddress ?? "";
-    var companyPhone = (string)ViewBag.CompanyPhone ?? "";
-    var companyEmail = (string)ViewBag.CompanyEmail ?? "";
+    var companyName = Configuration["CompanyInfo:Name"] ?? "GestionQ";
+    var fantasyName = Configuration["CompanyInfo:FantasyName"];
+    if (string.IsNullOrWhiteSpace(fantasyName)) fantasyName = companyName;
+    var companyAddress = Configuration["CompanyInfo:Address"] ?? "";
+    var companyPhone = Configuration["CompanyInfo:Phone"] ?? "";
+    var companyEmail = Configuration["CompanyInfo:Email"] ?? "";
     var posName = Model.PointOfSale?.Name ?? "General";
     var ticketNo = Model.FormattedTicketNumber;
     var dateStr = Model.Date.ToString("dd/MM/yyyy HH:mm");
@@ -51,38 +54,44 @@
 
     var ticketText = new System.Text.StringBuilder();
     ticketText.AppendLine(CenterText("DOCUMENTO NO VALIDO COMO FACTURA"));
-    ticketText.AppendLine(new string('-', 40));
-    ticketText.AppendLine(CenterText(companyName));
+    ticketText.AppendLine(new string('-', 35));
+    ticketText.AppendLine(CenterText(fantasyName));
+    if (fantasyName != companyName) ticketText.AppendLine(CenterText($"de {companyName}"));
     if (!string.IsNullOrEmpty(companyAddress)) ticketText.AppendLine(CenterText(companyAddress));
     if (!string.IsNullOrEmpty(companyPhone)) ticketText.AppendLine(CenterText($"Tel: {companyPhone}"));
     if (!string.IsNullOrEmpty(companyEmail)) ticketText.AppendLine(CenterText(companyEmail));
-    ticketText.AppendLine(new string('-', 40));
+    ticketText.AppendLine(new string('-', 35));
     ticketText.AppendLine($"Punto de Venta: {posName}");
     ticketText.AppendLine($"Ticket #:       {ticketNo}");
     ticketText.AppendLine($"Fecha:          {dateStr}");
     ticketText.AppendLine($"Cliente:        {customerName}");
-    ticketText.AppendLine(new string('-', 40));
-    ticketText.AppendLine(FormatLine("Descripcion", "Cant x Precio      Total", 40));
-    ticketText.AppendLine(new string('-', 40));
+    ticketText.AppendLine(new string('-', 35));
+    ticketText.AppendLine(FormatLine("Cant Descripcion", "Total", 35));
+    ticketText.AppendLine(new string('-', 35));
 
     foreach (var item in Model.Items)
     {
         var prodName = (!string.IsNullOrEmpty(item.CustomName) ? item.CustomName : (item.Product?.Name ?? "Producto Sin Nombre")).ToUpper();
-        ticketText.AppendLine(prodName);
-        
-        string qtyPrice = $"  {item.Quantity.ToString(item.Quantity % 1 == 0 ? "F0" : "F3")} x ${item.UnitPrice.ToString("N2")}";
+        string qtyStr = item.Quantity.ToString(item.Quantity % 1 == 0 ? "F0" : "F3");
         string totalStr = $"${(item.UnitPrice * item.Quantity).ToString("N2")}";
-        ticketText.AppendLine(FormatLine(qtyPrice, totalStr, 40));
+        
+        string leftText = $"{qtyStr} {prodName}";
+        ticketText.AppendLine(FormatLine(leftText, totalStr, 35));
+        
+        if (item.Quantity != 1)
+        {
+            ticketText.AppendLine($"  ({qtyStr} x ${item.UnitPrice.ToString("N2")})");
+        }
     }
     
-    ticketText.AppendLine(new string('-', 40));
+    ticketText.AppendLine(new string('-', 35));
     
     var textPromoDiscount = Model.Items.Sum(i => i.DiscountAmount);
     var textGeneralDiscount = Model.DiscountAmount - textPromoDiscount;
     
     if (Model.DiscountAmount > 0 || Model.PaymentDiscountAmount > 0)
     {
-        ticketText.AppendLine(FormatLine("Subtotal Bruto:", $"${Model.SubTotal.ToString("N2")}", 40));
+        ticketText.AppendLine(FormatLine("Subtotal Bruto:", $"${Model.SubTotal.ToString("N2")}", 35));
         if (textPromoDiscount > 0)
         {
             var promoDiscounts = Model.Items
@@ -92,12 +101,12 @@
 
             foreach (var promo in promoDiscounts)
             {
-                ticketText.AppendLine(FormatLine($" - {promo.Name}:", $"-${promo.Amount.ToString("N2")}", 40));
+                ticketText.AppendLine(FormatLine($" - {promo.Name}:", $"-${promo.Amount.ToString("N2")}", 35));
             }
         }
         if (textGeneralDiscount > 0)
         {
-            ticketText.AppendLine(FormatLine("Desct. General:", $"-${textGeneralDiscount.ToString("N2")}", 40));
+            ticketText.AppendLine(FormatLine("Desct. General:", $"-${textGeneralDiscount.ToString("N2")}", 35));
         }
         if (Model.PaymentDiscountAmount > 0)
         {
@@ -109,29 +118,29 @@
             {
                 methodNames = "Medio de Pago";
             }
-            ticketText.AppendLine(FormatLine($"Desct. {methodNames}:", $"-${Model.PaymentDiscountAmount.ToString("N2")}", 40));
+            ticketText.AppendLine(FormatLine($"Desct. {methodNames}:", $"-${Model.PaymentDiscountAmount.ToString("N2")}", 35));
         }
-        ticketText.AppendLine(new string('-', 40));
+        ticketText.AppendLine(new string('-', 35));
     }
     
-    ticketText.AppendLine(FormatLine("TOTAL NETO:", $"${Model.TotalAmount.ToString("N2")}", 40));
+    ticketText.AppendLine(FormatLine("TOTAL NETO:", $"${Model.TotalAmount.ToString("N2")}", 35));
     ticketText.AppendLine();
     ticketText.AppendLine("PAGOS:");
     foreach (var p in Model.Payments)
     {
-        ticketText.AppendLine(FormatLine($" - {p.PaymentMethod?.Name ?? "Otro"}:", $"${p.Amount.ToString("N2")}", 40));
+        ticketText.AppendLine(FormatLine($" - {p.PaymentMethod?.Name ?? "Otro"}:", $"${p.Amount.ToString("N2")}", 35));
     }
     
     decimal totalPaymentsText = Model.Payments.Sum(p => p.Amount);
     if (totalPaymentsText > Model.TotalAmount)
     {
-        ticketText.AppendLine(FormatLine("VUELTO:", $"${(totalPaymentsText - Model.TotalAmount).ToString("N2")}", 40));
+        ticketText.AppendLine(FormatLine("VUELTO:", $"${(totalPaymentsText - Model.TotalAmount).ToString("N2")}", 35));
     }
 
-    ticketText.AppendLine(new string('-', 40));
-    ticketText.AppendLine(CenterText("DOCUMENTO NO VALIDO COMO FACTURA"));
-    ticketText.AppendLine(CenterText("*** GRACIAS POR SU COMPRA ***"));
-    ticketText.AppendLine(CenterText("Software de Gestión - GestionQ"));
+    ticketText.AppendLine(new string('-', 35));
+    ticketText.AppendLine(CenterText("DOCUMENTO NO VALIDO COMO FACTURA", 35));
+    ticketText.AppendLine(CenterText("*** GRACIAS POR SU COMPRA ***", 35));
+    ticketText.AppendLine(CenterText(companyName, 35));
 }
 
 <!DOCTYPE html>
@@ -140,9 +149,15 @@
     <meta charset="utf-8" />
     <title>Ticket de Venta #@Model.FormattedTicketNumber</title>
     <style>
+        @@page {
+            margin: 0;
+            size: 80mm auto;
+        }
+
         body {
             font-family: 'Courier New', Courier, monospace;
-            width: 80mm;
+            width: 100%;
+            max-width: 80mm;
             margin: 0;
             padding: 5mm;
             color: #000;
@@ -224,21 +239,23 @@
 
         .text-receipt-container {
             display: none;
-            width: 80mm;
-            max-width: 100%;
+            width: 100%;
             margin: 0;
-            padding: 0;
+            padding: 0 5mm;
             background-color: #fff;
+            box-sizing: border-box;
         }
 
         .text-receipt {
             font-family: 'Courier New', Courier, monospace;
-            font-size: 12px;
+            font-size: 11px;
             line-height: 1.2;
             margin: 0;
-            white-space: pre-wrap;
-            word-break: break-all;
-            color: #000;
+            white-space: pre;
+            overflow: hidden;
+            color: #000000 !important;
+            font-weight: bold !important;
+            text-rendering: optimizeSpeed;
         }
 
         @@media print {
@@ -249,11 +266,15 @@
                 display: none !important;
             }
             body {
-                width: 80mm;
-                padding: 0 !important;
-                margin: 0 !important;
-                background: #fff;
-            }
+            width: 100% !important;
+            max-width: 80mm !important;
+            padding: 0 !important;
+            margin: 0 auto !important;
+            background: #fff;
+            font-size: 11px !important;
+            color: #000000 !important;
+            font-weight: bold !important;
+        }
             .text-receipt-container {
                 display: block !important;
             }
@@ -273,18 +294,22 @@
         </div>
 
         <div class="header">
-            <h1>@ViewBag.CompanyName</h1>
-            @if (!string.IsNullOrEmpty(ViewBag.CompanyAddress))
+            <h1>@fantasyName</h1>
+            @if (fantasyName != companyName)
             {
-                <p>@ViewBag.CompanyAddress</p>
+                <div style="font-size: 0.8em; margin-top: -5px; margin-bottom: 5px;">de @companyName</div>
             }
-            @if (!string.IsNullOrEmpty(ViewBag.CompanyPhone))
+            @if (!string.IsNullOrEmpty(companyAddress))
             {
-                <p>Tel: @ViewBag.CompanyPhone</p>
+                <p>@companyAddress</p>
             }
-            @if (!string.IsNullOrEmpty(ViewBag.CompanyEmail))
+            @if (!string.IsNullOrEmpty(companyPhone))
             {
-                <p>@ViewBag.CompanyEmail</p>
+                <p>Tel: @companyPhone</p>
+            }
+            @if (!string.IsNullOrEmpty(companyEmail))
+            {
+                <p>@companyEmail</p>
             }
         </div>
 
@@ -399,7 +424,7 @@
         <div class="footer">
             <p style="font-weight: bold; font-size: 11px;">DOCUMENTO NO VALIDO COMO FACTURA</p>
             <p>*** GRACIAS POR SU COMPRA ***</p>
-            <p>Software de Gestión - GestionQ</p>
+            <p>@companyName</p>
         </div>
     </div>
 
@@ -424,8 +449,24 @@
         }
 
         window.onload = function() {
-            // Optional: Auto-generate PDF or Auto-print
+            setTimeout(function() { 
+                var ticketContent = document.querySelector('.text-receipt').innerText;
+                var payload = JSON.stringify({
+                    command: 'print',
+                    printerName: '@Html.Raw(Model.PointOfSale?.PrinterName ?? "")',
+                    copies: @(Model.PointOfSale?.PrintCopies ?? 1),
+                    text: ticketContent
+                });
+
+                if (window.parent && window.parent !== window) {
+                    window.parent.postMessage({ type: 'PRINT_TICKET', payload: payload }, '*');
+                } else if (window.chrome && window.chrome.webview) {
+                    window.chrome.webview.postMessage(payload);
+                } else {
+                    window.print(); 
+                }
+            }, 500);
         };
     </script>
 </body>
-</html>ml>
+</html>

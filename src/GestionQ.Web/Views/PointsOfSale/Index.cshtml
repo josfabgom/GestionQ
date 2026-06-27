@@ -16,6 +16,8 @@
                 <th>Nombre</th>
                 <th style="text-align: center;">Nro. POS</th>
                 <th>PC / Terminal</th>
+                <th>Impresora</th>
+                <th style="text-align: center;">Copias</th>
                 <th>Descripción</th>
                 <th>Estado</th>
                 <th style="text-align: center;">Acciones</th>
@@ -30,6 +32,10 @@
                     <td style="font-size: 0.9rem; color: var(--text-muted);">
                         @(string.IsNullOrEmpty(item.MachineName) ? "No vinculada" : item.MachineName)
                     </td>
+                    <td style="font-size: 0.9rem;">
+                        @(string.IsNullOrEmpty(item.PrinterName) ? "Predeterminada" : item.PrinterName)
+                    </td>
+                    <td style="text-align: center; font-weight: 600;">@item.PrintCopies</td>
                     <td>@item.Description</td>
                     <td>
                         <span class="badge @(item.IsActive ? "bg-success" : "bg-danger")" 

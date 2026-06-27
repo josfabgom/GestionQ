@@ -24,9 +24,15 @@
 
 <div class="glass-panel" style="margin-top: 2rem;">
     <h2>Acciones Rápidas</h2>
-    <div style="display: flex; gap: 1rem; margin-top: 1rem;">
-        <a asp-controller="Sales" asp-action="Create" class="btn-primary" style="background: #10b981;">+ Nueva Venta</a>
-        <a asp-controller="Products" asp-action="Create" class="btn-primary">+ Nuevo Producto</a>
-        <a asp-controller="Customers" asp-action="Create" class="btn-primary">+ Nuevo Cliente</a>
+    <div style="display: flex; gap: 1.5rem; margin-top: 1.5rem; flex-wrap: wrap;">
+        <a asp-controller="Sales" asp-action="Create" class="btn-action sales">
+            <i class="fa-solid fa-cart-arrow-down"></i> Nueva Venta
+        </a>
+        <a asp-controller="Products" asp-action="Create" class="btn-action product">
+            <i class="fa-solid fa-box-open"></i> Nuevo Producto
+        </a>
+        <a asp-controller="Customers" asp-action="Create" class="btn-action customer">
+            <i class="fa-solid fa-user-plus"></i> Nuevo Cliente
+        </a>
     </div>
 </div>
