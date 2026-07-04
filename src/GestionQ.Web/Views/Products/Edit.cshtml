@@ -27,7 +27,12 @@
                     </div>
                     <div class="form-group">
                         <label asp-for="Barcode" class="control-label"></label>
-                        <input asp-for="Barcode" class="form-control" />
+                        <div style="display: flex; gap: 0.5rem;">
+                            <input asp-for="Barcode" class="form-control" />
+                            <button type="button" class="btn btn-secondary" id="btnGenerateBarcode" title="Generar Código de Barras">
+                                <i class="fas fa-barcode"></i>
+                            </button>
+                        </div>
                         <span asp-validation-for="Barcode" class="text-danger"></span>
                     </div>
                 </div>
@@ -318,6 +323,14 @@
                         opt.text = item.name;
                         subSelect.add(opt);
                     });
+                });
+        });
+
+        document.getElementById('btnGenerateBarcode').addEventListener('click', function() {
+            fetch('/Products/GenerateBarcode')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('Barcode').value = data.barcode;
                 });
         });
     </script>

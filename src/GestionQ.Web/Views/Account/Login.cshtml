@@ -21,7 +21,8 @@
         <h2
             style="color: var(--accent); margin-bottom: 2rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
             @{
-                var logoPath = System.IO.Path.Combine(Env.WebRootPath, "images", "logo.png");
+                var webRoot = Env.WebRootPath ?? Env.ContentRootPath ?? "";
+                var logoPath = System.IO.Path.Combine(webRoot, "images", "logo.png");
                 var hasLogo = System.IO.File.Exists(logoPath);
             }
                 @if (hasLogo)

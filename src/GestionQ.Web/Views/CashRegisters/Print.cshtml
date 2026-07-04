@@ -1,7 +1,7 @@
 @model GestionQ.Domain.Entities.CashRegister
 @inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 @functions {
-    public string CenterText(string text, int width = 40)
+    public string CenterText(string text, int width = 35)
     {
         if (string.IsNullOrEmpty(text)) return "";
         text = text.Trim();
@@ -10,7 +10,7 @@
         return text.PadLeft(text.Length + spaces).PadRight(width);
     }
 
-    public string FormatLine(string leftText, string rightText, int width = 40)
+    public string FormatLine(string leftText, string rightText, int width = 35)
     {
         leftText = leftText ?? "";
         rightText = rightText ?? "";
@@ -48,47 +48,47 @@
 
     var ticketText = new System.Text.StringBuilder();
     ticketText.AppendLine(CenterText("CIERRE DE CAJA"));
-    ticketText.AppendLine(new string('=', 40));
+    ticketText.AppendLine(new string('=', 35));
     ticketText.AppendLine(CenterText(fantasyName));
     if (fantasyName != companyName) ticketText.AppendLine(CenterText($"de {companyName}"));
     if (!string.IsNullOrEmpty(companyAddress)) ticketText.AppendLine(CenterText(companyAddress));
-    ticketText.AppendLine(new string('-', 40));
+    ticketText.AppendLine(new string('-', 35));
     ticketText.AppendLine($"Apertura: {Model.OpeningDate.ToString("dd/MM/yy HH:mm")}");
     ticketText.AppendLine($"Cierre:   {(Model.ClosingDate.HasValue ? Model.ClosingDate.Value.ToString("dd/MM/yy HH:mm") : "Aún Abierta")}");
     ticketText.AppendLine($"Operador: {Model.User?.UserName}");
-    ticketText.AppendLine(new string('-', 40));
+    ticketText.AppendLine(new string('-', 35));
     
     ticketText.AppendLine(CenterText("CONCILIACION DE EFECTIVO"));
-    ticketText.AppendLine(new string('-', 40));
-    ticketText.AppendLine(FormatLine("Saldo Inicial:", $"${Model.InitialBalance.ToString("N2")}", 40));
-    ticketText.AppendLine(FormatLine("(+) Ventas Efectivo:", $"${salesInCash.ToString("N2")}", 40));
-    ticketText.AppendLine(FormatLine("(+) Ingresos Manuales:", $"${manualInflows.ToString("N2")}", 40));
-    ticketText.AppendLine(FormatLine("(-) Egresos Manuales:", $"${manualOutflows.ToString("N2")}", 40));
-    ticketText.AppendLine(new string('-', 40));
-    ticketText.AppendLine(FormatLine("Efectivo Calculado:", $"${calculatedExpectedCash.ToString("N2")}", 40));
+    ticketText.AppendLine(new string('-', 35));
+    ticketText.AppendLine(FormatLine("Saldo Inicial:", $"${Model.InitialBalance.ToString("N2")}", 35));
+    ticketText.AppendLine(FormatLine("(+) Ventas Efectivo:", $"${salesInCash.ToString("N2")}", 35));
+    ticketText.AppendLine(FormatLine("(+) Ingresos Manuales:", $"${manualInflows.ToString("N2")}", 35));
+    ticketText.AppendLine(FormatLine("(-) Egresos Manuales:", $"${manualOutflows.ToString("N2")}", 35));
+    ticketText.AppendLine(new string('-', 35));
+    ticketText.AppendLine(FormatLine("Efectivo Calculado:", $"${calculatedExpectedCash.ToString("N2")}", 35));
     
     if (!Model.IsOpen)
     {
-        ticketText.AppendLine(FormatLine("Efectivo Fisico:", $"${Model.FinalCashBalance?.ToString("N2")}", 40));
-        ticketText.AppendLine(new string('-', 40));
-        ticketText.AppendLine(FormatLine("DIFERENCIA:", $"${Model.Difference?.ToString("N2")}", 40));
+        ticketText.AppendLine(FormatLine("Efectivo Fisico:", $"${Model.FinalCashBalance?.ToString("N2")}", 35));
+        ticketText.AppendLine(new string('-', 35));
+        ticketText.AppendLine(FormatLine("DIFERENCIA:", $"${Model.Difference?.ToString("N2")}", 35));
     }
     
-    ticketText.AppendLine(new string('=', 40));
+    ticketText.AppendLine(new string('=', 35));
     ticketText.AppendLine(CenterText("VENTAS POR METODO DE PAGO"));
-    ticketText.AppendLine(new string('-', 40));
+    ticketText.AppendLine(new string('-', 35));
     
     var paymentSummary = ViewBag.PaymentSummary as IEnumerable<dynamic>;
     if (paymentSummary != null)
     {
         foreach(var p in paymentSummary)
         {
-            ticketText.AppendLine(FormatLine((string)p.Method, $"${((decimal)p.Total).ToString("N2")}", 40));
+            ticketText.AppendLine(FormatLine((string)p.Method, $"${((decimal)p.Total).ToString("N2")}", 35));
         }
     }
     
-    ticketText.AppendLine(new string('-', 40));
-    ticketText.AppendLine(CenterText("*** FIN DEL REPORTE ***", 40));
+    ticketText.AppendLine(new string('-', 35));
+    ticketText.AppendLine(CenterText("*** FIN DEL REPORTE ***", 35));
 }
 
 <!DOCTYPE html>
@@ -96,6 +96,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Cierre de Caja - GestionQ</title>
+    <style id="page-style">@@page { size: 80mm auto; margin: 0; }</style>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -145,6 +146,7 @@
 
             /* Estilos para impresión térmica */
             body.print-thermal {
+                display: block !important;
                 width: 100% !important;
                 max-width: 80mm !important;
                 padding: 0 !important;
@@ -159,10 +161,12 @@
             }
             body.print-thermal .text-receipt-container {
                 display: block !important;
+                padding: 0 !important;
             }
 
             /* Estilos para impresión A4 (Chorro a tinta) */
             body.print-a4 {
+                display: block !important;
                 width: 100% !important;
                 max-width: none !important;
                 padding: 0 !important;
@@ -192,7 +196,7 @@
         </div>
         <div style="display: flex; gap: 10px; justify-content: center;">
             <button onclick="generatePDF()" style="padding: 10px 20px; cursor: pointer; background: #ea580c; color: white; border: none; border-radius: 5px; font-weight: bold;">📥 DESCARGAR PDF</button>
-            <button onclick="window.close()" style="padding: 10px 20px; cursor: pointer; background: #64748b; color: white; border: none; border-radius: 5px; font-weight: bold;">❌ CERRAR</button>
+            <button onclick="history.back()" style="padding: 10px 20px; cursor: pointer; background: #64748b; color: white; border: none; border-radius: 5px; font-weight: bold;">❌ VOLVER</button>
         </div>
     </div>
 
@@ -247,13 +251,20 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script>
         function printThermal() {
-            if (window.chrome && window.chrome.webview) {
-                var ticketContent = document.querySelector('.text-receipt').innerText;
-                window.chrome.webview.postMessage(JSON.stringify({
-                    command: 'print',
-                    text: ticketContent
-                }));
+            var ticketContent = document.querySelector('.text-receipt').innerText;
+            var payload = JSON.stringify({
+                command: 'print',
+                printerName: '@Html.Raw(Model.PointOfSale?.PrinterName ?? "")',
+                copies: @(Model.PointOfSale?.PrintCopies ?? 1),
+                text: ticketContent
+            });
+
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage({ type: 'PRINT_TICKET', payload: payload }, '*');
+            } else if (window.chrome && window.chrome.webview) {
+                window.chrome.webview.postMessage(payload);
             } else {
+                document.getElementById('page-style').innerHTML = '@@page { size: 80mm auto; margin: 0; }';
                 document.body.classList.remove('print-a4');
                 document.body.classList.add('print-thermal');
                 window.print();
@@ -261,6 +272,7 @@
         }
 
         function printA4() {
+            document.getElementById('page-style').innerHTML = '@@page { size: A4; margin: 10mm; }';
             document.body.classList.remove('print-thermal');
             document.body.classList.add('print-a4');
             window.print();

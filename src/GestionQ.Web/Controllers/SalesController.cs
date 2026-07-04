@@ -33,13 +33,63 @@ namespace GestionQ.Web.Controllers
             _electronicInvoicingService = electronicInvoicingService;
         }
 
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(DateTime? startDate, DateTime? endDate, string? customerName, string? ticketNumber)
         {
-            var sales = await _context.Sales
+            if (!startDate.HasValue && !endDate.HasValue && string.IsNullOrEmpty(customerName) && string.IsNullOrEmpty(ticketNumber))
+            {
+                // Default to today's sales
+                startDate = DateTime.Today;
+                endDate = DateTime.Today;
+            }
+
+            var query = _context.Sales
                 .Include(s => s.Customer)
                 .Include(s => s.PointOfSale)
-                .OrderByDescending(s => s.Date)
-                .ToListAsync();
+                .AsQueryable();
+
+            if (startDate.HasValue)
+            {
+                query = query.Where(s => s.Date >= startDate.Value.Date);
+            }
+            if (endDate.HasValue)
+            {
+                var end = endDate.Value.Date.AddDays(1);
+                query = query.Where(s => s.Date < end);
+            }
+                if (!string.IsNullOrEmpty(customerName))
+                {
+                    query = query.Where(s => s.Customer != null && s.Customer.Name.Contains(customerName));
+                }
+                if (!string.IsNullOrEmpty(ticketNumber))
+                {
+                    var ticketClean = ticketNumber.Trim();
+                    if (ticketClean.Contains("-") || ticketClean.Contains("."))
+                    {
+                        var sep = ticketClean.Contains("-") ? '-' : '.';
+                        var parts = ticketClean.Split(sep);
+                        if (parts.Length == 2 && int.TryParse(parts[0], out int posNumber) && int.TryParse(parts[1], out int saleId))
+                        {
+                            query = query.Where(s => s.PointOfSale != null && s.PointOfSale.PosNumber == posNumber && s.Id == saleId);
+                        }
+                    }
+                    else if (int.TryParse(ticketClean, out int exactId))
+                    {
+                        // Si ingresan solo el número de comprobante sin punto de venta, buscamos coincidencia exacta o parcial
+                        query = query.Where(s => s.Id.ToString().Contains(exactId.ToString()));
+                    }
+                    else
+                    {
+                        query = query.Where(s => s.Id.ToString().Contains(ticketClean));
+                    }
+                }
+
+            var sales = await query.OrderByDescending(s => s.Date).ToListAsync();
+
+            ViewBag.StartDate = startDate?.ToString("yyyy-MM-dd");
+            ViewBag.EndDate = endDate?.ToString("yyyy-MM-dd");
+            ViewBag.CustomerName = customerName;
+            ViewBag.TicketNumber = ticketNumber;
+
             return View(sales);
         }
 

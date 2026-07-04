@@ -12,6 +12,10 @@ namespace GestionQ.Domain.Entities
         [StringLength(50)]
         public string? Barcode { get; set; }
 
+        [Display(Name = "Código de Proveedor")]
+        [StringLength(50)]
+        public string? SupplierCode { get; set; }
+
         [Required, StringLength(100)]
         public string Name { get; set; } = string.Empty;
 

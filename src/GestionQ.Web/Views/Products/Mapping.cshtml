@@ -1,0 +1,73 @@
+@model GestionQ.Web.Models.ImportMappingViewModel
+
+@{
+    ViewData["Title"] = "Mapear Columnas de Excel";
+}
+
+<div class="container-fluid">
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Asociar columnas del Excel con el Sistema</h6>
+        </div>
+        <div class="card-body">
+            <p>Selecciona a qué campo del sistema corresponde cada columna de tu archivo Excel. Si el "Código de Proveedor" ya existe, el producto se actualizará; si no, se creará uno nuevo.</p>
+
+            <form asp-action="ProcessImport" method="post">
+                <input type="hidden" asp-for="TempFilePath" />
+                
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Columna en Excel</th>
+                                <th>Campo en Sistema</th>
+                                <th>Muestra (Fila 1)</th>
+                                <th>Muestra (Fila 2)</th>
+                                <th>Muestra (Fila 3)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (int i = 0; i < Model.Mappings.Count; i++)
+                            {
+                                <tr>
+                                    <td>
+                                        <strong>@Model.Mappings[i].ExcelColumnName</strong>
+                                        <input type="hidden" asp-for="Mappings[i].ExcelColumnIndex" />
+                                        <input type="hidden" asp-for="Mappings[i].ExcelColumnName" />
+                                    </td>
+                                    <td>
+                                        <select asp-for="Mappings[i].SystemProperty" class="form-control">
+                                            <option value="">(Ignorar)</option>
+                                            <option value="SupplierCode">Código de Proveedor (Requerido para actualizar)</option>
+                                            <option value="Name">Nombre / Descripción</option>
+                                            <option value="Price">Precio / Costo</option>
+                                            <option value="Stock">Stock Actual</option>
+                                            <option value="Barcode">Código de Barras</option>
+                                            <option value="InternalCode">Código Interno</option>
+                                        </select>
+                                    </td>
+                                    @for (int r = 0; r < 3; r++)
+                                    {
+                                        <td>
+                                            @if (Model.SampleRows.Count > r && Model.SampleRows[r].Count > i)
+                                            {
+                                                <span class="text-muted small">@Model.SampleRows[r][i]</span>
+                                            }
+                                        </td>
+                                    }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check mr-1"></i> Procesar Importación
+                    </button>
+                    <a asp-action="Index" class="btn btn-secondary">Cancelar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

@@ -204,10 +204,10 @@ h3 {
 .btn-action {
     display: flex;
     align-items: center;
-    gap: 0.8rem;
-    padding: 1rem 1.5rem;
-    border-radius: 12px;
-    font-size: 1.1rem;
+    gap: 1rem;
+    padding: 1.5rem 2.5rem;
+    border-radius: 16px;
+    font-size: 1.3rem;
     font-weight: 600;
     color: white;
     text-decoration: none;
@@ -221,7 +221,7 @@ h3 {
 }
 
 .btn-action i {
-    font-size: 1.4rem;
+    font-size: 1.8rem;
 }
 
 .btn-action.sales {

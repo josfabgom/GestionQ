@@ -721,6 +721,11 @@ ALTER TABLE [PointsOfSale] ADD [PrintCopies] int NOT NULL DEFAULT 0;
 INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
 VALUES (N'20260626090146_AddPrintCopiesToPointOfSale', N'9.0.15');
 
+ALTER TABLE [Products] ADD [SupplierCode] nvarchar(50) NULL;
+
+INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+VALUES (N'20260703021041_AddSupplierCode', N'9.0.15');
+
 COMMIT;
 GO
 

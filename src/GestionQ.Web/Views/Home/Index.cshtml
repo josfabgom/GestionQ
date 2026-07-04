@@ -4,35 +4,33 @@
 
 <h1 class="page-title">Bienvenido a GestionQ</h1>
 
-<div class="glass-panel">
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem;">
-        <div>
-            <h3 style="color: var(--text-muted); font-size: 1rem;">Ventas Totales</h3>
-            <div style="font-size: 2.5rem; font-weight: 600; color: #10b981;">$@ViewBag.TotalSales.ToString("N2")</div>
-        </div>
-        <div>
-            <h3 style="color: var(--text-muted); font-size: 1rem;">Clientes Activos</h3>
-            <div style="font-size: 2.5rem; font-weight: 600; color: #3b82f6;">@ViewBag.TotalClients</div>
-        </div>
-        <div>
-            <h3 style="color: var(--text-muted); font-size: 1rem;">Valor en Stock</h3>
-            <div style="font-size: 2.5rem; font-weight: 600; color: #f59e0b;">$@ViewBag.TotalStockValue.ToString("N2")
-            </div>
-        </div>
-    </div>
-</div>
+<h2 style="margin-top: 1rem; margin-bottom: 1.5rem;">Acciones Rápidas</h2>
 
-<div class="glass-panel" style="margin-top: 2rem;">
-    <h2>Acciones Rápidas</h2>
-    <div style="display: flex; gap: 1.5rem; margin-top: 1.5rem; flex-wrap: wrap;">
-        <a asp-controller="Sales" asp-action="Create" class="btn-action sales">
-            <i class="fa-solid fa-cart-arrow-down"></i> Nueva Venta
-        </a>
-        <a asp-controller="Products" asp-action="Create" class="btn-action product">
-            <i class="fa-solid fa-box-open"></i> Nuevo Producto
-        </a>
-        <a asp-controller="Customers" asp-action="Create" class="btn-action customer">
-            <i class="fa-solid fa-user-plus"></i> Nuevo Cliente
-        </a>
-    </div>
+<div class="settings-grid">
+    <!-- Nueva Venta -->
+    <a asp-controller="Sales" asp-action="Create" class="settings-card">
+        <span class="settings-card-icon" style="color: #10b981;">
+            <i class="fa-solid fa-cart-arrow-down"></i>
+        </span>
+        <div class="settings-card-title">Nueva Venta</div>
+        <div class="settings-card-desc">Iniciar un nuevo comprobante de venta o facturación.</div>
+    </a>
+
+    <!-- Nuevo Producto -->
+    <a asp-controller="Products" asp-action="Create" class="settings-card">
+        <span class="settings-card-icon" style="color: #3b82f6;">
+            <i class="fa-solid fa-box-open"></i>
+        </span>
+        <div class="settings-card-title">Nuevo Producto</div>
+        <div class="settings-card-desc">Dar de alta un nuevo artículo o servicio en el catálogo.</div>
+    </a>
+
+    <!-- Nuevo Cliente -->
+    <a asp-controller="Customers" asp-action="Create" class="settings-card">
+        <span class="settings-card-icon" style="color: #8b5cf6;">
+            <i class="fa-solid fa-user-plus"></i>
+        </span>
+        <div class="settings-card-title">Nuevo Cliente</div>
+        <div class="settings-card-desc">Registrar un nuevo cliente para seguimiento y cuenta corriente.</div>
+    </a>
 </div>

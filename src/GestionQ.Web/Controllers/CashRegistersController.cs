@@ -382,6 +382,7 @@ namespace GestionQ.Web.Controllers
         {
             var register = await _context.CashRegisters
                 .Include(c => c.User)
+                .Include(c => c.PointOfSale)
                 .Include(c => c.Movements)
                 .Include(c => c.Sales)
                     .ThenInclude(s => s.Payments)

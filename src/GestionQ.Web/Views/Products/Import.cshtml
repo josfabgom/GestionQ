@@ -1,0 +1,33 @@
+@{
+    ViewData["Title"] = "Importar Productos desde Excel";
+}
+
+<div class="container-fluid">
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Subir archivo Excel</h6>
+        </div>
+        <div class="card-body">
+            <p>Selecciona un archivo Excel (.xlsx o .xls) con la lista de productos a importar. En el siguiente paso podrás elegir qué columnas corresponden a qué datos del sistema.</p>
+            
+            <form asp-action="UploadExcel" method="post" enctype="multipart/form-data">
+                <div class="form-group mb-4">
+                    <label for="file">Archivo Excel</label>
+                    <input type="file" name="file" id="file" class="form-control-file" accept=".xlsx, .xls" required />
+                </div>
+                
+                @if (!ViewData.ModelState.IsValid)
+                {
+                    <div class="alert alert-danger">
+                        @Html.ValidationSummary()
+                    </div>
+                }
+
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-upload mr-1"></i> Subir y Analizar
+                </button>
+                <a asp-action="Index" class="btn btn-secondary">Cancelar</a>
+            </form>
+        </div>
+    </div>
+</div>

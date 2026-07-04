@@ -9,7 +9,11 @@ using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 using GestionQ.Domain.Services;
 
-var builder = WebApplication.CreateBuilder(args);
+var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+{
+    Args = args,
+    ContentRootPath = AppContext.BaseDirectory
+});
 builder.WebHost.UseUrls("http://*:5144");
 builder.Host.UseWindowsService();
 
