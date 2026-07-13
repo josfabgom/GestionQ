@@ -1,0 +1,125 @@
+@model GestionQ.Web.Models.StatisticsViewModel
+@{
+    ViewData["Title"] = "Estadísticas Diarias";
+}
+
+<div class="top-bar">
+    <div class="top-bar-title">
+        <i class="fa-solid fa-chart-pie"></i>
+        <h1>@ViewData["Title"]</h1>
+    </div>
+</div>
+
+<div class="glass-panel" style="margin-bottom: 2rem;">
+    <form asp-action="Index" method="get" style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+        <div class="form-group" style="margin: 0;">
+            <label for="startDate">Desde:</label>
+            <input type="date" id="startDate" name="startDate" class="form-control" value="@Model.StartDate.ToString("yyyy-MM-dd")" required />
+        </div>
+        <div class="form-group" style="margin: 0;">
+            <label for="endDate">Hasta:</label>
+            <input type="date" id="endDate" name="endDate" class="form-control" value="@Model.EndDate.ToString("yyyy-MM-dd")" required />
+        </div>
+        <button type="submit" class="btn-primary" style="padding: 0.5rem 1rem;">
+            <i class="fa-solid fa-filter"></i> Filtrar
+        </button>
+    </form>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+    <!-- Resumen Ventas -->
+    <div class="glass-panel" style="text-align: center; display: flex; flex-direction: column; justify-content: center; padding: 2rem;">
+        <div style="font-size: 3rem; color: #10b981; margin-bottom: 0.5rem;">
+            <i class="fa-solid fa-money-bill-wave"></i>
+        </div>
+        <h3 style="color: var(--text-secondary); margin-bottom: 0.5rem;">Total Recaudado</h3>
+        <h2 style="font-size: 2.5rem; color: #f8fafc; margin: 0;">@Model.TotalSalesAmount.ToString("C")</h2>
+    </div>
+
+    <!-- Resumen Productos -->
+    <div class="glass-panel" style="text-align: center; display: flex; flex-direction: column; justify-content: center; padding: 2rem;">
+        <div style="font-size: 3rem; color: #60a5fa; margin-bottom: 0.5rem;">
+            <i class="fa-solid fa-boxes-stacked"></i>
+        </div>
+        <h3 style="color: var(--text-secondary); margin-bottom: 0.5rem;">Artículos Vendidos</h3>
+        <h2 style="font-size: 2.5rem; color: #f8fafc; margin: 0;">@Model.TotalItemsSold.ToString("N0") un.</h2>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1.5rem;">
+    <!-- Ventas por Medio de Pago -->
+    <div class="glass-panel">
+        <h2 style="margin-top: 0; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fa-solid fa-credit-card"></i> Recaudación por Medio de Pago
+        </h2>
+        
+        @if (Model.SalesByPaymentMethod.Any())
+        {
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Medio de Pago</th>
+                            <th style="text-align: right;">Total Recaudado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.SalesByPaymentMethod)
+                        {
+                            <tr>
+                                <td>@item.PaymentMethodName</td>
+                                <td style="text-align: right; font-weight: bold; color: #10b981;">@item.TotalAmount.ToString("C")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="empty-state">
+                <i class="fa-solid fa-receipt"></i>
+                <p>No hay ventas registradas en este período.</p>
+            </div>
+        }
+    </div>
+
+    <!-- Ventas por Producto -->
+    <div class="glass-panel">
+        <h2 style="margin-top: 0; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fa-solid fa-box"></i> Artículos Más Vendidos
+        </h2>
+
+        @if (Model.SalesByProduct.Any())
+        {
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th style="text-align: right;">Cantidad</th>
+                            <th style="text-align: right;">Recaudación</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.SalesByProduct.Take(10)) // Mostrar los top 10
+                        {
+                            <tr>
+                                <td>@item.ProductName</td>
+                                <td style="text-align: right;">@item.TotalQuantity.ToString("N2") un.</td>
+                                <td style="text-align: right; font-weight: bold; color: #10b981;">@item.TotalAmount.ToString("C")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="empty-state">
+                <i class="fa-solid fa-box-open"></i>
+                <p>No hay productos vendidos en este período.</p>
+            </div>
+        }
+    </div>
+</div>

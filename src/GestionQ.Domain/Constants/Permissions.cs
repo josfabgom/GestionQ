@@ -82,6 +82,11 @@ namespace GestionQ.Domain.Constants
             public const string Manage = "Permissions.ElectronicInvoices.Manage";
         }
 
+        public static class Statistics
+        {
+            public const string View = "Permissions.Statistics.View";
+        }
+
         /// <summary>
         /// Returns a list of all available permissions in the system.
         /// </summary>
@@ -148,6 +153,9 @@ namespace GestionQ.Domain.Constants
             permissions.Add(ElectronicInvoices.Edit);
             permissions.Add(ElectronicInvoices.Delete);
             permissions.Add(ElectronicInvoices.Manage);
+
+            // Statistics
+            permissions.Add(Statistics.View);
 
             return permissions;
         }

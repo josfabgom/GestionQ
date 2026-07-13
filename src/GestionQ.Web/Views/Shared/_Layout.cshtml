@@ -143,6 +143,14 @@
                         </a>
                     </li>
                 }
+                @if (User.IsInRole("Admin") || User.HasClaim("Permission", Permissions.Statistics.View))
+                {
+                <li>
+                    <a asp-controller="Statistics" asp-action="Index" style="color: #a855f7; font-weight: 600;">
+                        <i class="fa-solid fa-chart-pie"></i> Estadísticas
+                    </a>
+                </li>
+                }
                 @if (User.IsInRole("Admin") || User.HasClaim("Permission", Permissions.ElectronicInvoices.View))
                 {
 
