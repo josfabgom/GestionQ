@@ -10,7 +10,7 @@ $StartShortcut.TargetPath = "wscript.exe"
 $VbsStartPath = Join-Path $BaseDir "Iniciar-GestionQ.vbs"
 $StartShortcut.Arguments = "`"$VbsStartPath`""
 $StartShortcut.WorkingDirectory = "$BaseDir"
-$IconPath = Join-Path $BaseDir "src\GestionQ.Web\wwwroot\favicon.ico"
+$IconPath = Join-Path $BaseDir "app_cliente\favicon.ico"
 if (Test-Path $IconPath) {
     $StartShortcut.IconLocation = "$IconPath"
 }
@@ -23,9 +23,17 @@ $StopShortcut.TargetPath = "wscript.exe"
 $VbsStopPath = Join-Path $BaseDir "Detener-GestionQ.vbs"
 $StopShortcut.Arguments = "`"$VbsStopPath`""
 $StopShortcut.WorkingDirectory = "$BaseDir"
-# Icono de apagado (color rojo) en shell32.dll
 $StopShortcut.IconLocation = "shell32.dll, 131"
 $StopShortcut.Description = "Detener el servidor de GestionQ"
 $StopShortcut.Save()
+
+# 3. Acceso directo: Monitor de Servidor
+$MonitorShortcut = $WshShell.CreateShortcut("$DesktopPath\Monitor GestionQ.lnk")
+$MonitorShortcut.TargetPath = "wscript.exe"
+$VbsMonitorPath = Join-Path $BaseDir "Iniciar-Monitor.vbs"
+$MonitorShortcut.Arguments = "`"$VbsMonitorPath`""
+$MonitorShortcut.WorkingDirectory = "$BaseDir"
+$MonitorShortcut.Description = "Monitor del servidor de GestionQ"
+$MonitorShortcut.Save()
 
 Write-Host "¡Accesos directos creados correctamente en tu Escritorio!" -ForegroundColor Green

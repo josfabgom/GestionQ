@@ -158,26 +158,19 @@ public class MonitorApplicationContext : ApplicationContext
     {
         try
         {
-            string rootPath = GetRootPath();
-            string scriptPath = Path.Combine(rootPath, "Iniciar-Servidor.vbs");
-            if (File.Exists(scriptPath))
+            Process.Start(new ProcessStartInfo
             {
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = "wscript.exe",
-                    Arguments = $"\"{scriptPath}\"",
-                    UseShellExecute = true
-                });
-                trayIcon.ShowBalloonTip(3000, "GestionQ", "Iniciando servidor...", ToolTipIcon.Info);
-            }
-            else
-            {
-                MessageBox.Show("No se encontró Iniciar-Servidor.vbs en " + rootPath, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
+                FileName = "net.exe",
+                Arguments = "start GestionQ_Web_Service",
+                UseShellExecute = true,
+                Verb = "runas",
+                WindowStyle = ProcessWindowStyle.Hidden
+            });
+            trayIcon.ShowBalloonTip(3000, "GestionQ", "Iniciando servicio de Windows...", ToolTipIcon.Info);
         }
         catch (Exception ex)
         {
-            MessageBox.Show("No se pudo iniciar el servidor: " + ex.Message);
+            MessageBox.Show("No se pudo iniciar el servicio: " + ex.Message);
         }
     }
 
@@ -185,17 +178,20 @@ public class MonitorApplicationContext : ApplicationContext
     {
         try
         {
-            var processes = Process.GetProcessesByName("GestionQ.Web");
-            foreach (var p in processes)
+            Process.Start(new ProcessStartInfo
             {
-                p.Kill();
-            }
-            trayIcon.ShowBalloonTip(3000, "GestionQ", "El servidor ha sido detenido.", ToolTipIcon.Warning);
+                FileName = "net.exe",
+                Arguments = "stop GestionQ_Web_Service",
+                UseShellExecute = true,
+                Verb = "runas",
+                WindowStyle = ProcessWindowStyle.Hidden
+            });
+            trayIcon.ShowBalloonTip(3000, "GestionQ", "Deteniendo servicio de Windows...", ToolTipIcon.Warning);
             SetOffline();
         }
         catch (Exception ex)
         {
-            MessageBox.Show("No se pudo detener el servidor: " + ex.Message);
+            MessageBox.Show("No se pudo detener el servicio: " + ex.Message);
         }
     }
 

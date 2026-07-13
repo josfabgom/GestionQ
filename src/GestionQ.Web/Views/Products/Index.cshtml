@@ -23,6 +23,13 @@
     </div>
 </div>
 
+@if (TempData["Error"] != null)
+{
+    <div class="glass-panel" style="background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.2); color: #ef4444; margin-bottom: 1rem;">
+        @TempData["Error"]
+    </div>
+}
+
 <div class="glass-panel">
     <table class="table">
         <thead>
@@ -30,13 +37,9 @@
                 <th>Cód. Int</th>
                 <th>Cód. Barras</th>
                 <th>Nombre</th>
-                <th>Rubro / Subrubro</th>
-                <th>Alta</th>
                 <th>Precio</th>
                 <th>Stock</th>
-                <th>Tipo</th>
-                <th>A Balanza</th>
-                <th>Acciones</th>
+                <th style="text-align: right;">Acciones</th>
             </tr>
         </thead>
         <tbody>
@@ -44,7 +47,7 @@
             {
                 <tr>
                     <td style="color: var(--accent); font-weight: 600;">@item.InternalCode.ToString("D5")</td>
-                    <td>@(item.Barcode ?? "-")</td>
+                    <td style="font-family: monospace; font-size: 1.1rem;">@(item.Barcode ?? "-")</td>
                     <td style="display: flex; align-items: center; gap: 0.75rem;">
                         <div style="width: 40px; height: 40px; border-radius: 8px; overflow: hidden; background: rgba(255,255,255,0.05); flex-shrink: 0; display: flex; align-items: center; justify-content: center;">
                             @if (!string.IsNullOrEmpty(item.ImageUrl))
@@ -61,62 +64,43 @@
                             }
                         </div>
                         <div>
-                            @item.Name
+                            <div style="font-weight: 500; font-size: 1.05rem;">@item.Name</div>
+                            @if (item.SubCategory != null)
+                            {
+                                <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">@item.SubCategory?.Category?.Name &bull; @item.SubCategory?.Name</div>
+                            }
                             @if (!item.IsActive)
                             {
-                                <span style="font-size: 0.7rem; background: #ef4444; color: white; padding: 0.1rem 0.4rem; border-radius: 4px; margin-left: 0.5rem;">Inactivo</span>
+                                <span style="font-size: 0.7rem; background: #ef4444; color: white; padding: 0.1rem 0.4rem; border-radius: 4px; margin-top: 4px; display: inline-block;">Inactivo</span>
                             }
                         </div>
                     </td>
-                    <td>
-                        <span class="badge" style="background: rgba(var(--primary-rgb), 0.1); color: var(--primary);">@item.SubCategory?.Category?.Name</span>
-                        <br />
-                        <small style="color: var(--text-muted);">@item.SubCategory?.Name</small>
-                    </td>
-                    <td style="font-size: 0.9rem; color: var(--text-muted);">@item.CreationDate.ToString("dd/MM/yyyy")</td>
-                    <td style="font-weight: 600;">$@item.Price.ToString("N2")</td>
+                    <td style="font-weight: 700; font-size: 1.1rem; color: #10b981;">$@item.Price.ToString("N2")</td>
                     <td style="font-weight: 600;">
-                        <div style="display: flex; flex-direction: column;">
-                            <span style="color: @(item.Stock <= item.MinimumStock ? "#ef4444" : "#10b981")">@item.Stock un.</span>
+                        <div style="display: flex; flex-direction: column; align-items: flex-start;">
+                            <span style="font-size: 1.1rem; color: @(item.Stock <= item.MinimumStock ? "#ef4444" : "#e2e8f0")">@item.Stock un.</span>
                             @if (item.Stock <= item.MinimumStock)
                             {
-                                <span style="font-size: 0.6rem; color: #ef4444; font-weight: 400; background: rgba(239, 68, 68, 0.1); padding: 0.1rem 0.3rem; border-radius: 4px; text-align: center;">MIN: @item.MinimumStock</span>
-                            }
-                            else if (item.MinimumStock > 0)
-                            {
-                                <span style="font-size: 0.6rem; color: var(--text-muted); font-weight: 400;">Min: @item.MinimumStock</span>
+                                <span style="font-size: 0.7rem; color: #ef4444; font-weight: 500; background: rgba(239, 68, 68, 0.1); padding: 0.1rem 0.4rem; border-radius: 4px; text-align: center; margin-top: 2px;">Stock Crítico (Mín: @item.MinimumStock)</span>
                             }
                         </div>
                     </td>
-                    <td>
-                        @if (item.IsPesable)
-                        {
-                            <span class="badge" style="background: rgba(167, 139, 250, 0.1); color: #a78bfa;">Pesable</span>
-                        }
-                        else
-                        {
-                            <span class="badge" style="background: rgba(255, 255, 255, 0.05); color: var(--text-muted);">Unidad</span>
-                        }
-                    </td>
-                    <td>
-                        @if (item.SendToScale)
-                        {
-                            <span style="color: #10b981; font-weight: 600;">SI</span>
-                        }
-                        else
-                        {
-                            <span style="color: var(--text-muted);">NO</span>
-                        }
-                    </td>
-                    <td>
-                        <div style="display: flex; gap: 0.4rem;">
-                            <a asp-action="Movements" asp-route-id="@item.Id" class="btn-secondary" style="padding: 0.3rem 0.5rem;" title="Ficha de Stock">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                    <td style="text-align: right;">
+                        <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                            <a asp-action="Movements" asp-route-id="@item.Id" class="btn-secondary" style="padding: 0.4rem 0.7rem; display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem;" title="Ficha de Movimientos">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                                Ficha
                             </a>
-                            <a asp-action="Adjustment" asp-route-id="@item.Id" class="btn-secondary" style="padding: 0.3rem 0.5rem;" title="Ajuste de Stock">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                            <a asp-action="Edit" asp-route-id="@item.Id" class="btn-primary" style="padding: 0.4rem 0.7rem; display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; background: var(--accent);" title="Editar Producto">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                Editar
                             </a>
-                            <a asp-action="Edit" asp-route-id="@item.Id" class="btn-secondary" style="padding: 0.3rem 0.5rem;">Editar</a>
+                            <form asp-action="Delete" asp-route-id="@item.Id" method="post" onsubmit="return confirm('¿Está seguro de eliminar este producto?');" style="margin: 0;">
+                                <button type="submit" class="btn-secondary" style="padding: 0.4rem 0.7rem; display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: #ef4444; border-color: rgba(239, 68, 68, 0.2);" title="Eliminar Producto">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                                    Eliminar
+                                </button>
+                            </form>
                         </div>
                     </td>
                 </tr>

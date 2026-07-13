@@ -6,17 +6,17 @@
 
 <h1 class="page-title">Nuevo Producto</h1>
 
-<div class="glass-panel" style="max-width: 900px;">
+<div class="glass-panel" style="width: 100%;">
     <form asp-action="Create" enctype="multipart/form-data">
-        <div style="display: grid; grid-template-columns: 1fr 300px; gap: 2rem;">
+        <div style="display: flex; flex-wrap: wrap; gap: 2rem;">
             <!-- Left Column: Form Fields -->
-            <div>
+            <div style="flex: 1 1 400px; min-width: 0;">
                 <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
                     <input asp-for="IsActive" style="width: 20px; height: 20px;" checked />
                     <label asp-for="IsActive" style="margin: 0; font-weight: 600;">Habilitado para la venta</label>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
                     <div class="form-group">
                         <label asp-for="InternalCode" class="control-label"></label>
                         <input asp-for="InternalCode" class="form-control" readonly placeholder="[Automático]" />
@@ -39,7 +39,7 @@
                     <span asp-validation-for="Name" class="text-danger"></span>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
                     <div class="form-group">
                         <label class="control-label">Rubro</label>
                         <select id="CategoryId" class="form-control">
@@ -69,7 +69,7 @@
                     </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 1rem;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem;">
                     <div class="form-group">
                         <label asp-for="IsPesable" class="control-label"></label>
                         <select asp-for="IsPesable" class="form-control">
@@ -98,7 +98,7 @@
                     </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
                     <div class="form-group">
                         <label asp-for="Stock" class="control-label">Stock Actual</label>
                         <input asp-for="Stock" type="number" class="form-control" />
@@ -129,7 +129,7 @@
             </div>
 
             <!-- Right Column: Image Upload -->
-            <div>
+            <div style="flex: 1 1 300px; max-width: 400px;">
                 <label class="control-label">Imagen del Producto</label>
                 <div style="border: 2px dashed var(--border); border-radius: 12px; padding: 1rem; text-align: center; background: rgba(255,255,255,0.02);">
                     <div id="imagePreview" style="width: 100%; aspect-ratio: 1; border-radius: 8px; overflow: hidden; margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.2);">

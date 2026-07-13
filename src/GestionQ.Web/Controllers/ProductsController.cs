@@ -314,6 +314,13 @@ namespace GestionQ.Web.Controllers
             var product = await _context.Products.FindAsync(id);
             if (product != null)
             {
+                bool hasSales = await _context.SaleItems.AnyAsync(si => si.ProductId == id);
+                if (hasSales)
+                {
+                    TempData["Error"] = "No se puede eliminar el producto porque tiene ventas relacionadas.";
+                    return RedirectToAction(nameof(Index));
+                }
+
                 if (!string.IsNullOrEmpty(product.ImageUrl))
                 {
                     string path = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", product.ImageUrl.TrimStart('/'));
@@ -612,6 +619,8 @@ namespace GestionQ.Web.Controllers
 
             return RedirectToAction(nameof(Index));
         }
+
+
 
         private bool ProductExists(int id)
         {

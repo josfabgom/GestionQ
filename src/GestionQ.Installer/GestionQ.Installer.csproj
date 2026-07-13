@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="7.0.2" />
+    <PackageReference Include="System.ServiceProcess.ServiceController" Version="10.0.9" />
+    <PackageReference Include="System.IO.Compression.ZipFile" Version="4.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\payload.zip" Condition="Exists('Resources\payload.zip')" />
+    <EmbeddedResource Include="Resources\SQL2022-SSEI-Expr.exe" Condition="Exists('Resources\SQL2022-SSEI-Expr.exe')" />
+    <EmbeddedResource Include="Resources\GestionQ_Schema.sql" Condition="Exists('Resources\GestionQ_Schema.sql')" />
+    <EmbeddedResource Include="Resources\GestionQ_Datos_Basicos.sql" Condition="Exists('Resources\GestionQ_Datos_Basicos.sql')" />
+  </ItemGroup>
+
+</Project>

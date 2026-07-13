@@ -30,6 +30,25 @@ public partial class Form1 : Form
         var configMenu = new ToolStripMenuItem("Configurar Conexión...");
         configMenu.Click += ConfigMenu_Click;
         opcionesMenu.DropDownItems.Add(configMenu);
+
+        var zoomMenu = new ToolStripMenuItem("Escala (Zoom)");
+        var zoomInMenu = new ToolStripMenuItem("Acercar");
+        zoomInMenu.ShortcutKeyDisplayString = "Ctrl +";
+        zoomInMenu.Click += (s, e) => { webView.ZoomFactor = Math.Min(webView.ZoomFactor + 0.1, 3.0); };
+        
+        var zoomOutMenu = new ToolStripMenuItem("Alejar");
+        zoomOutMenu.ShortcutKeyDisplayString = "Ctrl -";
+        zoomOutMenu.Click += (s, e) => { webView.ZoomFactor = Math.Max(webView.ZoomFactor - 0.1, 0.3); };
+        
+        var zoomResetMenu = new ToolStripMenuItem("Restablecer 100%");
+        zoomResetMenu.ShortcutKeyDisplayString = "Ctrl 0";
+        zoomResetMenu.Click += (s, e) => { webView.ZoomFactor = 1.0; };
+        
+        zoomMenu.DropDownItems.Add(zoomInMenu);
+        zoomMenu.DropDownItems.Add(zoomOutMenu);
+        zoomMenu.DropDownItems.Add(zoomResetMenu);
+        opcionesMenu.DropDownItems.Add(zoomMenu);
+
         menuStrip.Items.Add(opcionesMenu);
 
         this.Controls.Add(webView);
@@ -42,6 +61,9 @@ public partial class Form1 : Form
     async void InitializeAsync()
     {
         await webView.EnsureCoreWebView2Async(null);
+        
+        webView.ZoomFactor = config.ZoomFactor;
+        webView.ZoomFactorChanged += (s, e) => SaveZoom();
         
         webView.CoreWebView2.NavigationCompleted += (s, e) =>
         {
@@ -217,6 +239,12 @@ public partial class Form1 : Form
         {
             MessageBox.Show("Error al imprimir imagen: " + ex.Message, "Error de Impresión", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
+    }
+
+    private void SaveZoom()
+    {
+        config.ZoomFactor = webView.ZoomFactor;
+        config.Save();
     }
 
     private void ConfigMenu_Click(object? sender, EventArgs e)
