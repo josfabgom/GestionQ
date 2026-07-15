@@ -53,5 +53,8 @@ namespace GestionQ.Web.Models
 
         [Display(Name = "Ruta de Carpeta JDataGate (Balanza)")]
         public string JDataGateFolderPath { get; set; } = string.Empty;
+
+        [Display(Name = "Tema Visual (Colores)")]
+        public string UITheme { get; set; } = "violet";
     }
 }

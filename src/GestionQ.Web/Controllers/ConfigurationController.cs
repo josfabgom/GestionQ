@@ -54,7 +54,8 @@ namespace GestionQ.Web.Controllers
                 CompanyTaxCondition = _config["CompanyInfo:TaxCondition"] ?? "",
                 CompanyStartOfActivities = DateTime.TryParse(_config["CompanyInfo:StartOfActivities"], out var date) ? date : null,
                 CompanyIIBB = _config["CompanyInfo:IIBB"] ?? "",
-                JDataGateFolderPath = _config["Scale:JDataGateFolderPath"] ?? @"C:\JDataGate\IN\"
+                JDataGateFolderPath = _config["Scale:JDataGateFolderPath"] ?? @"C:\JDataGate\IN\",
+                UITheme = _config["UI:Theme"] ?? "violet"
             };
 
             var setting = _context.SystemSettings.FirstOrDefault(s => s.Key == "NextInternalSupplierNumber");
@@ -162,6 +163,12 @@ namespace GestionQ.Web.Controllers
                     }
                     node["Scale"]!["JDataGateFolderPath"] = model.JDataGateFolderPath;
 
+                    if (node["UI"] == null)
+                    {
+                        node["UI"] = new JsonObject();
+                    }
+                    node["UI"]!["Theme"] = model.UITheme;
+
                     var options = new JsonSerializerOptions { WriteIndented = true };
                     await System.IO.File.WriteAllTextAsync(appSettingsPath, node.ToJsonString(options));
                 }
@@ -237,6 +244,91 @@ namespace GestionQ.Web.Controllers
             {
                 ModelState.AddModelError(string.Empty, "Ocurrió un error al guardar la identidad: " + ex.Message);
                 return View("SystemSettings", model);
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateUITheme(ConfigurationViewModel model)
+        {
+            try
+            {
+                var appSettingsPath = Path.Combine(_env.ContentRootPath, "appsettings.json");
+                var json = await System.IO.File.ReadAllTextAsync(appSettingsPath);
+                var node = JsonNode.Parse(json);
+                if (node != null)
+                {
+                    if (node["UI"] == null)
+                    {
+                        node["UI"] = new JsonObject();
+                    }
+                    node["UI"]!["Theme"] = model.UITheme;
+
+                    var options = new JsonSerializerOptions { WriteIndented = true };
+                    await System.IO.File.WriteAllTextAsync(appSettingsPath, node.ToJsonString(options));
+                }
+
+                TempData["SuccessMessage"] = "El tema visual se actualizó correctamente.";
+                return RedirectToAction(nameof(SystemSettings));
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = "Ocurrió un error al guardar el tema: " + ex.Message;
+                return RedirectToAction(nameof(SystemSettings));
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> BackupDatabase()
+        {
+            try
+            {
+                var connString = _config.GetConnectionString("DefaultConnection");
+                var builder = new SqlConnectionStringBuilder(connString);
+                string dbName = builder.InitialCatalog;
+
+                string backupDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonDocuments), "GestionQ_Backups");
+                if (!Directory.Exists(backupDir))
+                {
+                    Directory.CreateDirectory(backupDir);
+                }
+
+                string fileName = $"{dbName}_Backup_{DateTime.Now:yyyyMMdd_HHmmss}.bak";
+                string backupPath = Path.Combine(backupDir, fileName);
+
+                using (var connection = new SqlConnection(connString))
+                {
+                    await connection.OpenAsync();
+                    
+                    var backupCommand = $"BACKUP DATABASE [{dbName}] TO DISK = @path WITH FORMAT, INIT, SKIP, NOREWIND, NOUNLOAD, STATS = 10";
+                    using (var cmd = new SqlCommand(backupCommand, connection))
+                    {
+                        cmd.Parameters.AddWithValue("@path", backupPath);
+                        cmd.CommandTimeout = 300; // 5 minutos de timeout
+                        await cmd.ExecuteNonQueryAsync();
+                    }
+                }
+
+                if (!System.IO.File.Exists(backupPath))
+                {
+                    TempData["ErrorMessage"] = "No se pudo generar el archivo de respaldo.";
+                    return RedirectToAction(nameof(SystemSettings));
+                }
+
+                var fileBytes = await System.IO.File.ReadAllBytesAsync(backupPath);
+                
+                try
+                {
+                    System.IO.File.Delete(backupPath);
+                }
+                catch { /* Ignorar errores de borrado */ }
+
+                return File(fileBytes, "application/octet-stream", fileName);
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = "Ocurrió un error al generar el respaldo: " + ex.Message;
+                return RedirectToAction(nameof(SystemSettings));
             }
         }
     }

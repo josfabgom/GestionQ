@@ -179,6 +179,41 @@
                 <span asp-validation-for="LogoFile" class="text-danger"></span>
             </div>
 
+            <h3 style="margin-top: 2rem; color: #a855f7; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">
+                <i class="fa-solid fa-palette"></i> Apariencia y Tema</h3>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">Elige la paleta de colores para la interfaz.</p>
+            
+            <div class="form-group" style="margin-top: 1rem;">
+                <label asp-for="UITheme" class="control-label"></label>
+                <select asp-for="UITheme" class="form-control" style="background: rgba(0,0,0,0.2);">
+                    <option value="violet">Premium Violeta-Índigo (Por defecto)</option>
+                    <option value="emerald">Verde Esmeralda / Cyberpunk</option>
+                    <option value="sapphire">Azul Zafiro Clásico</option>
+                    <option value="ruby">Rojo Rubí / Carmesí</option>
+                    <option value="amber">Naranja Ámbar / Dorado</option>
+                </select>
+                <span asp-validation-for="UITheme" class="text-danger"></span>
+            </div>
+            
+            <div class="form-group" style="margin-top: 1rem; display: flex; justify-content: flex-end;">
+                <button type="submit" asp-action="UpdateUITheme" class="btn-primary" style="padding: 0.6rem 1.2rem;">
+                    <i class="fa-solid fa-save"></i> Aplicar Tema
+                </button>
+            </div>
+
+            <h3
+                style="margin-top: 2rem; color: #ef4444; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">
+                <i class="fa-solid fa-database"></i> Respaldo de Base de Datos</h3>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">Genera y descarga un archivo (.bak) con toda la información actual del sistema.</p>
+
+            <div class="form-group" style="margin-top: 1rem;">
+                <a asp-action="BackupDatabase" asp-controller="Configuration" class="btn-secondary" 
+                   style="display: inline-flex; align-items: center; gap: 0.5rem; background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #fca5a5;"
+                   onclick="return confirm('Se generará un respaldo de la base de datos actual. El proceso puede demorar unos segundos. ¿Deseas continuar?');">
+                    <i class="fa-solid fa-download"></i> Generar y Descargar Backup (.bak)
+                </a>
+            </div>
+
             <div class="form-group" style="margin-top: 2.5rem;">
                 <button type="submit" class="btn-primary" style="width: 100%; font-size: 1.1rem; padding: 0.8rem;"
                     onclick="return confirm('Al aplicar cambios de base de datos el sistema intentará reiniciar momentáneamente. ¿Deseas aplicar los ajustes?')">

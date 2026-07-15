@@ -8,18 +8,65 @@
 }
 
 :root {
-    --bg-dark: #0f172a;
+    /* Default Theme (Violet-Indigo) */
+    --bg-dark-1: #0f172a;
+    --bg-dark-2: #1e1b4b;
     --bg-panel: rgba(30, 41, 59, 0.7);
     --text-main: #f8fafc;
     --text-muted: #94a3b8;
-    --accent: #3b82f6;
-    --accent-hover: #2563eb;
+    --accent: #8b5cf6;
+    --accent-hover: #7c3aed;
     --border: rgba(255, 255, 255, 0.1);
+    --glow-color: rgba(139, 92, 246, 0.4);
+}
+
+[data-theme="emerald"] {
+    --bg-dark-1: #064e3b;
+    --bg-dark-2: #022c22;
+    --bg-panel: rgba(6, 78, 59, 0.6);
+    --text-main: #ecfdf5;
+    --text-muted: #a7f3d0;
+    --accent: #10b981;
+    --accent-hover: #059669;
+    --glow-color: rgba(16, 185, 129, 0.4);
+}
+
+[data-theme="sapphire"] {
+    --bg-dark-1: #0c4a6e;
+    --bg-dark-2: #082f49;
+    --bg-panel: rgba(12, 74, 110, 0.6);
+    --text-main: #f0f9ff;
+    --text-muted: #bae6fd;
+    --accent: #0284c7;
+    --accent-hover: #0369a1;
+    --glow-color: rgba(2, 132, 199, 0.4);
+}
+
+[data-theme="ruby"] {
+    --bg-dark-1: #450a0a;
+    --bg-dark-2: #280505;
+    --bg-panel: rgba(69, 10, 10, 0.6);
+    --text-main: #fef2f2;
+    --text-muted: #fecaca;
+    --accent: #ef4444;
+    --accent-hover: #dc2626;
+    --glow-color: rgba(239, 68, 68, 0.4);
+}
+
+[data-theme="amber"] {
+    --bg-dark-1: #451a03;
+    --bg-dark-2: #290f02;
+    --bg-panel: rgba(69, 26, 3, 0.6);
+    --text-main: #fffbeb;
+    --text-muted: #fde68a;
+    --accent: #f59e0b;
+    --accent-hover: #d97706;
+    --glow-color: rgba(245, 158, 11, 0.4);
 }
 
 body {
     font-family: 'Outfit', sans-serif;
-    background: radial-gradient(circle at top left, #1e1b4b, #0f172a);
+    background: linear-gradient(135deg, var(--bg-dark-1), var(--bg-dark-2));
     color: var(--text-main);
     min-height: 100vh;
     display: flex;
@@ -105,12 +152,12 @@ body {
 /* Cards & Panels */
 .glass-panel {
     background: var(--bg-panel);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(20px) saturate(1.2);
+    -webkit-backdrop-filter: blur(20px) saturate(1.2);
     border: 1px solid var(--border);
     border-radius: 16px;
     padding: 1.5rem;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.6);
     margin-bottom: 1.5rem;
 }
 
@@ -120,6 +167,7 @@ h2,
 h3 {
     font-weight: 600;
     margin-bottom: 1rem;
+    color: var(--text-main);
 }
 
 .page-title {
@@ -142,6 +190,12 @@ h3 {
 .table td {
     padding: 1rem;
     border-bottom: 1px solid var(--border);
+    transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.table tbody tr:hover td {
+    background-color: rgba(255,255,255,0.02);
+    transform: translateX(4px);
 }
 
 .table th {
@@ -152,22 +206,23 @@ h3 {
 
 /* Buttons */
 .btn-primary {
-    background: var(--accent);
+    background: linear-gradient(135deg, var(--accent), var(--accent-hover));
     color: white;
     border: none;
     padding: 0.6rem 1.2rem;
     border-radius: 8px;
     cursor: pointer;
     font-weight: 600;
-    transition: background 0.3s ease, transform 0.2s ease;
+    transition: all 0.3s ease;
     text-decoration: none;
     display: inline-block;
+    box-shadow: 0 4px 15px var(--glow-color);
 }
 
 .btn-primary:hover {
-    background: var(--accent-hover);
-    transform: translateY(-2px);
+    transform: translateY(-2px) scale(1.03);
     color: white;
+    box-shadow: 0 6px 20px var(--glow-color);
 }
 
 .btn-danger {
@@ -267,10 +322,9 @@ h3 {
 .form-control:focus {
     outline: none;
     border-color: var(--accent);
-}
-
-/* Sidebar Icons */
-.nav-links li a i {
+    box-shadow: 0 0 0 3px var(--glow-color);
+    background: rgba(0, 0, 0, 0.3);
+}.nav-links li a i {
     margin-right: 10px;
     width: 20px;
     text-align: center;
