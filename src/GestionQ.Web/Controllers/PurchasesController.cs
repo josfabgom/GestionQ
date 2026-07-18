@@ -12,10 +12,12 @@ namespace GestionQ.Web.Controllers
     public class PurchasesController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly IWebHostEnvironment _env;
 
-        public PurchasesController(ApplicationDbContext context)
+        public PurchasesController(ApplicationDbContext context, IWebHostEnvironment env)
         {
             _context = context;
+            _env = env;
         }
 
         public async Task<IActionResult> Index()
@@ -96,7 +98,7 @@ namespace GestionQ.Web.Controllers
 
                 if (vm.ImageFile != null)
                 {
-                    string uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "purchases");
+                    string uploadsFolder = Path.Combine(_env.WebRootPath, "uploads", "purchases");
                     if (!Directory.Exists(uploadsFolder)) Directory.CreateDirectory(uploadsFolder);
                     
                     string uniqueFileName = Guid.NewGuid().ToString() + "_" + vm.ImageFile.FileName;

@@ -15,10 +15,12 @@ namespace GestionQ.Web.Controllers
     public class ProductsController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly IWebHostEnvironment _env;
 
-        public ProductsController(ApplicationDbContext context)
+        public ProductsController(ApplicationDbContext context, IWebHostEnvironment env)
         {
             _context = context;
+            _env = env;
         }
 
         public async Task<IActionResult> Index(string q)
@@ -125,7 +127,7 @@ namespace GestionQ.Web.Controllers
 
                 if (model.ImageFile != null)
                 {
-                    string folder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", "products");
+                    string folder = Path.Combine(_env.WebRootPath, "images", "products");
                     if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
 
                     string fileName = $"{product.InternalCode}_{Guid.NewGuid()}{Path.GetExtension(model.ImageFile.FileName)}";
@@ -265,11 +267,11 @@ namespace GestionQ.Web.Controllers
                     {
                         if (!string.IsNullOrEmpty(product.ImageUrl))
                         {
-                            string oldPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", product.ImageUrl.TrimStart('/'));
+                            string oldPath = Path.Combine(_env.WebRootPath, product.ImageUrl.TrimStart('/'));
                             if (System.IO.File.Exists(oldPath)) System.IO.File.Delete(oldPath);
                         }
 
-                        string folder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", "products");
+                        string folder = Path.Combine(_env.WebRootPath, "images", "products");
                         if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
 
                         string fileName = $"{product.InternalCode}_{Guid.NewGuid()}{Path.GetExtension(model.ImageFile.FileName)}";
@@ -323,7 +325,7 @@ namespace GestionQ.Web.Controllers
 
                 if (!string.IsNullOrEmpty(product.ImageUrl))
                 {
-                    string path = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", product.ImageUrl.TrimStart('/'));
+                    string path = Path.Combine(_env.WebRootPath, product.ImageUrl.TrimStart('/'));
                     if (System.IO.File.Exists(path)) System.IO.File.Delete(path);
                 }
                 _context.Products.Remove(product);
@@ -414,7 +416,7 @@ namespace GestionQ.Web.Controllers
                 return View("Import");
             }
 
-            var tempFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "temp");
+            var tempFolder = Path.Combine(_env.WebRootPath, "temp");
             if (!Directory.Exists(tempFolder)) Directory.CreateDirectory(tempFolder);
 
             var tempFilePath = Path.Combine(tempFolder, $"{Guid.NewGuid()}{Path.GetExtension(file.FileName)}");

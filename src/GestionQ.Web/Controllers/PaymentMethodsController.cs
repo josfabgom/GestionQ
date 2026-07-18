@@ -80,5 +80,19 @@ namespace GestionQ.Web.Controllers
         {
             return _context.PaymentMethods.Any(e => e.Id == id);
         }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Policy = Permissions.Config.Delete)]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var paymentMethod = await _context.PaymentMethods.FindAsync(id);
+            if (paymentMethod != null)
+            {
+                _context.PaymentMethods.Remove(paymentMethod);
+                await _context.SaveChangesAsync();
+            }
+            return RedirectToAction(nameof(Index));
+        }
     }
 }

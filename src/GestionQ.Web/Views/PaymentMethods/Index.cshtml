@@ -35,10 +35,45 @@
                         }
                     </td>
                     <td>
-                        <a asp-action="Edit" asp-route-id="@item.Id" class="btn-secondary">Editar</a>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <a asp-action="Edit" asp-route-id="@item.Id" class="btn-secondary">Editar</a>
+                            <form asp-action="Delete" asp-route-id="@item.Id" method="post" class="delete-form" data-name="@item.Name" style="margin: 0;">
+                                <button type="submit" class="btn-secondary" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.2);" title="Eliminar Medio de Pago">
+                                    Eliminar
+                                </button>
+                            </form>
+                        </div>
                     </td>
                 </tr>
             }
         </tbody>
     </table>
 </div>
+
+@section Scripts {
+    <script>
+        document.querySelectorAll('.delete-form').forEach(form => {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const itemName = this.getAttribute('data-name');
+                
+                Swal.fire({
+                    title: '¿Eliminar Medio de Pago?',
+                    html: `¿Está seguro que desea eliminar el medio de pago <b>${itemName}</b>?<br><br><small style="color: #fca5a5;">Nota: Eliminar un medio de pago que ya ha sido usado en ventas podría afectar el historial.</small>`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#ef4444',
+                    cancelButtonColor: '#4b5563',
+                    confirmButtonText: 'Sí, eliminar',
+                    cancelButtonText: 'Cancelar',
+                    background: '#1e293b',
+                    color: '#f8fafc'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        this.submit();
+                    }
+                });
+            });
+        });
+    </script>
+}
