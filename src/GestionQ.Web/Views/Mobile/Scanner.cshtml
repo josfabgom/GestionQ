@@ -1,0 +1,321 @@
+@{
+    Layout = null;
+    ViewData["Title"] = "Escáner Móvil";
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>@ViewData["Title"]</title>
+    
+    <!-- PWA & Mobile Icons -->
+    <link rel="manifest" href="/manifest-scanner.json" />
+    <link rel="icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" href="/favicon.ico" />
+    <meta name="theme-color" content="#1e293b" />
+    
+    <!-- iOS Specific -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Escáner" />
+
+    <!-- Fonts & Icons -->
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@@sweetalert2/theme-dark@5/dark.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@@11/dist/sweetalert2.min.js"></script>
+    <style>
+        body {
+            background-color: #0f172a;
+            color: #f8fafc;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .mobile-header {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 1rem;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .mobile-header h1 {
+            margin: 0;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        .mobile-container {
+            flex: 1;
+            padding: 1rem;
+            overflow-y: auto;
+        }
+        .card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.8rem 1rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            color: white;
+            transition: opacity 0.2s;
+        }
+        .btn:active {
+            opacity: 0.8;
+        }
+        .btn-green { background: #10b981; }
+        .btn-red { background: #ef4444; }
+        .btn-blue { background: #3b82f6; }
+        
+        .input-group {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .input-group input {
+            flex: 1;
+            padding: 0.8rem;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(0,0,0,0.2);
+            color: white;
+            font-size: 1rem;
+        }
+        .input-group .btn {
+            width: auto;
+            padding: 0 1rem;
+        }
+        
+        .stat-box {
+            background: rgba(0,0,0,0.2);
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+            flex: 1;
+        }
+        .stat-box p { margin: 0 0 0.25rem 0; font-size: 0.8rem; color: #94a3b8; }
+        .stat-box h3 { margin: 0; font-size: 1.5rem; }
+    </style>
+</head>
+<body>
+
+    <div class="mobile-header">
+        <h1><i class="fa-solid fa-qrcode"></i> Escáner de Góndola</h1>
+    </div>
+
+    <div class="mobile-container">
+        
+        <!-- Lector -->
+        <div class="card" style="padding: 0; overflow: hidden; margin-bottom: 1rem;">
+            <div id="reader" style="width: 100%; min-height: 250px; background: #000;"></div>
+        </div>
+
+        <div style="margin-bottom: 1.5rem;">
+            <button id="btnStart" class="btn btn-green"><i class="fa-solid fa-camera"></i> Activar Lector</button>
+            <button id="btnStop" class="btn btn-red" style="display: none;"><i class="fa-solid fa-stop"></i> Detener Lector</button>
+        </div>
+
+        <!-- Manual input -->
+        <div class="input-group">
+            <input type="number" id="manualBarcode" placeholder="O ingresa código manual..." pattern="\d*" />
+            <button id="btnManualSearch" class="btn btn-blue"><i class="fa-solid fa-magnifying-glass"></i></button>
+        </div>
+
+        <!-- Resultados -->
+        <div id="resultCard" class="card" style="display: none;">
+            <h2 id="prodName" style="margin-top: 0; color: #60a5fa; font-size: 1.2rem; line-height: 1.3;">Nombre del Producto</h2>
+            <p style="color: #94a3b8; margin-bottom: 1rem; font-size: 0.85rem;">Cód: <span id="prodBarcode"></span></p>
+
+            <input type="hidden" id="prodId" />
+
+            <div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem;">
+                <!-- Stock -->
+                <div class="stat-box">
+                    <p>Stock Actual</p>
+                    <h3 id="prodStock" style="color: #f8fafc;">0.00</h3>
+                </div>
+                
+                <!-- Precio -->
+                <div class="stat-box">
+                    <p>Precio Final</p>
+                    <h3 id="prodPrice" style="color: #10b981;">$0.00</h3>
+                </div>
+            </div>
+
+            <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 1rem 0;" />
+
+            <h4 style="margin-top: 0; margin-bottom: 1rem; font-size: 1rem; color: #cbd5e1;">Ajuste Rápido</h4>
+            
+            <!-- Add to Print Queue -->
+            <button id="btnMarkForLabel" class="btn btn-blue" style="margin-bottom: 1rem; background: #8b5cf6;"><i class="fa-solid fa-barcode"></i> Enviar a Imprimir Etiqueta</button>
+
+            <!-- Update Stock -->
+            <div class="input-group" style="margin-bottom: 0.5rem;">
+                <input type="number" id="inputStockChange" placeholder="Sumar/restar stock (ej: 5 o -2)" step="0.01" />
+                <button id="btnUpdateStock" class="btn btn-blue"><i class="fa-solid fa-boxes-stacked"></i></button>
+            </div>
+
+            <!-- Update Price -->
+            <div class="input-group" style="margin-bottom: 0;">
+                <input type="number" id="inputNewPrice" placeholder="Nuevo Precio Final $" step="0.01" />
+                <button id="btnUpdatePrice" class="btn btn-green"><i class="fa-solid fa-tag"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script>
+        let html5QrCode = null;
+
+        const beepSound = new Audio("data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAAAeHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4e");
+        
+        function playBeep() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(800, ctx.currentTime);
+                osc.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.1);
+            } catch(e) {}
+        }
+
+        document.getElementById('btnStart').addEventListener('click', () => {
+            if (!html5QrCode) {
+                html5QrCode = new Html5Qrcode("reader");
+            }
+            
+            html5QrCode.start(
+                { facingMode: "environment" },
+                {
+                    fps: 10,
+                    qrbox: { width: 250, height: 150 }
+                },
+                (decodedText, decodedResult) => {
+                    playBeep();
+                    searchProduct(decodedText);
+                },
+                (errorMessage) => {
+                })
+            .then(() => {
+                document.getElementById('btnStart').style.display = 'none';
+                document.getElementById('btnStop').style.display = 'inline-flex';
+            })
+            .catch((err) => {
+                Swal.fire('Error', 'No se pudo acceder a la cámara. Asegúrate de usar HTTPS.', 'error');
+            });
+        });
+
+        document.getElementById('btnStop').addEventListener('click', stopScanner);
+
+        function stopScanner() {
+            if (html5QrCode) {
+                html5QrCode.stop().then(() => {
+                    document.getElementById('btnStart').style.display = 'inline-flex';
+                    document.getElementById('btnStop').style.display = 'none';
+                }).catch(err => {
+                    console.error("Failed to stop", err);
+                });
+            }
+        }
+
+        document.getElementById('btnManualSearch').addEventListener('click', () => {
+            const code = document.getElementById('manualBarcode').value;
+            if (code) searchProduct(code);
+        });
+
+        function searchProduct(barcode) {
+            document.getElementById('manualBarcode').value = barcode;
+            
+            fetch(`/Mobile/GetProduct?barcode=${barcode}`)
+                .then(res => {
+                    if (!res.ok) throw new Error('Producto no encontrado');
+                    return res.json();
+                })
+                .then(data => {
+                    document.getElementById('prodId').value = data.id;
+                    document.getElementById('prodName').innerText = data.name;
+                    document.getElementById('prodBarcode').innerText = data.barcode || data.internalCode;
+                    document.getElementById('prodStock').innerText = data.stock.toFixed(2);
+                    document.getElementById('prodPrice').innerText = '$' + data.price.toFixed(2);
+                    
+                    document.getElementById('inputStockChange').value = '';
+                    document.getElementById('inputNewPrice').value = data.price.toFixed(2);
+
+                    document.getElementById('resultCard').style.display = 'block';
+                    
+                    // scroll to result
+                    document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth' });
+                })
+                .catch(err => {
+                    Swal.fire({ icon: 'warning', title: 'Ups!', text: err.message, toast: true, position: 'top', showConfirmButton: false, timer: 3000 });
+                });
+        }
+
+        document.getElementById('btnUpdateStock').addEventListener('click', () => {
+            const id = document.getElementById('prodId').value;
+            const change = document.getElementById('inputStockChange').value;
+            
+            if (!id || !change) return;
+
+            fetch(`/Mobile/UpdateStock?id=${id}&quantityChange=${change}&concept=Ajuste Scanner`, { method: 'POST' })
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('prodStock').innerText = data.newStock.toFixed(2);
+                    document.getElementById('inputStockChange').value = '';
+                    Swal.fire({ icon: 'success', title: 'Stock actualizado', toast: true, position: 'top', showConfirmButton: false, timer: 2000 });
+                });
+        });
+
+        document.getElementById('btnUpdatePrice').addEventListener('click', () => {
+            const id = document.getElementById('prodId').value;
+            const newPrice = document.getElementById('inputNewPrice').value;
+            
+            if (!id || !newPrice) return;
+
+            fetch(`/Mobile/UpdatePrice?id=${id}&newPrice=${newPrice}`, { method: 'POST' })
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('prodPrice').innerText = '$' + data.newPrice.toFixed(2);
+                    Swal.fire({ icon: 'success', title: 'Precio actualizado', toast: true, position: 'top', showConfirmButton: false, timer: 2000 });
+                });
+        });
+
+        document.getElementById('btnMarkForLabel').addEventListener('click', () => {
+            const id = document.getElementById('prodId').value;
+            if (!id) return;
+
+            fetch(`/Mobile/MarkForLabel?id=${id}`, { method: 'POST' })
+                .then(res => res.json())
+                .then(data => {
+                    Swal.fire({ icon: 'success', title: 'Etiqueta programada', text: data.message, toast: true, position: 'top', showConfirmButton: false, timer: 2000 });
+                })
+                .catch(err => {
+                    Swal.fire({ icon: 'error', title: 'Error', text: err.message, toast: true, position: 'top', showConfirmButton: false, timer: 2000 });
+                });
+        });
+    </script>
+</body>
+</html>

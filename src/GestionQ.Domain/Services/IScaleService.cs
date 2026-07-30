@@ -17,5 +17,5 @@ public interface IScaleService
     /// <summary>
     /// Exporta un catálogo completo de productos para Kretz Itegra en formato CSV.
     /// </summary>
-    bool ExportItegraCatalog(IEnumerable<(int Plu, string Name, decimal Price, int CategoryId, bool IsPesable)> products);
+    bool ExportItegraCatalog(IEnumerable<(int Plu, string Name, decimal Price, int CategoryId, bool IsPesable, int ExpirationDays)> products);
 }

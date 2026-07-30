@@ -73,7 +73,7 @@ public class KretzJDataGateService : IScaleService
         }
     }
 
-    public bool ExportItegraCatalog(IEnumerable<(int Plu, string Name, decimal Price, int CategoryId, bool IsPesable)> products)
+    public bool ExportItegraCatalog(IEnumerable<(int Plu, string Name, decimal Price, int CategoryId, bool IsPesable, int ExpirationDays)> products)
     {
         try
         {
@@ -113,8 +113,11 @@ public class KretzJDataGateService : IScaleService
                 // CODIGO DE ETIQUETA: 2 dígitos
                 string labelCode = "01"; // Fijo según requerimiento
 
+                // DIAS DE VENCIMIENTO
+                string expirationDays = product.ExpirationDays.ToString();
+
                 // Formato con delimitador punto y coma (;)
-                writer.WriteLine($"{pluNum};{pluCod};{name};{price};{dpto};{type};{labelCode}");
+                writer.WriteLine($"{pluNum};{pluCod};{name};{price};{dpto};{type};{labelCode};{expirationDays}");
             }
 
             _logger.LogInformation("Catálogo para Itegra exportado exitosamente a {FilePath}", filePath);

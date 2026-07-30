@@ -313,6 +313,23 @@
             renderQueue();
         }
 
+        function updateQueueFormat(index, newFormat) {
+            printQueue[index].Format = newFormat;
+            updatePrintInput();
+        }
+
+        function updateQueueQty(index, newQty) {
+            let qty = parseInt(newQty);
+            if (qty < 1) qty = 1;
+            printQueue[index].Quantity = qty;
+            updatePrintInput();
+        }
+
+        function updatePrintInput() {
+            const printInput = document.getElementById('printQueueJson');
+            printInput.value = JSON.stringify(printQueue.map(q => ({ ProductId: q.ProductId, Quantity: q.Quantity, Format: q.Format })));
+        }
+
         document.getElementById('btnClearQueue').addEventListener('click', function() {
             if (printQueue.length === 0) return;
             Swal.fire({
@@ -337,8 +354,7 @@
             document.getElementById('queueCount').textContent = printQueue.length;
             
             const printInput = document.getElementById('printQueueJson');
-            // We map to match the C# model strictly
-            printInput.value = JSON.stringify(printQueue.map(q => ({ ProductId: q.ProductId, Quantity: q.Quantity, Format: q.Format })));
+            updatePrintInput();
             
             const btnPrint = document.getElementById('btnPrint');
             btnPrint.disabled = printQueue.length === 0;
@@ -352,10 +368,20 @@
             printQueue.forEach((item, index) => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td style="font-weight: 500;">${item.ProductName}</td>
-                    <td style="text-align: center;"><span style="background: rgba(255,255,255,0.1); padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem;">${item.Format}</span></td>
-                    <td style="text-align: center; font-weight: bold;">${item.Quantity}</td>
-                    <td style="text-align: right;">
+                    <td style="font-weight: 500; vertical-align: middle;">${item.ProductName}</td>
+                    <td style="text-align: center; vertical-align: middle;">
+                        <select class="form-control" style="padding: 0.2rem 0.5rem; font-size: 0.85rem; height: auto; display: inline-block; width: auto; background: rgba(0,0,0,0.2);" onchange="updateQueueFormat(${index}, this.value)">
+                            <option value="50x35" ${item.Format === '50x35' ? 'selected' : ''}>50x35mm</option>
+                            <option value="80x33" ${item.Format === '80x33' ? 'selected' : ''}>80x33mm</option>
+                            <option value="A4_Sheet_50x35" ${item.Format === 'A4_Sheet_50x35' ? 'selected' : ''}>Hoja A4 (Varias 55x35)</option>
+                            <option value="A4" ${item.Format === 'A4' ? 'selected' : ''}>A4 (Cartel)</option>
+                            <option value="A4_Half" ${item.Format === 'A4_Half' ? 'selected' : ''}>Media A4</option>
+                        </select>
+                    </td>
+                    <td style="text-align: center; vertical-align: middle;">
+                        <input type="number" class="form-control" style="padding: 0.2rem; font-size: 0.85rem; width: 60px; height: auto; text-align: center; margin: 0 auto; background: rgba(0,0,0,0.2);" value="${item.Quantity}" min="1" onchange="updateQueueQty(${index}, this.value)">
+                    </td>
+                    <td style="text-align: right; vertical-align: middle;">
                         <button type="button" class="btn-danger btn-sm" onclick="removeQueueItem(${index})" style="padding: 0.3rem 0.6rem;"><i class="fa-solid fa-times"></i></button>
                     </td>
                 `;

@@ -130,7 +130,7 @@
                 <div class="form-group">
                     <label asp-for="Price" class="control-label">Precio de Venta Final ($)</label>
                     <div style="display: flex; gap: 0.5rem; align-items: stretch;">
-                        <input asp-for="Price" type="number" class="form-control" id="Price" style="background: rgba(96, 165, 250, 0.15); border-color: var(--accent); font-weight: 700; font-size: 1.5rem; color: #fff; flex: 1;" step="0.01" />
+                        <input asp-for="Price" type="number" class="form-control" id="Price" style="background: rgba(96, 165, 250, 0.15); border-color: var(--accent); font-weight: 700; font-size: 1.5rem; color: #fff; flex: 1;" step="0.01" oninput="calculateMarginFromPrice()" />
                         <button type="button" class="btn-secondary" onclick="openPriceWizard()" style="padding: 0 1rem; white-space: nowrap;" title="Calcular desde Costos">
                             ⚙️ Estructura
                         </button>
@@ -320,6 +320,30 @@
             document.getElementById('InternalTax').value = document.getElementById('WizardInternalTax').value;
             
             closePriceWizard();
+        }
+
+        function calculateMarginFromPrice() {
+            const cost = parseFloat(document.getElementById('BaseCost').value) || 0;
+            const tax = parseFloat(document.getElementById('InternalTax').value) || 0;
+            const finalPrice = parseFloat(document.getElementById('Price').value) || 0;
+            
+            const vatRateId = document.getElementById('VatRateId').value;
+            const vatSelect = document.getElementById('WizardVatRateId');
+            let vatRate = 0;
+            
+            if (vatSelect && vatRateId) {
+                const option = Array.from(vatSelect.options).find(o => o.value === vatRateId);
+                if (option) {
+                    vatRate = parseFloat(option.dataset.rate) || 0;
+                }
+            }
+
+            const costWithIva = cost * (1 + (vatRate / 100));
+            
+            if (costWithIva > 0) {
+                let newMargin = (((finalPrice - tax) / costWithIva) - 1) * 100;
+                document.getElementById('ProfitMargin').value = newMargin.toFixed(6);
+            }
         }
 
         document.getElementById('CategoryId').addEventListener('change', function() {

@@ -82,13 +82,14 @@ public class ScaleController : Controller
             return RedirectToAction(nameof(Index));
         }
 
-        // Para Itegra se requiere: (int Plu, string Name, decimal Price, int CategoryId, bool IsPesable)
+        // Para Itegra se requiere: (int Plu, string Name, decimal Price, int CategoryId, bool IsPesable, int ExpirationDays)
         var exportData = pesables.Select(p => (
             Plu: p.InternalCode, 
             Name: p.Name, 
             Price: p.Price, 
             CategoryId: p.SubCategory?.CategoryId ?? 1, // Fallback si no tiene subrubro
-            IsPesable: p.IsPesable
+            IsPesable: p.IsPesable,
+            ExpirationDays: p.ExpirationDays
         )).ToList();
         
         bool success = _scaleService.ExportItegraCatalog(exportData);

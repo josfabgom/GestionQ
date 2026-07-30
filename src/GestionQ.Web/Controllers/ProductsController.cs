@@ -309,6 +309,58 @@ namespace GestionQ.Web.Controllers
             return View(model);
         }
 
+        [Authorize(Policy = Permissions.Products.Create)]
+        public async Task<IActionResult> Duplicate(int? id)
+        {
+            if (id == null) return NotFound();
+
+            var product = await _context.Products
+                .Include(p => p.SubCategory)
+                .Include(p => p.PriceHistory)
+                .FirstOrDefaultAsync(m => m.Id == id);
+
+            if (product == null) return NotFound();
+
+            var latestPrice = product.PriceHistory.OrderByDescending(p => p.UpdateDate).FirstOrDefault();
+
+            var model = new ProductViewModel
+            {
+                Id = 0, // Id 0 para que se cree como nuevo
+                InternalCode = 0, // Se asignará uno nuevo automáticamente en el POST
+                Barcode = null, // Dejar vacío para evitar duplicados
+                Name = product.Name + " (Copia)",
+                SubCategoryId = product.SubCategoryId,
+                IsPesable = product.IsPesable,
+                IsFractionable = product.IsFractionable,
+                SendToScale = product.SendToScale,
+                BaseCost = latestPrice?.BaseCost ?? 0,
+                ProfitMargin = latestPrice?.ProfitMargin ?? 0,
+                InternalTax = latestPrice?.InternalTax ?? 0,
+                Price = product.Price,
+                Stock = product.Stock,
+                MinimumStock = product.MinimumStock,
+                VatRateId = product.VatRateId,
+                ImageUrl = null, // No copiamos la imagen por defecto
+                IsActive = product.IsActive,
+                ExpirationDays = product.ExpirationDays
+            };
+
+            ViewBag.Categories = await _context.Categories.ToListAsync();
+            ViewBag.VatRates = await _context.VatRates.Where(v => v.IsActive).ToListAsync();
+            
+            if (product.SubCategoryId.HasValue)
+            {
+                var sub = await _context.SubCategories.FindAsync(product.SubCategoryId);
+                if (sub != null)
+                {
+                    ViewBag.SelectedCategoryId = sub.CategoryId;
+                    ViewBag.SubCategories = await _context.SubCategories.Where(s => s.CategoryId == sub.CategoryId).ToListAsync();
+                }
+            }
+
+            return View("Create", model);
+        }
+
         [HttpPost]
         [Authorize(Policy = Permissions.Products.Delete)]
         public async Task<IActionResult> Delete(int id)
@@ -496,118 +548,233 @@ namespace GestionQ.Web.Controllers
 
                 if (result.Tables.Count > 0)
                 {
-                    var table = result.Tables[0];
-                    int newProducts = 0;
-                    int updatedProducts = 0;
-
-                    var nameCol = model.Mappings.FirstOrDefault(m => m.SystemProperty == "Name");
-                    var supplierCodeCol = model.Mappings.FirstOrDefault(m => m.SystemProperty == "SupplierCode");
-                    var internalCodeCol = model.Mappings.FirstOrDefault(m => m.SystemProperty == "InternalCode");
-                    var priceCol = model.Mappings.FirstOrDefault(m => m.SystemProperty == "Price");
-                    var stockCol = model.Mappings.FirstOrDefault(m => m.SystemProperty == "Stock");
-                    var barcodeCol = model.Mappings.FirstOrDefault(m => m.SystemProperty == "Barcode");
-
-                    var existingProductsBySupplier = await _context.Products
-                        .Where(p => p.SupplierCode != null && p.SupplierCode != "")
-                        .ToDictionaryAsync(p => p.SupplierCode);
-
-                    int maxInternalCode = await _context.Products.AnyAsync() ? await _context.Products.MaxAsync(p => p.InternalCode) : 0;
-
-                    foreach (DataRow row in table.Rows)
+                    try 
                     {
-                        string supplierCode = supplierCodeCol != null ? row[supplierCodeCol.ExcelColumnIndex]?.ToString() : null;
-                        string name = nameCol != null ? row[nameCol.ExcelColumnIndex]?.ToString() : "Producto Sin Nombre";
+                        var table = result.Tables[0];
+                        int newProducts = 0;
+                        int updatedProducts = 0;
+
+                        if (model.Mappings == null) model.Mappings = new List<GestionQ.Web.Models.ColumnMapping>();
+
+                        var nameCol = model.Mappings.FirstOrDefault(m => m.SystemProperty == "Name");
+                        var supplierCodeCol = model.Mappings.FirstOrDefault(m => m.SystemProperty == "SupplierCode");
+                        var internalCodeCol = model.Mappings.FirstOrDefault(m => m.SystemProperty == "InternalCode");
+                        var priceCol = model.Mappings.FirstOrDefault(m => m.SystemProperty == "Price");
+                        var stockCol = model.Mappings.FirstOrDefault(m => m.SystemProperty == "Stock");
+                        var barcodeCol = model.Mappings.FirstOrDefault(m => m.SystemProperty == "Barcode");
                         
-                        if (string.IsNullOrWhiteSpace(name) && string.IsNullOrWhiteSpace(supplierCode)) continue;
+                        var isActiveCol = model.Mappings.FirstOrDefault(m => m.SystemProperty == "IsActive");
+                        var categoryNameCol = model.Mappings.FirstOrDefault(m => m.SystemProperty == "CategoryName");
+                        var subCategoryNameCol = model.Mappings.FirstOrDefault(m => m.SystemProperty == "SubCategoryName");
+                        var isPesableCol = model.Mappings.FirstOrDefault(m => m.SystemProperty == "IsPesable");
+                        var isFractionableCol = model.Mappings.FirstOrDefault(m => m.SystemProperty == "IsFractionable");
+                        var sendToScaleCol = model.Mappings.FirstOrDefault(m => m.SystemProperty == "SendToScale");
+                        var expirationDaysCol = model.Mappings.FirstOrDefault(m => m.SystemProperty == "ExpirationDays");
+                        var minimumStockCol = model.Mappings.FirstOrDefault(m => m.SystemProperty == "MinimumStock");
 
-                        decimal ParseDecimal(string val)
+                        var existingProductsList = await _context.Products
+                            .Where(p => p.SupplierCode != null && p.SupplierCode != "")
+                            .ToListAsync();
+                        
+                        var existingProductsBySupplier = existingProductsList
+                            .GroupBy(p => p.SupplierCode)
+                            .ToDictionary(g => g.Key, g => g.First());
+
+                        var allCategories = await _context.Categories.Include(c => c.SubCategories).ToListAsync();
+
+                        int maxInternalCode = await _context.Products.AnyAsync() ? await _context.Products.MaxAsync(p => p.InternalCode) : 0;
+                        foreach (DataRow row in table.Rows)
                         {
-                            if (string.IsNullOrWhiteSpace(val)) return 0;
-                            // Reemplazar comas por puntos y parsear invariant
-                            val = val.Replace("$", "").Trim();
-                            if (decimal.TryParse(val, System.Globalization.NumberStyles.Any, new System.Globalization.CultureInfo("es-AR"), out decimal parsedEs))
-                                return parsedEs;
-                            if (decimal.TryParse(val, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out decimal parsedInv))
-                                return parsedInv;
-                            return 0;
-                        }
-
-                        decimal price = priceCol != null ? ParseDecimal(row[priceCol.ExcelColumnIndex]?.ToString()) : 0;
-                        decimal stock = stockCol != null ? ParseDecimal(row[stockCol.ExcelColumnIndex]?.ToString()) : 0;
-                        string barcode = barcodeCol != null ? row[barcodeCol.ExcelColumnIndex]?.ToString() : null;
-
-                        Product product = null;
-                        bool isNew = false;
-
-                        if (!string.IsNullOrWhiteSpace(supplierCode) && existingProductsBySupplier.ContainsKey(supplierCode))
-                        {
-                            product = existingProductsBySupplier[supplierCode];
-                            // Update
-                            if (nameCol != null) product.Name = name;
-                            if (priceCol != null) product.Price = price;
-                            if (stockCol != null) product.Stock = stock;
-                            if (barcodeCol != null) product.Barcode = barcode;
-                            
-                            _context.Update(product);
-                            updatedProducts++;
-                            
-                            if (priceCol != null)
+                            string GetRowValue(GestionQ.Web.Models.ColumnMapping col)
                             {
-                                var priceEntry = new ProductPrice
+                                if (col == null) return null;
+                                if (col.ExcelColumnIndex < 0 || col.ExcelColumnIndex >= row.ItemArray.Length) return null;
+                                return row[col.ExcelColumnIndex]?.ToString();
+                            }
+
+                            string supplierCode = GetRowValue(supplierCodeCol);
+                            string name = GetRowValue(nameCol) ?? "Producto Sin Nombre";
+                            
+                            if (string.IsNullOrWhiteSpace(name) && string.IsNullOrWhiteSpace(supplierCode)) continue;
+
+                            decimal ParseDecimal(string val)
+                            {
+                                if (string.IsNullOrWhiteSpace(val)) return 0;
+                                val = val.Replace("$", "").Trim();
+                                if (decimal.TryParse(val, System.Globalization.NumberStyles.Any, new System.Globalization.CultureInfo("es-AR"), out decimal parsedEs))
+                                    return parsedEs;
+                                if (decimal.TryParse(val, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out decimal parsedInv))
+                                    return parsedInv;
+                                return 0;
+                            }
+
+                            bool ParseBool(string val, bool defaultValue)
+                            {
+                                if (string.IsNullOrWhiteSpace(val)) return defaultValue;
+                                var v = val.Trim().ToLowerInvariant();
+                                return v == "1" || v == "si" || v == "sí" || v == "s" || v == "true" || v == "verdadero" || v == "x";
+                            }
+
+                            int ParseInt(string val, int defaultValue = 0)
+                            {
+                                if (string.IsNullOrWhiteSpace(val)) return defaultValue;
+                                if (int.TryParse(val.Trim(), out int res)) return res;
+                                return defaultValue;
+                            }
+
+                            decimal price = ParseDecimal(GetRowValue(priceCol));
+                            decimal stock = ParseDecimal(GetRowValue(stockCol));
+                            string barcode = GetRowValue(barcodeCol);
+
+                            string catName = GetRowValue(categoryNameCol)?.Trim();
+                            string subCatName = GetRowValue(subCategoryNameCol)?.Trim();
+
+                            SubCategory assignedSubCategory = null;
+
+                            if (!string.IsNullOrWhiteSpace(catName) || !string.IsNullOrWhiteSpace(subCatName))
+                            {
+                                Category category = null;
+                                if (!string.IsNullOrWhiteSpace(catName))
                                 {
-                                    ProductId = product.Id,
-                                    FinalPrice = product.Price,
-                                    UpdateDate = DateTime.Now
+                                    category = allCategories.FirstOrDefault(c => c.Name.Equals(catName, StringComparison.OrdinalIgnoreCase));
+                                    if (category == null)
+                                    {
+                                        category = new Category { Name = catName };
+                                        _context.Categories.Add(category);
+                                        allCategories.Add(category);
+                                    }
+                                }
+
+                                if (!string.IsNullOrWhiteSpace(subCatName))
+                                {
+                                    if (category != null)
+                                    {
+                                        assignedSubCategory = category.SubCategories?.FirstOrDefault(s => s.Name.Equals(subCatName, StringComparison.OrdinalIgnoreCase));
+                                        if (assignedSubCategory == null)
+                                        {
+                                            assignedSubCategory = new SubCategory { Name = subCatName, Category = category };
+                                            _context.SubCategories.Add(assignedSubCategory);
+                                            category.SubCategories?.Add(assignedSubCategory);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        assignedSubCategory = allCategories.SelectMany(c => c.SubCategories ?? new List<SubCategory>()).FirstOrDefault(s => s.Name.Equals(subCatName, StringComparison.OrdinalIgnoreCase));
+                                        if (assignedSubCategory == null)
+                                        {
+                                            category = allCategories.FirstOrDefault(c => c.Name.Equals("General", StringComparison.OrdinalIgnoreCase));
+                                            if (category == null)
+                                            {
+                                                category = new Category { Name = "General" };
+                                                _context.Categories.Add(category);
+                                                allCategories.Add(category);
+                                            }
+                                            assignedSubCategory = new SubCategory { Name = subCatName, Category = category };
+                                            _context.SubCategories.Add(assignedSubCategory);
+                                            category.SubCategories?.Add(assignedSubCategory);
+                                        }
+                                    }
+                                }
+                                else if (category != null)
+                                {
+                                    assignedSubCategory = category.SubCategories?.FirstOrDefault(s => s.Name.Equals(catName, StringComparison.OrdinalIgnoreCase));
+                                    if (assignedSubCategory == null)
+                                    {
+                                        assignedSubCategory = new SubCategory { Name = catName, Category = category };
+                                        _context.SubCategories.Add(assignedSubCategory);
+                                        category.SubCategories?.Add(assignedSubCategory);
+                                    }
+                                }
+                            }
+
+                            Product product = null;
+                            bool isNew = false;
+
+                            if (!string.IsNullOrWhiteSpace(supplierCode) && existingProductsBySupplier.ContainsKey(supplierCode))
+                            {
+                                product = existingProductsBySupplier[supplierCode];
+                                // Update
+                                if (nameCol != null) product.Name = name;
+                                if (priceCol != null) product.Price = price;
+                                if (stockCol != null) product.Stock = stock;
+                                if (barcodeCol != null) product.Barcode = barcode;
+                                
+                                if (isActiveCol != null) product.IsActive = ParseBool(GetRowValue(isActiveCol), product.IsActive);
+                                if (assignedSubCategory != null) product.SubCategory = assignedSubCategory;
+                                if (isPesableCol != null) product.IsPesable = ParseBool(GetRowValue(isPesableCol), product.IsPesable);
+                                if (isFractionableCol != null) product.IsFractionable = ParseBool(GetRowValue(isFractionableCol), product.IsFractionable);
+                                if (sendToScaleCol != null) product.SendToScale = ParseBool(GetRowValue(sendToScaleCol), product.SendToScale);
+                                if (expirationDaysCol != null) product.ExpirationDays = ParseInt(GetRowValue(expirationDaysCol), product.ExpirationDays);
+                                if (minimumStockCol != null) product.MinimumStock = ParseDecimal(GetRowValue(minimumStockCol));
+                                
+                                _context.Update(product);
+                                updatedProducts++;
+                                
+                                if (priceCol != null)
+                                {
+                                    var priceEntry = new ProductPrice
+                                    {
+                                        ProductId = product.Id,
+                                        FinalPrice = product.Price,
+                                        UpdateDate = DateTime.Now
+                                    };
+                                    _context.ProductPrices.Add(priceEntry);
+                                }
+                            }
+                            else
+                            {
+                                // Create
+                                maxInternalCode++;
+                                product = new Product
+                                {
+                                    InternalCode = maxInternalCode,
+                                    SupplierCode = supplierCode,
+                                    Name = string.IsNullOrWhiteSpace(name) ? "Desconocido" : name,
+                                    Price = price,
+                                    Stock = stock,
+                                    Barcode = barcode,
+                                    CreationDate = DateTime.Now,
+                                    IsActive = isActiveCol != null ? ParseBool(GetRowValue(isActiveCol), true) : true,
+                                    NeedsLabelPrint = true,
+                                    IsPesable = isPesableCol != null ? ParseBool(GetRowValue(isPesableCol), false) : false,
+                                    IsFractionable = isFractionableCol != null ? ParseBool(GetRowValue(isFractionableCol), false) : false,
+                                    SendToScale = sendToScaleCol != null ? ParseBool(GetRowValue(sendToScaleCol), false) : false,
+                                    ExpirationDays = expirationDaysCol != null ? ParseInt(GetRowValue(expirationDaysCol), 0) : 0,
+                                    MinimumStock = minimumStockCol != null ? ParseDecimal(GetRowValue(minimumStockCol)) : 0,
+                                    SubCategory = assignedSubCategory
                                 };
-                                _context.ProductPrices.Add(priceEntry);
+                                _context.Products.Add(product);
+                                
+                                isNew = true;
+                                newProducts++;
                             }
                         }
-                        else
-                        {
-                            // Create
-                            maxInternalCode++;
-                            product = new Product
-                            {
-                                InternalCode = maxInternalCode,
-                                SupplierCode = supplierCode,
-                                Name = string.IsNullOrWhiteSpace(name) ? "Desconocido" : name,
-                                Price = price,
-                                Stock = stock,
-                                Barcode = barcode,
-                                CreationDate = DateTime.Now,
-                                IsActive = true,
-                                NeedsLabelPrint = true
-                            };
-                            _context.Products.Add(product);
-                            
-                            // To be able to add ProductPrice we will do it after SaveChanges or just let it be.
-                            // Since ProductId is generated after SaveChanges, we defer ProductPrice creation or save twice.
-                            isNew = true;
-                            newProducts++;
-                        }
-                    }
-                    
-                    await _context.SaveChangesAsync();
-                    
-                    // We need a second pass for new products prices
-                    if (newProducts > 0)
-                    {
-                        // We fetch new products recently added in this batch.
-                        // Or simply it's better to add the ProductPrice for the tracked entities.
-                        var trackedNew = _context.ChangeTracker.Entries<Product>().Where(e => e.State == EntityState.Unchanged && e.Entity.PriceHistory.Count == 0).ToList();
-                        foreach (var entry in trackedNew)
-                        {
-                            _context.ProductPrices.Add(new ProductPrice
-                            {
-                                ProductId = entry.Entity.Id,
-                                FinalPrice = entry.Entity.Price,
-                                UpdateDate = DateTime.Now
-                            });
-                        }
+                        
                         await _context.SaveChangesAsync();
-                    }
+                        
+                        // We need a second pass for new products prices
+                        if (newProducts > 0)
+                        {
+                            var trackedNew = _context.ChangeTracker.Entries<Product>().Where(e => e.State == Microsoft.EntityFrameworkCore.EntityState.Unchanged && e.Entity.PriceHistory.Count == 0).ToList();
+                            foreach (var entry in trackedNew)
+                            {
+                                var p = entry.Entity;
+                                _context.ProductPrices.Add(new ProductPrice
+                                {
+                                    ProductId = p.Id,
+                                    FinalPrice = p.Price,
+                                    UpdateDate = DateTime.Now
+                                });
+                            }
+                            if (trackedNew.Any()) await _context.SaveChangesAsync();
+                        }
 
-                    TempData["Success"] = $"Importación completada. Nuevos: {newProducts}. Actualizados: {updatedProducts}.";
+                        TempData["Success"] = $"Importación finalizada. Se crearon {newProducts} productos y se actualizaron {updatedProducts} productos.";
+                    }
+                    catch (Exception ex)
+                    {
+                        return Content($"Error de importación: {ex.Message} \n {ex.StackTrace}");
+                    }
                 }
             }
 

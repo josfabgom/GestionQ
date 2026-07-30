@@ -22,6 +22,7 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddHttpClient<IElectronicInvoicingService, ArcaElectronicInvoicingService>();
 builder.Services.AddScoped<IScaleService, KretzJDataGateService>();
 builder.Services.AddHttpClient<IMercadoPagoService, MercadoPagoService>();
+builder.Services.AddHostedService<GestionQ.Web.Services.NgrokTunnelService>();
 
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, AuthorizationPolicyProvider>();
 builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
@@ -55,6 +56,19 @@ if (!app.Environment.IsDevelopment())
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
+
+var cultureInfo = new System.Globalization.CultureInfo("es-AR");
+cultureInfo.NumberFormat.NumberDecimalSeparator = ".";
+cultureInfo.NumberFormat.CurrencyDecimalSeparator = ".";
+cultureInfo.NumberFormat.NumberGroupSeparator = ",";
+cultureInfo.NumberFormat.CurrencyGroupSeparator = ",";
+
+app.UseRequestLocalization(new RequestLocalizationOptions
+{
+    DefaultRequestCulture = new Microsoft.AspNetCore.Localization.RequestCulture(cultureInfo),
+    SupportedCultures = new List<System.Globalization.CultureInfo> { cultureInfo },
+    SupportedUICultures = new List<System.Globalization.CultureInfo> { cultureInfo }
+});
 
 app.UseHttpsRedirection();
 app.UseRouting();

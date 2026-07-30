@@ -109,10 +109,47 @@
                         <i class="fa-solid fa-box"></i> Stock (Productos)
                     </a>
                 </li>
+                }
+                @if (User.IsInRole("Admin") || User.HasClaim("Permission", Permissions.Products.View) || User.HasClaim("Permission", Permissions.Config.View))
+                {
                 <li>
-                    <a asp-controller="Labels" asp-action="Index" style="color: #ec4899;">
-                        <i class="fa-solid fa-barcode"></i> Imprimir Etiquetas
-                    </a>
+                    <details class="sidebar-dropdown">
+                        <summary style="display: block; padding: 0.8rem 1rem; color: #10b981; font-weight: 600; text-decoration: none; border-radius: 8px; cursor: pointer; transition: background 0.2s; list-style: none;">
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <div><i class="fa-solid fa-scale-balanced" style="margin-right: 10px; width: 20px; text-align: center;"></i> Módulo Balanzas</div>
+                                <i class="fa-solid fa-chevron-down" style="font-size: 0.8em; opacity: 0.7;"></i>
+                            </div>
+                        </summary>
+                        <ul class="nav-links" style="padding-left: 1rem; margin-top: 0.2rem;">
+                            @if (User.IsInRole("Admin") || User.HasClaim("Permission", Permissions.Products.View))
+                            {
+                            <li>
+                                <a asp-controller="Labels" asp-action="Index" style="color: #ec4899; padding: 0.6rem 1rem;">
+                                    <i class="fa-solid fa-barcode"></i> Imprimir Etiquetas
+                                </a>
+                            </li>
+                            <li>
+                                <a asp-controller="Labels" asp-action="ScaleLabels" style="color: #10b981; padding: 0.6rem 1rem;">
+                                    <i class="fa-solid fa-tag"></i> Impresión Manual
+                                </a>
+                            </li>
+                            }
+                            @if (User.IsInRole("Admin") || User.HasClaim("Permission", Permissions.Config.View))
+                            {
+                            <li>
+                                <a asp-controller="Scale" asp-action="Index" style="color: #f59e0b; padding: 0.6rem 1rem;">
+                                    <i class="fa-solid fa-upload"></i> Envío a Red
+                                </a>
+                            </li>
+                            }
+                        </ul>
+                    </details>
+                    <style>
+                        .sidebar-dropdown summary::-webkit-details-marker { display: none; }
+                        .sidebar-dropdown summary::marker { display: none; }
+                        .sidebar-dropdown[open] summary .fa-chevron-down { transform: rotate(180deg); transition: transform 0.3s; }
+                        .sidebar-dropdown summary .fa-chevron-down { transition: transform 0.3s; }
+                    </style>
                 </li>
                 }
                 @if (User.IsInRole("Admin") || User.HasClaim("Permission", Permissions.Config.View))
@@ -120,11 +157,6 @@
                 <li>
                     <a asp-controller="Prices" asp-action="Index" style="color: #60a5fa;">
                         <i class="fa-solid fa-tags"></i> Gestión de Precios
-                    </a>
-                </li>
-                <li>
-                    <a asp-controller="Scale" asp-action="Index" style="color: #f59e0b;">
-                        <i class="fa-solid fa-scale-balanced"></i> Envío Balanza
                     </a>
                 </li>
                 }

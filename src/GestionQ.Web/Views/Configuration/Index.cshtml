@@ -18,6 +18,15 @@
         <div class="settings-card-desc">Configuración de base de datos SQL Server, identidad de la empresa, contacto y carga de logotipo.</div>
     </a>
 
+    <!-- Escáner Móvil -->
+    <a href="javascript:void(0);" onclick="showMobileScannerQR()" class="settings-card">
+        <span class="settings-card-icon" style="color: #10b981;">
+            <i class="fa-solid fa-mobile-screen"></i>
+        </span>
+        <div class="settings-card-title">Escáner Móvil (QR)</div>
+        <div class="settings-card-desc">Mostrar un código QR para vincular rápidamente el celular como escáner de góndola.</div>
+    </a>
+
     <!-- Configuración Mercado Pago -->
     <a asp-controller="MercadoPagoConfig" asp-action="Index" class="settings-card">
         <span class="settings-card-icon" style="color: #009ee3;">
@@ -144,3 +153,73 @@
         <div class="settings-card-desc">Tipos de condiciones impositivas de clientes y proveedores ante organismos públicos (ARCA/AFIP).</div>
     </a>
 </div>
+
+@section Scripts {
+    <script>
+        async function showMobileScannerQR() {
+            try {
+                Swal.fire({
+                    title: 'Generando Túnel...',
+                    text: 'Obteniendo enlace seguro de internet...',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                const res = await fetch('/api/tunnel/url');
+                const data = await res.json();
+                
+                let targetUrl = window.location.protocol + '//' + window.location.hostname + ':' + window.location.port + '/Mobile/Scanner';
+                let isSecure = false;
+
+                if (data.status === 'ready' && data.url) {
+                    targetUrl = data.url + '/Mobile/Scanner';
+                    isSecure = true;
+                }
+
+                Swal.fire({
+                    title: 'Conectar Escáner Móvil',
+                    html: `
+                        <p style="margin-bottom: 15px;">Escanea este código con la cámara de tu celular para abrir el escáner:</p>
+                        <div id="qrcode" style="display:flex; justify-content:center; margin: 20px 0; background: white; padding: 15px; border-radius: 8px; width: fit-content; margin-left: auto; margin-right: auto;"></div>
+                        <p style="font-size: 0.9em; color: var(--text-muted);">O ingresa manualmente desde tu celular a:<br><b style="color: ${isSecure ? '#10b981' : '#f59e0b'};">${targetUrl}</b></p>
+                        ${!isSecure ? '<p style="color: #ef4444; font-size: 0.8em; margin-top: 10px;">⚠️ No se pudo obtener el túnel seguro. Usando IP local (puede fallar la cámara).</p>' : ''}
+                        <p style="font-size: 0.85em; color: #10b981; margin-top:20px; text-align: left; background: rgba(16, 185, 129, 0.1); padding: 10px; border-radius: 8px;">
+                            <i class="fa-solid fa-lightbulb"></i> <b>Tip:</b> Una vez que se abra en tu celular, busca la opción <b>"Agregar a la pantalla principal"</b> en tu navegador web. Esto instalará el escáner como si fuera una App nativa en tu teléfono.
+                        </p>
+                    `,
+                    showConfirmButton: true,
+                    confirmButtonText: 'Cerrar',
+                    confirmButtonColor: '#3b82f6',
+                    didOpen: () => {
+                        if (typeof QRCode === 'undefined') {
+                            const script = document.createElement('script');
+                            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+                            script.onload = () => {
+                                new QRCode(document.getElementById("qrcode"), {
+                                    text: targetUrl,
+                                    width: 200,
+                                    height: 200,
+                                    colorDark : "#000000",
+                                    colorLight : "#ffffff",
+                                    correctLevel : QRCode.CorrectLevel.H
+                                });
+                            };
+                            document.head.appendChild(script);
+                        } else {
+                            new QRCode(document.getElementById("qrcode"), {
+                                text: targetUrl,
+                                width: 200,
+                                height: 200
+                            });
+                        }
+                    }
+                });
+
+            } catch (err) {
+                Swal.fire('Error', 'No se pudo generar el túnel: ' + err.message, 'error');
+            }
+        }
+    </script>
+}

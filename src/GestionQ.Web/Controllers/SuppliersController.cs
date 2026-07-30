@@ -63,6 +63,20 @@ namespace GestionQ.Web.Controllers
             ViewBag.TaxConditions = await _context.TaxConditions.Where(v => v.IsActive).ToListAsync();
             return View(supplier);
         }
+
+        [HttpPost]
+        [Authorize(Policy = Permissions.Config.Create)]
+        public async Task<IActionResult> CreateAjax([FromBody] Supplier supplier)
+        {
+            if (ModelState.IsValid)
+            {
+                supplier.IsActive = true;
+                _context.Add(supplier);
+                await _context.SaveChangesAsync();
+                return Json(new { success = true, id = supplier.Id, name = supplier.Name });
+            }
+            return Json(new { success = false, message = "Datos inválidos." });
+        }
         [Authorize(Policy = Permissions.Config.Edit)]
 
         public async Task<IActionResult> Edit(int? id)

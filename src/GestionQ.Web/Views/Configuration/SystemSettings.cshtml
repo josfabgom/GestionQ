@@ -220,6 +220,33 @@
                     Guardar y Aplicar Todo</button>
             </div>
         </form>
+
+        <!-- 5. Configuración Ngrok -->
+        <div class="card bg-gray-800 border-gray-700 mt-4">
+            <div class="card-header border-b border-gray-700 bg-gray-800">
+                <h4 class="m-0 text-white"><i class="fa-solid fa-mobile-screen text-indigo-400"></i> Escáner Móvil (Ngrok)</h4>
+            </div>
+            <form asp-action="UpdateNgrokSettings" method="post">
+                <div class="card-body">
+                    <div class="alert alert-info bg-indigo-900 border-indigo-700 text-indigo-100">
+                        <i class="fa-solid fa-circle-info"></i> Configure el túnel de internet seguro para conectar los celulares al escáner. Requiere una cuenta en <b>ngrok.com</b>.
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label text-gray-300">Dominio Estático (Domain)</label>
+                            <input asp-for="NgrokDomain" class="form-control bg-gray-700 border-gray-600 text-white" placeholder="ej: tu-negocio.ngrok-free.app" />
+                        </div>
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label text-gray-300">Token de Autenticación (Authtoken)</label>
+                            <input asp-for="NgrokAuthToken" class="form-control bg-gray-700 border-gray-600 text-white" type="password" placeholder="ej: 3GzWWk..." />
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-gray-800 border-t border-gray-700 text-end">
+                    <button type="submit" class="btn btn-indigo"><i class="fa-solid fa-save"></i> Guardar Túnel</button>
+                </div>
+            </form>
+        </div>
     </div>
 
 </div>

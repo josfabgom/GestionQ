@@ -9,6 +9,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace GestionQ.Infrastructure.Services
@@ -18,9 +19,8 @@ namespace GestionQ.Infrastructure.Services
         private readonly ILogger<ArcaElectronicInvoicingService> _logger;
         private readonly HttpClient _httpClient;
         
-        // Homologation endpoints
-        private const string WSAA_URL = "https://wsaahomo.afip.gov.ar/ws/services/LoginCms";
-        private const string WSFE_URL = "https://wswhomo.afip.gov.ar/wsfev1/service.asmx";
+        private readonly string _wsaaUrl;
+        private readonly string _wsfeUrl;
         
         private const string WSFE_SERVICE_NAME = "wsfe";
         
@@ -30,10 +30,24 @@ namespace GestionQ.Infrastructure.Services
         private static string _cachedSign;
         private static DateTime _tokenExpiration = DateTime.MinValue;
 
-        public ArcaElectronicInvoicingService(ILogger<ArcaElectronicInvoicingService> logger, HttpClient httpClient)
+        public ArcaElectronicInvoicingService(ILogger<ArcaElectronicInvoicingService> logger, HttpClient httpClient, IConfiguration configuration)
         {
             _logger = logger;
             _httpClient = httpClient;
+            
+            bool isProduction = false;
+            bool.TryParse(configuration["Afip:UseProduction"], out isProduction);
+            
+            if (isProduction)
+            {
+                _wsaaUrl = configuration["Afip:Production:WsaaUrl"] ?? "https://wsaa.afip.gov.ar/ws/services/LoginCms";
+                _wsfeUrl = configuration["Afip:Production:WsfeUrl"] ?? "https://servicios1.afip.gov.ar/wsfev1/service.asmx";
+            }
+            else
+            {
+                _wsaaUrl = configuration["Afip:Homologation:WsaaUrl"] ?? "https://wsaahomo.afip.gov.ar/ws/services/LoginCms";
+                _wsfeUrl = configuration["Afip:Homologation:WsfeUrl"] ?? "https://wswhomo.afip.gov.ar/wsfev1/service.asmx";
+            }
         }
 
         public async Task<ElectronicInvoiceResponse> RequestCAEAsync(ElectronicInvoiceRequest request)
@@ -51,7 +65,7 @@ namespace GestionQ.Infrastructure.Services
                 var httpContent = new StringContent(soapEnvelope, Encoding.UTF8, "text/xml");
                 httpContent.Headers.Add("SOAPAction", "\"http://ar.gov.afip.dif.FEV1/FECAESolicitar\"");
 
-                var httpResponse = await _httpClient.PostAsync(WSFE_URL, httpContent);
+                var httpResponse = await _httpClient.PostAsync(_wsfeUrl, httpContent);
                 var responseXml = await httpResponse.Content.ReadAsStringAsync();
 
                 if (!httpResponse.IsSuccessStatusCode)
@@ -96,7 +110,7 @@ namespace GestionQ.Infrastructure.Services
             var httpContent = new StringContent(soapEnvelope, Encoding.UTF8, "text/xml");
             httpContent.Headers.Add("SOAPAction", "\"http://ar.gov.afip.dif.FEV1/FECompUltimoAutorizado\"");
 
-            var httpResponse = await _httpClient.PostAsync(WSFE_URL, httpContent);
+            var httpResponse = await _httpClient.PostAsync(_wsfeUrl, httpContent);
             var responseXml = await httpResponse.Content.ReadAsStringAsync();
 
             if (!httpResponse.IsSuccessStatusCode)
@@ -117,6 +131,10 @@ namespace GestionQ.Infrastructure.Services
                     if (firstErr != null)
                     {
                         var msg = firstErr.Element(ns + "Msg")?.Value;
+                        if (msg != null && msg.Contains("El punto de venta no se encuentra habilitado a usar en el presente WS"))
+                        {
+                            msg = "El Punto de Venta configurado en el sistema no está habilitado en AFIP para Facturación Electrónica (Web Services). Debe ingresar a la web de AFIP, dar de alta un nuevo Punto de Venta para Web Services y configurarlo en el sistema.";
+                        }
                         throw new Exception($"AFIP Error: {msg}");
                     }
                 }
@@ -145,7 +163,7 @@ namespace GestionQ.Infrastructure.Services
                 var httpContent = new StringContent(soapEnvelope, Encoding.UTF8, "text/xml");
                 httpContent.Headers.Add("SOAPAction", "\"http://ar.gov.afip.dif.FEV1/FEDummy\"");
 
-                var httpResponse = await _httpClient.PostAsync(WSFE_URL, httpContent);
+                var httpResponse = await _httpClient.PostAsync(_wsfeUrl, httpContent);
                 var responseXml = await httpResponse.Content.ReadAsStringAsync();
 
                 var doc = XDocument.Parse(responseXml);
@@ -263,7 +281,7 @@ namespace GestionQ.Infrastructure.Services
             var httpContent = new StringContent(soapLogin, Encoding.UTF8, "text/xml");
             httpContent.Headers.Add("SOAPAction", "\"\"");
             
-            var httpResponse = await _httpClient.PostAsync(WSAA_URL, httpContent);
+            var httpResponse = await _httpClient.PostAsync(_wsaaUrl, httpContent);
             var responseXml = await httpResponse.Content.ReadAsStringAsync();
 
             if (!httpResponse.IsSuccessStatusCode)
@@ -388,7 +406,14 @@ namespace GestionQ.Infrastructure.Services
                 foreach (var err in errors.Elements(ns + "Err"))
                 {
                     string msg = err.Element(ns + "Msg")?.Value;
-                    if (!string.IsNullOrEmpty(msg)) response.Errors.Add(msg);
+                    if (!string.IsNullOrEmpty(msg))
+                    {
+                        if (msg.Contains("El punto de venta no se encuentra habilitado a usar en el presente WS"))
+                        {
+                            msg = "El Punto de Venta configurado en el sistema no está habilitado en AFIP para Facturación Electrónica (Web Services). Debe ingresar a la web de AFIP, dar de alta un nuevo Punto de Venta para Web Services y configurarlo en el sistema.";
+                        }
+                        response.Errors.Add(msg);
+                    }
                 }
             }
 
@@ -419,6 +444,10 @@ namespace GestionQ.Infrastructure.Services
                         string msg = o.Element(ns + "Msg")?.Value;
                         if (!string.IsNullOrEmpty(msg))
                         {
+                            if (msg.Contains("El punto de venta no se encuentra habilitado a usar en el presente WS"))
+                            {
+                                msg = "El Punto de Venta configurado en el sistema no está habilitado en AFIP para Facturación Electrónica (Web Services). Debe ingresar a la web de AFIP, dar de alta un nuevo Punto de Venta para Web Services y configurarlo en el sistema.";
+                            }
                             response.Warnings.Add(msg);
                             if (response.Status != "Approved")
                             {

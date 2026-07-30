@@ -1051,7 +1051,8 @@
                     internalCodeShort: "@p.InternalCode",
                     isPesable: @p.IsPesable.ToString().ToLower(),
                     isFractionable: @p.IsFractionable.ToString().ToLower(),
-                    isDepartment: @p.IsDepartment.ToString().ToLower()
+                    isDepartment: @p.IsDepartment.ToString().ToLower(),
+                    imageUrl: "@(string.IsNullOrEmpty(p.ImageUrl) ? "" : p.ImageUrl)"
                 },</text>
             }
         ];
@@ -1291,23 +1292,26 @@
                         const weightValue = parseInt(query.substring(7, 12));
                         const weightKg = weightValue / 1000;
 
-                        const foundPesable = productsList.find(p =>
-                            p.isPesable && (
-                                parseInt(p.internalCode) === scaleCodeNum ||
-                                parseInt(p.internalCodeShort) === scaleCodeNum ||
-                                p.barcode.includes(scaleCodeStr)
-                            )
+                        const foundProduct = productsList.find(p =>
+                            parseInt(p.internalCode) === scaleCodeNum ||
+                            parseInt(p.internalCodeShort) === scaleCodeNum ||
+                            (p.barcode && p.barcode.includes(scaleCodeStr))
                         );
 
-                        if (foundPesable) {
-                            addToCart(foundPesable.id, foundPesable.name, foundPesable.price, foundPesable.stock, weightKg);
+                        if (foundProduct) {
+                            if (foundProduct.isPesable) {
+                                addToCart(foundProduct.id, foundProduct.name, foundProduct.price, foundProduct.stock, weightKg);
+                            } else {
+                                // Producto por unidad impreso desde balanza (usamos la cantidad leída del código)
+                                addToCart(foundProduct.id, foundProduct.name, foundProduct.price, foundProduct.stock, weightValue);
+                            }
                             this.value = '';
                             filterProducts();
                             return;
                         } else {
                             Swal.fire({
                                 title: 'Producto no encontrado',
-                                text: `Se detectó etiqueta de balanza con código ${scaleCodeNum}, pero no hay un producto pesable correspondiente.`,
+                                text: `Se detectó etiqueta de balanza con código ${scaleCodeNum}, pero no está cargado en el sistema.`,
                                 icon: 'info'
                             });
                             this.value = '';
@@ -1613,7 +1617,8 @@
                     quantity: quantity, 
                     stock: stock,
                     isDepartment: isDepartment,
-                    customName: finalCustomName
+                    customName: finalCustomName,
+                    imageUrl: prodInfo ? prodInfo.imageUrl : ""
                 });
             }
             
@@ -1998,9 +2003,14 @@
                 
                 tr.innerHTML = `
                     <td>
-                        <div style="font-weight: 700; color: white; font-size: 1.3rem; text-transform: uppercase;">${item.name}</div>
-                        ${stockOrDeptHtml}
-                        ${promoBadgeHtml}
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                            ${item.imageUrl ? `<img src="${item.imageUrl}" style="width: 45px; height: 45px; object-fit: contain; border-radius: 6px; background: rgba(0,0,0,0.2); padding: 2px;" />` : ''}
+                            <div>
+                                <div style="font-weight: 700; color: white; font-size: 1.3rem; text-transform: uppercase;">${item.name}</div>
+                                ${stockOrDeptHtml}
+                                ${promoBadgeHtml}
+                            </div>
+                        </div>
                     </td>
                     <td style="text-align: right; font-family: monospace; font-size: 1.25rem;">$${item.price.toLocaleString('es-AR', {minimumFractionDigits: 2})}</td>
                     <td style="text-align: center;">

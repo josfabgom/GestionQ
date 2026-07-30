@@ -82,22 +82,43 @@ namespace GestionQ.Infrastructure.Services
         {
             try
             {
+                // Para la nueva API de Orders, necesitamos el ID de la terminal.
                 string deviceId = config.PointDeviceId;
+                if (string.IsNullOrWhiteSpace(deviceId))
+                {
+                    return new MpOrderResponse { Success = false, ErrorMessage = "ID del Dispositivo (PointDeviceId) no configurado. Es obligatorio para enviar la orden al Point Smart." };
+                }
+
                 if (!deviceId.StartsWith("PAX_A910__") && deviceId.StartsWith("SMARTPOS"))
                 {
                     deviceId = "PAX_A910__" + deviceId;
                 }
 
-                var requestUrl = $"point/integration-api/devices/{deviceId}/payment-intents";
-                
+                var requestUrl = "v1/orders";
+
+                // La nueva API requiere que el monto sea un string formateado con 2 decimales
+                string amountStr = amount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+
                 var payload = new
                 {
-                    amount = (int)Math.Round(amount * 100m), // La API vieja exige centavos (multiplicar x 100).
-                    additional_info = new
+                    type = "point",
+                    transactions = new
                     {
-                        external_reference = reference,
-                        print_on_terminal = true
-                    }
+                        payments = new[]
+                        {
+                            new { amount = amountStr }
+                        }
+                    },
+                    config = new
+                    {
+                        point = new
+                        {
+                            terminal_id = deviceId,
+                            print_on_terminal = "seller_ticket"
+                        }
+                    },
+                    description = description,
+                    external_reference = reference
                 };
 
                 using var request = new HttpRequestMessage(HttpMethod.Post, requestUrl);
@@ -111,37 +132,12 @@ namespace GestionQ.Infrastructure.Services
                 if (response.IsSuccessStatusCode)
                 {
                     using var doc = JsonDocument.Parse(contentString);
-                    var intentId = doc.RootElement.GetProperty("id").GetString();
-                    return new MpOrderResponse { Success = true, OrderId = intentId };
+                    var orderId = doc.RootElement.GetProperty("id").GetString();
+                    return new MpOrderResponse { Success = true, OrderId = orderId };
                 }
                 else
                 {
-                    // Intentar un parche automático si devuelve un error relacionado con STANDALONE
-                    if (contentString.Contains("STANDALONE") || contentString.Contains("operating_mode"))
-                    {
-                        using var patchReq = new HttpRequestMessage(new HttpMethod("PATCH"), $"point/integration-api/devices/{deviceId}");
-                        patchReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", config.AccessToken);
-                        patchReq.Content = new StringContent("{\"operating_mode\": \"PDV\"}", System.Text.Encoding.UTF8, "application/json");
-                        await _httpClient.SendAsync(patchReq);
-                        
-                        // Reintentar el cobro
-                        using var retryReq = new HttpRequestMessage(HttpMethod.Post, requestUrl);
-                        retryReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", config.AccessToken);
-                        retryReq.Headers.Add("X-Idempotency-Key", Guid.NewGuid().ToString());
-                        retryReq.Content = JsonContent.Create(payload);
-                        
-                        var retryRes = await _httpClient.SendAsync(retryReq);
-                        var retryContent = await retryRes.Content.ReadAsStringAsync();
-                        
-                        if (retryRes.IsSuccessStatusCode)
-                        {
-                            using var doc = JsonDocument.Parse(retryContent);
-                            return new MpOrderResponse { Success = true, OrderId = doc.RootElement.GetProperty("id").GetString() };
-                        }
-                        return new MpOrderResponse { Success = false, ErrorMessage = $"Error (Tras forzar PDV): {retryContent}" };
-                    }
-                    
-                    return new MpOrderResponse { Success = false, ErrorMessage = $"Error API Antigua: {contentString}" };
+                    return new MpOrderResponse { Success = false, ErrorMessage = $"Error MP Orders API: {contentString}" };
                 }
             }
             catch (Exception ex)

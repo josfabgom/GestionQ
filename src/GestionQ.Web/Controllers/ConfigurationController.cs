@@ -55,7 +55,9 @@ namespace GestionQ.Web.Controllers
                 CompanyStartOfActivities = DateTime.TryParse(_config["CompanyInfo:StartOfActivities"], out var date) ? date : null,
                 CompanyIIBB = _config["CompanyInfo:IIBB"] ?? "",
                 JDataGateFolderPath = _config["Scale:JDataGateFolderPath"] ?? @"C:\JDataGate\IN\",
-                UITheme = _config["UI:Theme"] ?? "violet"
+                UITheme = _config["UI:Theme"] ?? "violet",
+                NgrokAuthToken = _config["Ngrok:AuthToken"] ?? "",
+                NgrokDomain = _config["Ngrok:Domain"] ?? ""
             };
 
             var setting = _context.SystemSettings.FirstOrDefault(s => s.Key == "NextInternalSupplierNumber");
@@ -274,6 +276,38 @@ namespace GestionQ.Web.Controllers
             catch (Exception ex)
             {
                 TempData["ErrorMessage"] = "Ocurrió un error al guardar el tema: " + ex.Message;
+                return RedirectToAction(nameof(SystemSettings));
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateNgrokSettings(ConfigurationViewModel model)
+        {
+            try
+            {
+                var appSettingsPath = Path.Combine(_env.ContentRootPath, "appsettings.json");
+                var json = await System.IO.File.ReadAllTextAsync(appSettingsPath);
+                var node = JsonNode.Parse(json);
+                if (node != null)
+                {
+                    if (node["Ngrok"] == null)
+                    {
+                        node["Ngrok"] = new JsonObject();
+                    }
+                    node["Ngrok"]!["AuthToken"] = model.NgrokAuthToken ?? "";
+                    node["Ngrok"]!["Domain"] = model.NgrokDomain ?? "";
+
+                    var options = new JsonSerializerOptions { WriteIndented = true };
+                    await System.IO.File.WriteAllTextAsync(appSettingsPath, node.ToJsonString(options));
+                }
+
+                TempData["SuccessMessage"] = "La configuración del Escáner (Ngrok) se actualizó correctamente. Reinicia el servidor para aplicar el túnel.";
+                return RedirectToAction(nameof(SystemSettings));
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = "Ocurrió un error al guardar la configuración de Ngrok: " + ex.Message;
                 return RedirectToAction(nameof(SystemSettings));
             }
         }

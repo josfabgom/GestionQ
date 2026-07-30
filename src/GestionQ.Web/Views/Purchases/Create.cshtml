@@ -40,13 +40,18 @@
         <div>
             <div class="form-group">
                 <label class="control-label">Proveedor</label>
-                <select id="SupplierId" class="form-control" required>
-                    <option value="">Seleccione Proveedor...</option>
-                    @foreach (var s in ViewBag.Suppliers as IEnumerable<GestionQ.Domain.Entities.Supplier>)
-                    {
-                        <option value="@s.Id">@s.Name</option>
-                    }
-                </select>
+                <div style="display: flex; gap: 0.5rem;">
+                    <select id="SupplierId" class="form-control" required style="flex: 1;">
+                        <option value="">Seleccione Proveedor...</option>
+                        @foreach (var s in ViewBag.Suppliers as IEnumerable<GestionQ.Domain.Entities.Supplier>)
+                        {
+                            <option value="@s.Id">@s.Name</option>
+                        }
+                    </select>
+                    <button type="button" onclick="document.getElementById('newSupplierModal').style.display='flex';" class="btn-secondary" title="Crear Nuevo Proveedor" style="display: flex; align-items: center; justify-content: center; padding: 0 1rem; text-decoration: none; border-radius: 8px; border: none; cursor: pointer;">
+                        <i class="fa-solid fa-plus"></i> Nuevo
+                    </button>
+                </div>
             </div>
 
             <div style="display: grid; grid-template-columns: 80px 1fr; gap: 1rem;">
@@ -92,6 +97,33 @@
                 Confirmar Ingreso de Stock
             </button>
             <a asp-action="Index" class="btn-secondary" style="width: 100%; margin-top: 0.5rem; display: block; text-align: center;">Cancelar</a>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Nuevo Proveedor -->
+<div id="newSupplierModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1000; align-items:center; justify-content:center; backdrop-filter: blur(4px);">
+    <div class="glass-panel" style="width: 500px; padding: 2rem; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+        <h3 style="margin-bottom: 1.5rem; color: var(--accent);">Nuevo Proveedor</h3>
+        <div class="form-group">
+            <label class="control-label">Nombre / Razón Social *</label>
+            <input type="text" id="nsName" class="form-control" placeholder="Ej: Distribuidora SA" required />
+        </div>
+        <div class="form-group">
+            <label class="control-label">Teléfono</label>
+            <input type="text" id="nsPhone" class="form-control" />
+        </div>
+        <div class="form-group">
+            <label class="control-label">Email</label>
+            <input type="email" id="nsEmail" class="form-control" />
+        </div>
+        <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+            <button type="button" onclick="saveNewSupplier()" class="btn-primary" style="flex: 1; padding: 0.75rem;">
+                <i class="fa-solid fa-save"></i> Guardar
+            </button>
+            <button type="button" onclick="document.getElementById('newSupplierModal').style.display='none';" class="btn-secondary" style="flex: 1; padding: 0.75rem;">
+                <i class="fa-solid fa-xmark"></i> Cancelar
+            </button>
         </div>
     </div>
 </div>
@@ -247,6 +279,58 @@
                 alert('Error de conexión');
                 btn.disabled = false;
                 btn.innerText = 'Confirmar Ingreso de Stock';
+            });
+        }
+
+        function saveNewSupplier() {
+            const name = document.getElementById('nsName').value.trim();
+            if(!name) { alert("El nombre es requerido."); return; }
+            
+            const btn = document.querySelector('#newSupplierModal .btn-primary');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = 'Guardando...';
+            btn.disabled = true;
+
+            const data = {
+                Name: name,
+                Phone: document.getElementById('nsPhone').value.trim(),
+                Email: document.getElementById('nsEmail').value.trim()
+            };
+
+            fetch('/Suppliers/CreateAjax', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                },
+                body: JSON.stringify(data)
+            })
+            .then(res => res.json())
+            .then(res => {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+                
+                if(res.success) {
+                    const sel = document.getElementById('SupplierId');
+                    const opt = document.createElement('option');
+                    opt.value = res.id;
+                    opt.text = res.name;
+                    sel.appendChild(opt);
+                    sel.value = res.id;
+                    
+                    document.getElementById('nsName').value = '';
+                    document.getElementById('nsPhone').value = '';
+                    document.getElementById('nsEmail').value = '';
+                    document.getElementById('newSupplierModal').style.display='none';
+                } else {
+                    alert("Error al guardar proveedor: " + (res.message || ''));
+                }
+            })
+            .catch(err => {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+                console.error(err);
+                alert("Error de conexión al guardar proveedor.");
             });
         }
     </script>

@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -76,6 +77,130 @@ namespace GestionQ.Web.Controllers
                 .ToList();
 
             return View(viewModel);
+        }
+
+        public async Task<IActionResult> ProductChanges(DateTime? startDate, DateTime? endDate)
+        {
+            var start = startDate ?? DateTime.Today;
+            var end = endDate ?? DateTime.Today;
+            var endAdjusted = end.Date.AddDays(1).AddTicks(-1);
+
+            var viewModel = new ProductChangesViewModel
+            {
+                StartDate = start,
+                EndDate = end
+            };
+
+            // Products that had price changes
+            var productsWithPriceChanges = await _context.ProductPrices
+                .Where(p => p.UpdateDate >= start && p.UpdateDate <= endAdjusted)
+                .Select(p => p.ProductId)
+                .Distinct()
+                .ToListAsync();
+
+            // Products that had stock changes
+            var productsWithStockChanges = await _context.StockMovements
+                .Where(s => s.Date >= start && s.Date <= endAdjusted)
+                .Select(s => s.ProductId)
+                .Distinct()
+                .ToListAsync();
+
+            // Products newly created
+            var newlyCreatedProducts = await _context.Products
+                .Where(p => p.CreationDate >= start && p.CreationDate <= endAdjusted)
+                .Select(p => p.Id)
+                .Distinct()
+                .ToListAsync();
+
+            var allChangedProductIds = productsWithPriceChanges
+                .Union(productsWithStockChanges)
+                .Union(newlyCreatedProducts)
+                .Distinct()
+                .ToList();
+
+            if (allChangedProductIds.Any())
+            {
+                var changedProducts = await _context.Products
+                    .Where(p => allChangedProductIds.Contains(p.Id))
+                    .OrderBy(p => p.Name)
+                    .ToListAsync();
+
+                foreach (var p in changedProducts)
+                {
+                    viewModel.Changes.Add(new ProductChangeItem
+                    {
+                        ProductId = p.Id,
+                        InternalCode = p.InternalCode,
+                        Barcode = p.Barcode,
+                        Name = p.Name,
+                        Stock = p.Stock,
+                        FinalPrice = p.Price
+                    });
+                }
+            }
+
+            return View(viewModel);
+        }
+
+        public async Task<IActionResult> ExportProductChanges(DateTime? startDate, DateTime? endDate)
+        {
+            var start = startDate ?? DateTime.Today;
+            var end = endDate ?? DateTime.Today;
+            var endAdjusted = end.Date.AddDays(1).AddTicks(-1);
+
+            // Products that had price changes
+            var productsWithPriceChanges = await _context.ProductPrices
+                .Where(p => p.UpdateDate >= start && p.UpdateDate <= endAdjusted)
+                .Select(p => p.ProductId)
+                .Distinct()
+                .ToListAsync();
+
+            // Products that had stock changes
+            var productsWithStockChanges = await _context.StockMovements
+                .Where(s => s.Date >= start && s.Date <= endAdjusted)
+                .Select(s => s.ProductId)
+                .Distinct()
+                .ToListAsync();
+
+            // Products newly created
+            var newlyCreatedProducts = await _context.Products
+                .Where(p => p.CreationDate >= start && p.CreationDate <= endAdjusted)
+                .Select(p => p.Id)
+                .Distinct()
+                .ToListAsync();
+
+            var allChangedProductIds = productsWithPriceChanges
+                .Union(productsWithStockChanges)
+                .Union(newlyCreatedProducts)
+                .Distinct()
+                .ToList();
+
+            var sb = new StringBuilder();
+            sb.AppendLine("Codigo Interno;Codigo de Barras;Producto;Stock Actual;Precio Final");
+
+            if (allChangedProductIds.Any())
+            {
+                var changedProducts = await _context.Products
+                    .Where(p => allChangedProductIds.Contains(p.Id))
+                    .OrderBy(p => p.Name)
+                    .ToListAsync();
+
+                foreach (var p in changedProducts)
+                {
+                    string name = p.Name?.Replace(";", ",") ?? "";
+                    
+                    sb.AppendLine($"{p.InternalCode};{p.Barcode};{name};{p.Stock};{p.Price}");
+                }
+            }
+
+            var bytes = Encoding.UTF8.GetBytes(sb.ToString());
+            var bom = Encoding.UTF8.GetPreamble();
+            var content = new byte[bom.Length + bytes.Length];
+            Buffer.BlockCopy(bom, 0, content, 0, bom.Length);
+            Buffer.BlockCopy(bytes, 0, content, bom.Length, bytes.Length);
+
+            string fileName = $"Cambios_Productos_{start:yyyyMMdd}_al_{end:yyyyMMdd}.csv";
+            return File(content, "text/csv", fileName);
         }
     }
 }

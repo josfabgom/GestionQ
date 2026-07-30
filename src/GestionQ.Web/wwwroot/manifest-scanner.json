@@ -1,0 +1,16 @@
+{
+  "name": "Escáner GestionQ",
+  "short_name": "Escáner",
+  "start_url": "/Mobile/Scanner",
+  "display": "standalone",
+  "background_color": "#1e293b",
+  "theme_color": "#1e293b",
+  "scope": "/Mobile/",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "192x192 512x512",
+      "type": "image/x-icon"
+    }
+  ]
+}

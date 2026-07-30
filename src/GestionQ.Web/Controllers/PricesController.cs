@@ -52,12 +52,13 @@ namespace GestionQ.Web.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> UpdateSingle(int productId, string cost, string margin, string tax, int? vatRateId)
+        public async Task<IActionResult> UpdateSingle(int productId, string cost, string margin, string tax, string finalPrice, int? vatRateId)
         {
             var culture = System.Globalization.CultureInfo.InvariantCulture;
             decimal dCost = decimal.TryParse(cost, culture, out var c) ? c : 0;
             decimal dMargin = decimal.TryParse(margin, culture, out var m) ? m : 0;
             decimal dTax = decimal.TryParse(tax, culture, out var t) ? t : 0;
+            decimal dFinalPrice = decimal.TryParse(finalPrice, culture, out var f) ? f : -1;
 
             var product = await _context.Products.Include(p => p.VatRate).FirstOrDefaultAsync(p => p.Id == productId);
             if (product == null) return NotFound();
@@ -70,9 +71,23 @@ namespace GestionQ.Web.Controllers
             }
 
             decimal vatRateValue = product.VatRate?.Rate ?? 0;
-            decimal finalPrice = (dCost * (1 + (vatRateValue / 100))) * (1 + (dMargin / 100)) + dTax;
+            decimal calculatedFinalPrice;
 
-            product.Price = finalPrice;
+            if (dFinalPrice >= 0)
+            {
+                calculatedFinalPrice = dFinalPrice;
+                decimal costWithIva = dCost * (1 + (vatRateValue / 100));
+                if (costWithIva > 0)
+                {
+                    dMargin = (((dFinalPrice - dTax) / costWithIva) - 1) * 100;
+                }
+            }
+            else
+            {
+                calculatedFinalPrice = (dCost * (1 + (vatRateValue / 100))) * (1 + (dMargin / 100)) + dTax;
+            }
+
+            product.Price = calculatedFinalPrice;
             if (product.IsPesable) product.SendToScale = true;
             product.NeedsLabelPrint = true;
 
@@ -82,7 +97,7 @@ namespace GestionQ.Web.Controllers
                 BaseCost = dCost,
                 ProfitMargin = dMargin,
                 InternalTax = dTax,
-                FinalPrice = finalPrice,
+                FinalPrice = calculatedFinalPrice,
                 UpdateDate = DateTime.Now
             };
 
@@ -90,7 +105,7 @@ namespace GestionQ.Web.Controllers
             _context.Update(product);
             await _context.SaveChangesAsync();
 
-            return Ok(new { finalPrice = finalPrice.ToString("F2", culture) });
+            return Ok(new { finalPrice = calculatedFinalPrice.ToString("F2", culture) });
         }
 
         [HttpPost]

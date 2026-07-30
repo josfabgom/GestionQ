@@ -26,6 +26,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="ngrok.exe">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\GestionQ.Infrastructure\GestionQ.Infrastructure.csproj" />
     <ProjectReference Include="..\GestionQ.Domain\GestionQ.Domain.csproj" />
   </ItemGroup>

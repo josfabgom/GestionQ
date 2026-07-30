@@ -189,12 +189,15 @@
                     
                     for (int i = 0; i < item.Quantity; i++)
                     {
-                        var barcodeVal = !string.IsNullOrEmpty(item.Product.Barcode) ? item.Product.Barcode : item.Product.InternalCode.ToString();
+                        var barcodeVal = !string.IsNullOrEmpty(item.CustomBarcode) ? item.CustomBarcode : (!string.IsNullOrEmpty(item.Product.Barcode) ? item.Product.Barcode : item.Product.InternalCode.ToString());
+                        var priceVal = item.CustomPrice.HasValue ? item.CustomPrice.Value.ToString("N2") : item.Product.Price.ToString("N2");
+                        var weightLabelStr = !string.IsNullOrEmpty(item.WeightOrUnitLabel) ? item.WeightOrUnitLabel : "";
                         
                         <div class="lbl-sheet-item lbl-55x35" data-json="@jsonStr">
                             <div class="elem-base banner-oferta" data-id="banner">OFERTA</div>
                             <div class="elem-base prod-name" data-id="name">@item.Product.Name</div>
-                            <div class="elem-base prod-price" data-id="price">$@item.Product.Price.ToString("N2")</div>
+                            <div class="elem-base prod-price" data-id="price">$@priceVal</div>
+                            <div class="elem-base" data-id="peso_o_unidad">@weightLabelStr</div>
                             <div class="elem-base barcode-container" data-id="barcode">
                                 <svg class="barcode" jsbarcode-value="@barcodeVal" jsbarcode-displayvalue="true" jsbarcode-height="40" jsbarcode-width="2" jsbarcode-margin="0" jsbarcode-fontsize="14"></svg>
                             </div>
@@ -211,12 +214,15 @@
             
             for (int i = 0; i < item.Quantity; i++)
             {
-                var barcodeVal = !string.IsNullOrEmpty(item.Product.Barcode) ? item.Product.Barcode : item.Product.InternalCode.ToString();
+                var barcodeVal = !string.IsNullOrEmpty(item.CustomBarcode) ? item.CustomBarcode : (!string.IsNullOrEmpty(item.Product.Barcode) ? item.Product.Barcode : item.Product.InternalCode.ToString());
+                var priceVal = item.CustomPrice.HasValue ? item.CustomPrice.Value.ToString("N2") : item.Product.Price.ToString("N2");
+                var weightLabelStr = !string.IsNullOrEmpty(item.WeightOrUnitLabel) ? item.WeightOrUnitLabel : "";
                 
                 <div class="lbl-base lbl-@format" data-json="@jsonStr">
                     <div class="elem-base banner-oferta" data-id="banner">OFERTA</div>
                     <div class="elem-base prod-name" data-id="name">@item.Product.Name</div>
-                    <div class="elem-base prod-price" data-id="price">$@item.Product.Price.ToString("N2")</div>
+                    <div class="elem-base prod-price" data-id="price">$@priceVal</div>
+                    <div class="elem-base" data-id="peso_o_unidad">@weightLabelStr</div>
                     <div class="elem-base barcode-container" data-id="barcode">
                         <svg class="barcode" jsbarcode-value="@barcodeVal" jsbarcode-displayvalue="true" jsbarcode-height="40" jsbarcode-width="2" jsbarcode-margin="0" jsbarcode-fontsize="14"></svg>
                     </div>
@@ -275,7 +281,10 @@
                 let id = el.getAttribute('data-id');
                 let elState = state[id];
 
-                if (!elState) return;
+                if (!elState) {
+                    el.style.display = 'none';
+                    return;
+                }
 
                 if (elState.visible === false || elState.visible === 'false') {
                     el.style.display = 'none';

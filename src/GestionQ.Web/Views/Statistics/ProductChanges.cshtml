@@ -1,0 +1,131 @@
+@model GestionQ.Web.Models.ProductChangesViewModel
+@{
+    ViewData["Title"] = "Cambios en Productos";
+}
+
+<div class="top-bar">
+    <div class="top-bar-title">
+        <i class="fa-solid fa-boxes-packing"></i>
+        <h1>@ViewData["Title"]</h1>
+    </div>
+</div>
+
+<div class="glass-panel" style="margin-bottom: 2rem;">
+    <form asp-action="ProductChanges" method="get" style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+        <div class="form-group" style="margin: 0;">
+            <label for="startDate">Desde:</label>
+            <input type="date" id="startDate" name="startDate" class="form-control" value="@Model.StartDate.ToString("yyyy-MM-dd")" required />
+        </div>
+        <div class="form-group" style="margin: 0;">
+            <label for="endDate">Hasta:</label>
+            <input type="date" id="endDate" name="endDate" class="form-control" value="@Model.EndDate.ToString("yyyy-MM-dd")" required />
+        </div>
+        <button type="submit" class="btn-primary" style="padding: 0.5rem 1rem;">
+            <i class="fa-solid fa-filter"></i> Filtrar
+        </button>
+        
+        <button type="button" class="btn-primary" style="padding: 0.5rem 1rem; background: #3b82f6;" onclick="window.print()">
+            <i class="fa-solid fa-file-pdf"></i> Imprimir PDF
+        </button>
+
+        <a asp-action="ExportProductChanges" asp-route-startDate="@Model.StartDate.ToString("yyyy-MM-dd")" asp-route-endDate="@Model.EndDate.ToString("yyyy-MM-dd")" class="btn-primary" style="padding: 0.5rem 1rem; background: #10b981;">
+            <i class="fa-solid fa-file-csv"></i> Exportar a CSV
+        </a>
+    </form>
+</div>
+
+<style>
+    @@media print {
+        @@page {
+            size: A4;
+            margin: 1cm;
+        }
+        * {
+            color: black !important;
+            text-shadow: none !important;
+            box-shadow: none !important;
+        }
+        body, html {
+            background: white !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        .top-bar, .glass-panel form, .sidebar, .sidebar-toggle-btn {
+            display: none !important;
+        }
+        .main-content, .container, .container-fluid {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+        }
+        .glass-panel {
+            background: transparent !important;
+            border: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+        .table-responsive {
+            overflow: visible !important;
+            width: 100% !important;
+        }
+        table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+            font-size: 10pt !important;
+        }
+        th, td {
+            border: 1px solid #000 !important;
+            padding: 4px 6px !important;
+            word-wrap: break-word;
+        }
+        h2 {
+            margin-top: 0 !important;
+            font-size: 16pt !important;
+        }
+    }
+</style>
+
+<div class="glass-panel">
+    <h2 style="margin-top: 0; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        <i class="fa-solid fa-list-check"></i> Productos Modificados
+    </h2>
+
+    @if (Model.Changes.Any())
+    {
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Cód. Int</th>
+                        <th>Cód. Barras</th>
+                        <th>Producto</th>
+                        <th style="text-align: right;">Stock Actual</th>
+                        <th style="text-align: right;">Precio Final</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.Changes)
+                    {
+                        <tr>
+                            <td>@item.InternalCode</td>
+                            <td>@item.Barcode</td>
+                            <td>@item.Name</td>
+                            <td style="text-align: right; font-weight: bold;">@item.Stock.ToString("N2")</td>
+                            <td style="text-align: right; font-weight: bold;">@item.FinalPrice.ToString("C")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="empty-state">
+            <i class="fa-solid fa-box-open"></i>
+            <p>No se encontraron productos con cambios en el período seleccionado.</p>
+        </div>
+    }
+</div>

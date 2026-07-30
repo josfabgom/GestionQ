@@ -25,6 +25,7 @@
                 <option value="price">Precio</option>
                 <option value="barcode">Código de Barras</option>
                 <option value="printDate">Fecha de Impresión</option>
+                <option value="peso_o_unidad">Peso / Cantidad</option>
                 <option value="banner">Cartel Oferta</option>
             </select>
             <button class="btn-primary" id="btnInsert" style="background: #3b82f6; border-color: #3b82f6; padding: 0.375rem 0.75rem;">
@@ -201,28 +202,32 @@
                 'name': { x: 5, y: 5, visible: true, fontSize: 10, fontWeight: 'bold', fontFamily: 'Arial', textAlign: 'center', w: 90, h: 25 },
                 'price': { x: 5, y: 35, visible: true, fontSize: 18, fontWeight: '900', fontFamily: 'Arial', textAlign: 'center', w: 90, h: 25 },
                 'barcode': { x: 5, y: 70, visible: true, fontSize: 10, fontWeight: 'normal', fontFamily: 'Arial', textAlign: 'center', w: 90, h: 25 },
-                'printDate': { x: 50, y: 90, visible: false, fontSize: 7, fontWeight: 'normal', fontFamily: 'Arial', textAlign: 'right', w: 45, h: 10 }
+                'printDate': { x: 50, y: 90, visible: false, fontSize: 7, fontWeight: 'normal', fontFamily: 'Arial', textAlign: 'right', w: 45, h: 10 },
+                'peso_o_unidad': { x: 60, y: 5, visible: false, fontSize: 8, fontWeight: 'bold', fontFamily: 'Arial', textAlign: 'right', w: 35, h: 10 }
             },
             '80x33': {
                 'banner': { x: 5, y: -20, visible: false, fontSize: 10, fontWeight: 'bold', fontFamily: 'Arial', textAlign: 'center', w: 90, h: 15 }, 
                 'name': { x: 5, y: 5, visible: true, fontSize: 14, fontWeight: 'bold', fontFamily: 'Arial', textAlign: 'center', w: 90, h: 30 },
                 'price': { x: 5, y: 35, visible: true, fontSize: 24, fontWeight: '900', fontFamily: 'Arial', textAlign: 'center', w: 90, h: 40 },
                 'barcode': { x: 5, y: 75, visible: true, fontSize: 10, fontWeight: 'normal', fontFamily: 'Arial', textAlign: 'center', w: 90, h: 20 },
-                'printDate': { x: 50, y: 90, visible: false, fontSize: 7, fontWeight: 'normal', fontFamily: 'Arial', textAlign: 'right', w: 45, h: 10 }
+                'printDate': { x: 50, y: 90, visible: false, fontSize: 7, fontWeight: 'normal', fontFamily: 'Arial', textAlign: 'right', w: 45, h: 10 },
+                'peso_o_unidad': { x: 60, y: 5, visible: false, fontSize: 10, fontWeight: 'bold', fontFamily: 'Arial', textAlign: 'right', w: 35, h: 10 }
             },
             'A4': {
                 'banner': { x: 25, y: 5, visible: true, fontSize: 60, fontWeight: '900', fontFamily: 'Arial', textAlign: 'center', w: 50, h: 10 },
                 'name': { x: 10, y: 20, visible: true, fontSize: 50, fontWeight: 'bold', fontFamily: 'Arial', textAlign: 'center', w: 80, h: 20 },
                 'price': { x: 10, y: 50, visible: true, fontSize: 140, fontWeight: '900', fontFamily: 'Arial', textAlign: 'center', w: 80, h: 30 },
                 'barcode': { x: 20, y: 85, visible: true, fontSize: 20, fontWeight: 'normal', fontFamily: 'Arial', textAlign: 'center', w: 60, h: 10 },
-                'printDate': { x: 75, y: 95, visible: false, fontSize: 16, fontWeight: 'normal', fontFamily: 'Arial', textAlign: 'right', w: 20, h: 5 }
+                'printDate': { x: 75, y: 95, visible: false, fontSize: 16, fontWeight: 'normal', fontFamily: 'Arial', textAlign: 'right', w: 20, h: 5 },
+                'peso_o_unidad': { x: 70, y: 5, visible: false, fontSize: 16, fontWeight: 'bold', fontFamily: 'Arial', textAlign: 'right', w: 25, h: 10 }
             },
             'A4_Half': {
                 'banner': { x: 30, y: 5, visible: true, fontSize: 40, fontWeight: '900', fontFamily: 'Arial', textAlign: 'center', w: 40, h: 10 },
                 'name': { x: 10, y: 25, visible: true, fontSize: 30, fontWeight: 'bold', fontFamily: 'Arial', textAlign: 'center', w: 80, h: 20 },
                 'price': { x: 10, y: 50, visible: true, fontSize: 90, fontWeight: '900', fontFamily: 'Arial', textAlign: 'center', w: 80, h: 25 },
                 'barcode': { x: 25, y: 80, visible: true, fontSize: 16, fontWeight: 'normal', fontFamily: 'Arial', textAlign: 'center', w: 50, h: 15 },
-                'printDate': { x: 75, y: 95, visible: false, fontSize: 14, fontWeight: 'normal', fontFamily: 'Arial', textAlign: 'right', w: 20, h: 5 }
+                'printDate': { x: 75, y: 95, visible: false, fontSize: 14, fontWeight: 'normal', fontFamily: 'Arial', textAlign: 'right', w: 20, h: 5 },
+                'peso_o_unidad': { x: 70, y: 5, visible: false, fontSize: 14, fontWeight: 'bold', fontFamily: 'Arial', textAlign: 'right', w: 25, h: 10 }
             }
         };
 
@@ -269,7 +274,10 @@
             document.querySelectorAll('.draggable-elem').forEach(el => {
                 const id = el.getAttribute('data-id');
                 const state = elementsState[id];
-                if (!state) return;
+                if (!state) {
+                    el.remove();
+                    return;
+                }
 
                 el.style.left = state.x + '%';
                 el.style.top = state.y + '%';
@@ -298,7 +306,7 @@
                         el.innerText = state.text || 'Nuevo Texto';
                     } else if (!el.innerText) {
                         // Keep original hardcoded text if it's a standard element and currently empty
-                        const defaultTexts = { 'banner': 'OFERTA', 'name': 'PRODUCTO', 'price': '$999.99', 'barcode': '[CÓDIGO DE BARRAS]', 'printDate': '24/05/2024' };
+                        const defaultTexts = { 'banner': 'OFERTA', 'name': 'PRODUCTO', 'price': '$999.99', 'barcode': '[CÓDIGO DE BARRAS]', 'printDate': '24/05/2024', 'peso_o_unidad': 'PESO: 0.250 kg' };
                         el.innerText = defaultTexts[id] || id;
                     }
                 }
@@ -401,7 +409,7 @@
             document.getElementById('noSelectionMsg').style.display = 'none';
             document.getElementById('propsPanel').style.display = 'flex';
             
-            const names = { 'banner': 'Cartel Oferta', 'name': 'Nombre Producto', 'price': 'Precio', 'barcode': 'Código de Barras', 'printDate': 'Fecha de Impresión' };
+            const names = { 'banner': 'Cartel Oferta', 'name': 'Nombre Producto', 'price': 'Precio', 'barcode': 'Código de Barras', 'printDate': 'Fecha de Impresión', 'peso_o_unidad': 'Peso / Cantidad' };
             if (state.isBox) {
                 document.getElementById('propElementName').textContent = 'Recuadro/Línea';
             } else if (state.isCustomText) {

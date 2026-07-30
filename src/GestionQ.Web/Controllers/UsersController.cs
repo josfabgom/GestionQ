@@ -123,6 +123,27 @@ namespace GestionQ.Web.Controllers
 
             return RedirectToAction(nameof(Index));
         }
+
+        [HttpPost]
+        [Authorize(Policy = Permissions.Users.Edit)]
+        public async Task<IActionResult> ResetPassword(string id, string newPassword)
+        {
+            var user = await _userManager.FindByIdAsync(id);
+            if (user == null) return Json(new { success = false, message = "Usuario no encontrado" });
+
+            if (string.IsNullOrEmpty(newPassword) || newPassword.Length < 6)
+                return Json(new { success = false, message = "La contraseña debe tener al menos 6 caracteres" });
+
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+            var result = await _userManager.ResetPasswordAsync(user, token, newPassword);
+
+            if (result.Succeeded)
+            {
+                return Json(new { success = true });
+            }
+
+            return Json(new { success = false, message = string.Join(", ", result.Errors.Select(e => e.Description)) });
+        }
     }
 
     public class UserRoleViewModel

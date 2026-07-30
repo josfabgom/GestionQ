@@ -149,6 +149,79 @@ namespace GestionQ.Web.Controllers
 
             return Ok();
         }
+
+        [HttpGet]
+        public async Task<IActionResult> ScaleLabels()
+        {
+            ViewBag.Products = await _context.Products.Where(p => p.IsActive).ToListAsync();
+            return View();
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> PrintScalePreview([FromForm] int productId, [FromForm] decimal amount, [FromForm] int quantity, [FromForm] string format)
+        {
+            var product = await _context.Products.FindAsync(productId);
+            if (product == null) return RedirectToAction(nameof(ScaleLabels));
+
+            // Generate EAN-13
+            string prefix = "2";
+            string pluStr = product.InternalCode.ToString().PadLeft(6, '0');
+            string amountStr;
+            decimal calculatedPrice;
+            string weightOrUnitText;
+
+            if (product.IsPesable)
+            {
+                int grams = (int)Math.Round(amount * 1000m);
+                amountStr = grams.ToString().PadLeft(5, '0');
+                calculatedPrice = Math.Round(amount * product.Price, 2);
+                weightOrUnitText = $"PESO: {amount:F3} kg";
+            }
+            else
+            {
+                int units = (int)amount;
+                amountStr = units.ToString().PadLeft(5, '0');
+                calculatedPrice = Math.Round(units * product.Price, 2);
+                weightOrUnitText = $"CANT: {units} un.";
+            }
+
+            string codeWithoutCheck = prefix + pluStr + amountStr; // 12 digits
+            int sum = 0;
+            for (int i = 0; i < 12; i++)
+            {
+                int digit = int.Parse(codeWithoutCheck[i].ToString());
+                sum += (i % 2 == 0) ? digit * 1 : digit * 3; // 0-indexed: Even index = odd position (x1). Odd index = even position (x3).
+            }
+            int checksum = (10 - (sum % 10)) % 10;
+            string finalBarcode = codeWithoutCheck + checksum;
+
+            var templateSettings = await _context.SystemSettings
+                .Where(s => s.Key.StartsWith("LabelTemplate_"))
+                .ToListAsync();
+            
+            var templatesDict = new Dictionary<string, string>();
+            foreach (var t in templateSettings)
+            {
+                var formatName = t.Key.Replace("LabelTemplate_", "");
+                templatesDict[formatName] = t.Value;
+            }
+            ViewBag.TemplatesDict = templatesDict;
+
+            var model = new List<LabelPrintModel>
+            {
+                new LabelPrintModel
+                {
+                    Product = product,
+                    Quantity = quantity,
+                    Format = format,
+                    CustomBarcode = finalBarcode,
+                    CustomPrice = calculatedPrice,
+                    WeightOrUnitLabel = weightOrUnitText
+                }
+            };
+
+            return View("PrintPreview", model);
+        }
     }
 
     public class PrintQueueItem
@@ -163,5 +236,8 @@ namespace GestionQ.Web.Controllers
         public GestionQ.Domain.Entities.Product Product { get; set; }
         public int Quantity { get; set; }
         public string Format { get; set; }
+        public string CustomBarcode { get; set; }
+        public decimal? CustomPrice { get; set; }
+        public string WeightOrUnitLabel { get; set; }
     }
 }

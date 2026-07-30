@@ -56,5 +56,11 @@ namespace GestionQ.Web.Models
 
         [Display(Name = "Tema Visual (Colores)")]
         public string UITheme { get; set; } = "violet";
+
+        [Display(Name = "Ngrok Auth Token")]
+        public string NgrokAuthToken { get; set; } = string.Empty;
+
+        [Display(Name = "Ngrok Domain")]
+        public string NgrokDomain { get; set; } = string.Empty;
     }
 }
