@@ -1770,6 +1770,23 @@ BEGIN
     VALUES (N'20260703021041_AddSupplierCode', N'9.0.15');
 END;
 
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260730174740_AddShortDescriptionScale'
+)
+BEGIN
+    ALTER TABLE [Products] ADD [ShortDescriptionScale] nvarchar(30) NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260730174740_AddShortDescriptionScale'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20260730174740_AddShortDescriptionScale', N'9.0.15');
+END;
+
 COMMIT;
 GO
 

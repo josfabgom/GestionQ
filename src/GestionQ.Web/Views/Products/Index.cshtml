@@ -8,8 +8,8 @@
     <h1 class="page-title" style="margin-bottom: 0;">Stock de Productos</h1>
     
     <div style="display: flex; gap: 1rem; flex-grow: 1; justify-content: flex-end; align-items: center;">
-        <form asp-action="Index" method="get" style="display: flex; gap: 0.5rem; max-width: 400px; width: 100%;">
-            <input type="text" name="q" value="@ViewBag.SearchQuery" class="form-control" placeholder="Buscar por nombre, código o barra..." style="background: rgba(255,255,255,0.05);" />
+        <form asp-action="Index" method="get" id="searchForm" style="display: flex; gap: 0.5rem; max-width: 400px; width: 100%;">
+            <input type="text" id="searchInput" name="q" value="@ViewBag.SearchQuery" class="form-control" placeholder="Buscar por nombre, código o barra..." style="background: rgba(255,255,255,0.05);" oninput="debouncedSearch()" autofocus />
             <button type="submit" class="btn-secondary">Buscar</button>
             @if (!string.IsNullOrEmpty(ViewBag.SearchQuery as string))
             {
@@ -117,6 +117,26 @@
 
 @section Scripts {
     <script>
+        // Set focus to the end of the text on load if there's a search query
+        document.addEventListener("DOMContentLoaded", function() {
+            var input = document.getElementById("searchInput");
+            if (input && input.value.length > 0) {
+                // Focus and move cursor to the end
+                input.focus();
+                var val = input.value;
+                input.value = '';
+                input.value = val;
+            }
+        });
+
+        let searchTimeout;
+        function debouncedSearch() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(function () {
+                document.getElementById('searchForm').submit();
+            }, 600);
+        }
+
         document.querySelectorAll('.delete-product-form').forEach(form => {
             form.addEventListener('submit', function(e) {
                 e.preventDefault();

@@ -19,6 +19,10 @@ namespace GestionQ.Web.Models
         [Display(Name = "Nombre del Producto")]
         public string Name { get; set; } = string.Empty;
 
+        [StringLength(24)]
+        [Display(Name = "Nombre Corto para Balanza (Opcional)")]
+        public string? ShortDescriptionScale { get; set; }
+
         [Display(Name = "Subrubro")]
         [Required(ErrorMessage = "Debe seleccionar un subrubro")]
         public int? SubCategoryId { get; set; }

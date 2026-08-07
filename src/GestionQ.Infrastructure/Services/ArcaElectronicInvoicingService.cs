@@ -24,7 +24,7 @@ namespace GestionQ.Infrastructure.Services
         
         private const string WSFE_SERVICE_NAME = "wsfe";
         
-        private string _cuit = "20286759107"; // CUIT del titular del certificado
+        private string _cuit; // CUIT del titular del certificado, cargado dinámicamente
 
         private static string _cachedToken;
         private static string _cachedSign;
@@ -34,6 +34,7 @@ namespace GestionQ.Infrastructure.Services
         {
             _logger = logger;
             _httpClient = httpClient;
+            _cuit = configuration["CompanyInfo:Cuit"] ?? string.Empty;
             
             bool isProduction = false;
             bool.TryParse(configuration["Afip:UseProduction"], out isProduction);
@@ -325,14 +326,26 @@ namespace GestionQ.Infrastructure.Services
         {
             string fechaCbte = DateTime.Now.ToString("yyyyMMdd");
 
+            decimal netAmount = req.NetAmount;
+            decimal vatAmount = req.VatAmount;
+            decimal exemptAmount = req.ExemptAmount;
+
+            // Para comprobantes tipo C (11, 12, 13, 15), AFIP exige ImpIVA = 0 y ImpNeto = ImpTotal (Sub Total), sin objeto IVA.
+            if (req.InvoiceTypeCode == 11 || req.InvoiceTypeCode == 12 || req.InvoiceTypeCode == 13 || req.InvoiceTypeCode == 15)
+            {
+                netAmount = req.TotalAmount;
+                vatAmount = 0;
+                exemptAmount = 0;
+            }
+
             // Format numbers to 2 decimal places for AFIP
-            string netStr = req.NetAmount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
-            string vatStr = req.VatAmount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
-            string exStr = req.ExemptAmount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+            string netStr = netAmount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+            string vatStr = vatAmount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+            string exStr = exemptAmount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
             string totalStr = req.TotalAmount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
 
             string ivaXml = "";
-            if (req.VatAmount > 0)
+            if (vatAmount > 0)
             {
                 // Find Vat Base. Assuming 21% for simple example.
                 ivaXml = $@"

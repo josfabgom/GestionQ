@@ -43,7 +43,7 @@ public class ScaleController : Controller
             return RedirectToAction(nameof(Index));
         }
 
-        var exportData = pesables.Select(p => (p.InternalCode, p.Name, p.Price)).ToList();
+        var exportData = pesables.Select(p => (p.InternalCode, string.IsNullOrWhiteSpace(p.ShortDescriptionScale) ? p.Name : p.ShortDescriptionScale, p.Price)).ToList();
         
         bool success = _scaleService.ExportCatalog(exportData);
 
@@ -85,7 +85,7 @@ public class ScaleController : Controller
         // Para Itegra se requiere: (int Plu, string Name, decimal Price, int CategoryId, bool IsPesable, int ExpirationDays)
         var exportData = pesables.Select(p => (
             Plu: p.InternalCode, 
-            Name: p.Name, 
+            Name: string.IsNullOrWhiteSpace(p.ShortDescriptionScale) ? p.Name : p.ShortDescriptionScale, 
             Price: p.Price, 
             CategoryId: p.SubCategory?.CategoryId ?? 1, // Fallback si no tiene subrubro
             IsPesable: p.IsPesable,

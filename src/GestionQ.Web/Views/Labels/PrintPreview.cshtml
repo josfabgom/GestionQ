@@ -195,7 +195,7 @@
                         
                         <div class="lbl-sheet-item lbl-55x35" data-json="@jsonStr">
                             <div class="elem-base banner-oferta" data-id="banner">OFERTA</div>
-                            <div class="elem-base prod-name" data-id="name">@item.Product.Name</div>
+                            <div class="elem-base prod-name" data-id="name">@(string.IsNullOrWhiteSpace(item.Product.ShortDescriptionScale) ? item.Product.Name : item.Product.ShortDescriptionScale)</div>
                             <div class="elem-base prod-price" data-id="price">$@priceVal</div>
                             <div class="elem-base" data-id="peso_o_unidad">@weightLabelStr</div>
                             <div class="elem-base barcode-container" data-id="barcode">
@@ -220,7 +220,7 @@
                 
                 <div class="lbl-base lbl-@format" data-json="@jsonStr">
                     <div class="elem-base banner-oferta" data-id="banner">OFERTA</div>
-                    <div class="elem-base prod-name" data-id="name">@item.Product.Name</div>
+                    <div class="elem-base prod-name" data-id="name">@(string.IsNullOrWhiteSpace(item.Product.ShortDescriptionScale) ? item.Product.Name : item.Product.ShortDescriptionScale)</div>
                     <div class="elem-base prod-price" data-id="price">$@priceVal</div>
                     <div class="elem-base" data-id="peso_o_unidad">@weightLabelStr</div>
                     <div class="elem-base barcode-container" data-id="barcode">

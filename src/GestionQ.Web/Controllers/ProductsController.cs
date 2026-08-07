@@ -108,6 +108,7 @@ namespace GestionQ.Web.Controllers
                 {
                     Barcode = model.Barcode,
                     Name = model.Name,
+                    ShortDescriptionScale = model.ShortDescriptionScale,
                     SubCategoryId = model.SubCategoryId,
                     IsPesable = model.IsPesable,
                     IsFractionable = model.IsFractionable,
@@ -191,6 +192,7 @@ namespace GestionQ.Web.Controllers
                 InternalCode = product.InternalCode,
                 Barcode = product.Barcode,
                 Name = product.Name,
+                ShortDescriptionScale = product.ShortDescriptionScale,
                 SubCategoryId = product.SubCategoryId,
                 IsPesable = product.IsPesable,
                 IsFractionable = product.IsFractionable,
@@ -240,6 +242,7 @@ namespace GestionQ.Web.Controllers
                     product.InternalCode = model.InternalCode;
                     product.Barcode = model.Barcode;
                     product.Name = model.Name;
+                    product.ShortDescriptionScale = model.ShortDescriptionScale;
                     product.SubCategoryId = model.SubCategoryId;
                     product.IsPesable = model.IsPesable;
                     product.IsFractionable = model.IsFractionable;
@@ -329,6 +332,7 @@ namespace GestionQ.Web.Controllers
                 InternalCode = 0, // Se asignará uno nuevo automáticamente en el POST
                 Barcode = null, // Dejar vacío para evitar duplicados
                 Name = product.Name + " (Copia)",
+                ShortDescriptionScale = product.ShortDescriptionScale,
                 SubCategoryId = product.SubCategoryId,
                 IsPesable = product.IsPesable,
                 IsFractionable = product.IsFractionable,

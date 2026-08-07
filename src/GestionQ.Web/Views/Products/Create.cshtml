@@ -39,6 +39,18 @@
                     <span asp-validation-for="Name" class="text-danger"></span>
                 </div>
 
+                <div class="form-group">
+                    <label asp-for="ShortDescriptionScale" class="control-label"></label>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <input asp-for="ShortDescriptionScale" class="form-control" maxlength="24" placeholder="Si se deja vacío, se utilizará el nombre principal en la balanza" />
+                        <button type="button" class="btn btn-secondary" onclick="generateShortName()" title="Generar Nombre Corto">
+                            <i class="fas fa-magic"></i>
+                        </button>
+                    </div>
+                    <span asp-validation-for="ShortDescriptionScale" class="text-danger"></span>
+                    <small class="form-text text-muted" style="opacity: 0.7; font-size: 0.8rem;">Máx 24 caracteres. Para imprimir en etiquetas y exportar a balanza.</small>
+                </div>
+
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
                     <div class="form-group">
                         <label class="control-label">Rubro</label>
@@ -360,5 +372,54 @@
                     document.getElementById('Barcode').value = data.barcode;
                 });
         });
+
+        // Generate Short Name for Scale
+        function generateShortName() {
+            let name = document.getElementById('Name').value;
+            if (!name) return;
+            
+            // 1. Remove text in parenthesis if it makes it too long
+            if (name.length > 24) {
+                name = name.replace(/\s*\(.*?\)\s*/g, ' ').trim();
+            }
+            
+            // 2. Remove common small words
+            if (name.length > 24) {
+                const wordsToRemove = [' de ', ' con ', ' para ', ' sin ', ' el ', ' la ', ' los ', ' las ', ' y '];
+                wordsToRemove.forEach(w => {
+                    let regex = new RegExp(w, "gi");
+                    name = name.replace(regex, ' ');
+                });
+                name = name.replace(/\s+/g, ' ').trim();
+            }
+            
+            // 3. Abbreviate
+            if (name.length > 24) {
+                let parts = name.split(' ');
+                let shortName = parts[0];
+                for (let i = 1; i < parts.length; i++) {
+                    if (shortName.length + 1 + parts[i].length <= 24) {
+                        shortName += ' ' + parts[i];
+                    } else {
+                        let remaining = 24 - shortName.length - 1;
+                        if (remaining > 2) { 
+                            shortName += ' ' + parts[i].substring(0, remaining - 1) + '.';
+                        }
+                        break;
+                    }
+                }
+                name = shortName;
+            }
+            
+            if (name.length > 24) {
+                name = name.substring(0, 24);
+            }
+            
+            document.getElementById('ShortDescriptionScale').value = name;
+            
+            const input = document.getElementById('ShortDescriptionScale');
+            input.style.boxShadow = '0 0 0 2px var(--accent)';
+            setTimeout(() => input.style.boxShadow = 'none', 500);
+        }
     </script>
 }

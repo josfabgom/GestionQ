@@ -94,9 +94,15 @@
     
     invoiceText.AppendLine(new string('-', 35));
     
-    invoiceText.AppendLine(FormatLine("Subtotal Neto:", Model.NetAmount.ToString("C"), 35));
-    invoiceText.AppendLine(FormatLine("IVA 21%/10.5%:", Model.VatAmount.ToString("C"), 35));
-    if (Model.ExemptAmount > 0)
+    bool isTypeC = Model.InvoiceTypeCode == 11 || Model.InvoiceTypeCode == 12 || Model.InvoiceTypeCode == 13 || Model.InvoiceTypeCode == 15;
+    
+    invoiceText.AppendLine(FormatLine("Subtotal Neto:", (isTypeC ? Model.TotalAmount : Model.NetAmount).ToString("C"), 35));
+    if (!isTypeC)
+    {
+        invoiceText.AppendLine(FormatLine("IVA 21%/10.5%:", Model.VatAmount.ToString("C"), 35));
+    }
+    
+    if (Model.ExemptAmount > 0 && !isTypeC)
     {
         invoiceText.AppendLine(FormatLine("Exento:", Model.ExemptAmount.ToString("C"), 35));
     }
@@ -353,13 +359,16 @@
         <table style="width: 100%;">
             <tr>
                 <td class="bold">Subtotal:</td>
-                <td class="text-right">@Model.NetAmount.ToString("C")</td>
+                <td class="text-right">@(isTypeC ? Model.TotalAmount.ToString("C") : Model.NetAmount.ToString("C"))</td>
             </tr>
-            <tr>
-                <td class="bold">IVA:</td>
-                <td class="text-right">@Model.VatAmount.ToString("C")</td>
-            </tr>
-            @if (Model.ExemptAmount > 0)
+            @if (!isTypeC)
+            {
+                <tr>
+                    <td class="bold">IVA:</td>
+                    <td class="text-right">@Model.VatAmount.ToString("C")</td>
+                </tr>
+            }
+            @if (Model.ExemptAmount > 0 && !isTypeC)
             {
                 <tr>
                     <td class="bold">Exento:</td>

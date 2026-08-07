@@ -19,6 +19,10 @@ namespace GestionQ.Domain.Entities
         [Required, StringLength(100)]
         public string Name { get; set; } = string.Empty;
 
+        [Display(Name = "Nombre Corto (Balanza)")]
+        [StringLength(30)]
+        public string? ShortDescriptionScale { get; set; }
+
         [Display(Name = "Subrubro")]
         public int? SubCategoryId { get; set; }
         public SubCategory? SubCategory { get; set; }

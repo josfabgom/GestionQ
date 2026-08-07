@@ -10,8 +10,8 @@ using GestionQ.Domain.Entities;
 using GestionQ.Infrastructure.Services;
 using Microsoft.AspNetCore.Authorization;
 
+using Microsoft.Extensions.Configuration;
 using GestionQ.Domain.Constants;
-
 namespace GestionQ.Web.Controllers
 {
     [Authorize(Policy = Permissions.ElectronicInvoices.View)]
@@ -19,11 +19,13 @@ namespace GestionQ.Web.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly IElectronicInvoicingService _invoicingService;
+        private readonly IConfiguration _config;
 
-        public ElectronicInvoicesController(ApplicationDbContext context, IElectronicInvoicingService invoicingService)
+        public ElectronicInvoicesController(ApplicationDbContext context, IElectronicInvoicingService invoicingService, IConfiguration config)
         {
             _context = context;
             _invoicingService = invoicingService;
+            _config = config;
         }
 
         // GET: ElectronicInvoices
@@ -96,23 +98,41 @@ namespace GestionQ.Web.Controllers
                 docTypeCode = 96; // DNI
             }
 
-            if (sale.Customer?.TaxCondition != null)
+            var companyTaxCondition = _config["CompanyInfo:TaxCondition"]?.ToLower() ?? "";
+            bool isMonotributista = companyTaxCondition.Contains("monotributo") || companyTaxCondition.Contains("monotributista");
+
+            if (isMonotributista)
             {
-                var taxConditionName = sale.Customer.TaxCondition.Name.ToLower();
-                if (taxConditionName.Contains("inscripto"))
+                defaultInvoiceTypeCode = 11; // Factura C
+                defaultCondicionIvaReceptor = 5;
+                if (sale.Customer?.TaxCondition != null)
                 {
-                    defaultInvoiceTypeCode = 1; // Factura A
-                    defaultCondicionIvaReceptor = 1; // Responsable Inscripto
+                    var taxConditionName = sale.Customer.TaxCondition.Name.ToLower();
+                    if (taxConditionName.Contains("inscripto")) defaultCondicionIvaReceptor = 1;
+                    else if (taxConditionName.Contains("monotributo") || taxConditionName.Contains("monotributista")) defaultCondicionIvaReceptor = 6;
+                    else if (taxConditionName.Contains("exento")) defaultCondicionIvaReceptor = 4;
                 }
-                else if (taxConditionName.Contains("monotributo") || taxConditionName.Contains("monotributista"))
+            }
+            else
+            {
+                if (sale.Customer?.TaxCondition != null)
                 {
-                    defaultInvoiceTypeCode = 6; // Factura B
-                    defaultCondicionIvaReceptor = 6; // Responsable Monotributo
-                }
-                else if (taxConditionName.Contains("exento"))
-                {
-                    defaultInvoiceTypeCode = 6; // Factura B
-                    defaultCondicionIvaReceptor = 4; // Sujeto Exento
+                    var taxConditionName = sale.Customer.TaxCondition.Name.ToLower();
+                    if (taxConditionName.Contains("inscripto"))
+                    {
+                        defaultInvoiceTypeCode = 1; // Factura A
+                        defaultCondicionIvaReceptor = 1; // Responsable Inscripto
+                    }
+                    else if (taxConditionName.Contains("monotributo") || taxConditionName.Contains("monotributista"))
+                    {
+                        defaultInvoiceTypeCode = 6; // Factura B
+                        defaultCondicionIvaReceptor = 6; // Responsable Monotributo
+                    }
+                    else if (taxConditionName.Contains("exento"))
+                    {
+                        defaultInvoiceTypeCode = 6; // Factura B
+                        defaultCondicionIvaReceptor = 4; // Sujeto Exento
+                    }
                 }
             }
 
@@ -669,23 +689,41 @@ namespace GestionQ.Web.Controllers
                 docTypeCode = 96;
             }
 
-            if (sale.Customer?.TaxCondition != null)
+            var companyTaxCondition = _config["CompanyInfo:TaxCondition"]?.ToLower() ?? "";
+            bool isMonotributista = companyTaxCondition.Contains("monotributo") || companyTaxCondition.Contains("monotributista");
+
+            if (isMonotributista)
             {
-                var taxConditionName = sale.Customer.TaxCondition.Name.ToLower();
-                if (taxConditionName.Contains("inscripto"))
+                defaultInvoiceTypeCode = 11; // Factura C
+                defaultCondicionIvaReceptor = 5;
+                if (sale.Customer?.TaxCondition != null)
                 {
-                    defaultInvoiceTypeCode = 1; // Factura A
-                    defaultCondicionIvaReceptor = 1; // Responsable Inscripto
+                    var taxConditionName = sale.Customer.TaxCondition.Name.ToLower();
+                    if (taxConditionName.Contains("inscripto")) defaultCondicionIvaReceptor = 1;
+                    else if (taxConditionName.Contains("monotributo") || taxConditionName.Contains("monotributista")) defaultCondicionIvaReceptor = 6;
+                    else if (taxConditionName.Contains("exento")) defaultCondicionIvaReceptor = 4;
                 }
-                else if (taxConditionName.Contains("monotributo") || taxConditionName.Contains("monotributista"))
+            }
+            else
+            {
+                if (sale.Customer?.TaxCondition != null)
                 {
-                    defaultInvoiceTypeCode = 6;
-                    defaultCondicionIvaReceptor = 6;
-                }
-                else if (taxConditionName.Contains("exento"))
-                {
-                    defaultInvoiceTypeCode = 6;
-                    defaultCondicionIvaReceptor = 4;
+                    var taxConditionName = sale.Customer.TaxCondition.Name.ToLower();
+                    if (taxConditionName.Contains("inscripto"))
+                    {
+                        defaultInvoiceTypeCode = 1; // Factura A
+                        defaultCondicionIvaReceptor = 1; // Responsable Inscripto
+                    }
+                    else if (taxConditionName.Contains("monotributo") || taxConditionName.Contains("monotributista"))
+                    {
+                        defaultInvoiceTypeCode = 6;
+                        defaultCondicionIvaReceptor = 6;
+                    }
+                    else if (taxConditionName.Contains("exento"))
+                    {
+                        defaultInvoiceTypeCode = 6;
+                        defaultCondicionIvaReceptor = 4;
+                    }
                 }
             }
 
@@ -901,23 +939,41 @@ namespace GestionQ.Web.Controllers
                     if (!string.IsNullOrWhiteSpace(customerCuit)) docTypeCode = 80;
                     else if (!string.IsNullOrWhiteSpace(customerDni)) docTypeCode = 96;
 
-                    if (sale.Customer?.TaxCondition != null)
+                    var companyTaxCondition = _config["CompanyInfo:TaxCondition"]?.ToLower() ?? "";
+                    bool isMonotributista = companyTaxCondition.Contains("monotributo") || companyTaxCondition.Contains("monotributista");
+
+                    if (isMonotributista)
                     {
-                        var taxConditionName = sale.Customer.TaxCondition.Name.ToLower();
-                        if (taxConditionName.Contains("inscripto"))
+                        defaultInvoiceTypeCode = 11; // Factura C
+                        defaultCondicionIvaReceptor = 5;
+                        if (sale.Customer?.TaxCondition != null)
                         {
-                            defaultInvoiceTypeCode = 1;
-                            defaultCondicionIvaReceptor = 1;
+                            var taxConditionName = sale.Customer.TaxCondition.Name.ToLower();
+                            if (taxConditionName.Contains("inscripto")) defaultCondicionIvaReceptor = 1;
+                            else if (taxConditionName.Contains("monotributo") || taxConditionName.Contains("monotributista")) defaultCondicionIvaReceptor = 6;
+                            else if (taxConditionName.Contains("exento")) defaultCondicionIvaReceptor = 4;
                         }
-                        else if (taxConditionName.Contains("monotributo") || taxConditionName.Contains("monotributista"))
+                    }
+                    else
+                    {
+                        if (sale.Customer?.TaxCondition != null)
                         {
-                            defaultInvoiceTypeCode = 6;
-                            defaultCondicionIvaReceptor = 6;
-                        }
-                        else if (taxConditionName.Contains("exento"))
-                        {
-                            defaultInvoiceTypeCode = 6;
-                            defaultCondicionIvaReceptor = 4;
+                            var taxConditionName = sale.Customer.TaxCondition.Name.ToLower();
+                            if (taxConditionName.Contains("inscripto"))
+                            {
+                                defaultInvoiceTypeCode = 1;
+                                defaultCondicionIvaReceptor = 1;
+                            }
+                            else if (taxConditionName.Contains("monotributo") || taxConditionName.Contains("monotributista"))
+                            {
+                                defaultInvoiceTypeCode = 6;
+                                defaultCondicionIvaReceptor = 6;
+                            }
+                            else if (taxConditionName.Contains("exento"))
+                            {
+                                defaultInvoiceTypeCode = 6;
+                                defaultCondicionIvaReceptor = 4;
+                            }
                         }
                     }
 
