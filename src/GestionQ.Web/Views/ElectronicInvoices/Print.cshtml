@@ -5,11 +5,15 @@
 @{
     Layout = null; // No MVC wrapper for printing view
     
+    var eCuitStr = Configuration["CompanyInfo:Cuit"] ?? "";
+    long cuitLong = 0;
+    long.TryParse(eCuitStr, out cuitLong);
+
     // Generate AFIP QR Code Base64 Data
     var qrObj = new {
         ver = 1,
         fecha = Model.IssueDate.ToString("yyyy-MM-dd"),
-        cuit = 30712345678L, // Simulated company CUIT (GestionQ)
+        cuit = cuitLong > 0 ? cuitLong : 30712345678L, 
         ptoVta = Model.PointOfSaleNumber,
         tipoCmp = Model.InvoiceTypeCode,
         nroCmp = Model.InvoiceNumber,
@@ -58,13 +62,14 @@
             background-color: #fff;
             border-radius: 12px;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            position: relative;
         }
 
         /* Invoice Type AFIP standard letter box */
         .afip-letter-box {
             position: absolute;
             left: 50%;
-            top: 45px;
+            top: -24px;
             transform: translateX(-50%);
             width: 48px;
             height: 48px;
@@ -80,7 +85,7 @@
         .afip-letter-sub {
             position: absolute;
             left: 50%;
-            top: 95px;
+            top: 28px;
             transform: translateX(-50%);
             font-size: 8px;
             font-weight: 700;
@@ -346,6 +351,13 @@
                         var eCompanyName = Configuration["CompanyInfo:Name"] ?? "GestionQ";
                         var eFantasyName = Configuration["CompanyInfo:FantasyName"];
                         if (string.IsNullOrWhiteSpace(eFantasyName)) eFantasyName = eCompanyName;
+                        var eAddress = Configuration["CompanyInfo:Address"] ?? "";
+                        var ePhone = Configuration["CompanyInfo:Phone"] ?? "";
+                        var eEmail = Configuration["CompanyInfo:Email"] ?? "";
+                        var eCuit = Configuration["CompanyInfo:Cuit"] ?? "";
+                        var eIIBB = Configuration["CompanyInfo:IIBB"] ?? "";
+                        var eStartActivity = Configuration["CompanyInfo:StartOfActivities"] ?? "";
+                        var eVatCondition = Configuration["CompanyInfo:TaxCondition"] ?? "IVA Responsable Inscripto";
                     }
                     <h1>@eFantasyName</h1>
                     @if (eFantasyName != eCompanyName)
@@ -353,24 +365,24 @@
                         <div style="font-size: 0.8em; margin-top: -8px; margin-bottom: 10px;">de @eCompanyName</div>
                     }
                     <div class="header-info-row">
-                        <span class="header-info-label">Razón Social:</span> @(Configuration["CompanyInfo:Name"] ?? "GestionQ S.A.")
+                        <span class="header-info-label">Razón Social:</span> @eCompanyName
                     </div>
                     <div class="header-info-row">
-                        <span class="header-info-label">Domicilio Comercial:</span> @(Configuration["CompanyInfo:Address"] ?? "Av. Corrientes 1234, CABA")
+                        <span class="header-info-label">Domicilio Comercial:</span> @eAddress
                     </div>
                     <div class="header-info-row">
-                        <span class="header-info-label">Condición ante el IVA:</span> IVA Responsable Inscripto
+                        <span class="header-info-label">Condición ante el IVA:</span> @eVatCondition
                     </div>
-                    @if (!string.IsNullOrEmpty(Configuration["CompanyInfo:Phone"]))
+                    @if (!string.IsNullOrEmpty(ePhone))
                     {
                         <div class="header-info-row">
-                            <span class="header-info-label">Teléfono:</span> @Configuration["CompanyInfo:Phone"]
+                            <span class="header-info-label">Teléfono:</span> @ePhone
                         </div>
                     }
-                    @if (!string.IsNullOrEmpty(Configuration["CompanyInfo:Email"]))
+                    @if (!string.IsNullOrEmpty(eEmail))
                     {
                         <div class="header-info-row">
-                            <span class="header-info-label">Email:</span> @Configuration["CompanyInfo:Email"]
+                            <span class="header-info-label">Email:</span> @eEmail
                         </div>
                     }
                 </td>
@@ -387,13 +399,13 @@
                         <span class="header-info-label">Fecha de Emisión:</span> @Model.IssueDate.ToString("dd/MM/yyyy")
                     </div>
                     <div class="header-info-row">
-                        <span class="header-info-label">CUIT Emisor:</span> 30-71234567-8
+                        <span class="header-info-label">CUIT Emisor:</span> @eCuit
                     </div>
                     <div class="header-info-row">
-                        <span class="header-info-label">Ingresos Brutos:</span> 30-71234567-8
+                        <span class="header-info-label">Ingresos Brutos:</span> @eIIBB
                     </div>
                     <div class="header-info-row">
-                        <span class="header-info-label">Inicio de Actividades:</span> 01/01/2020
+                        <span class="header-info-label">Inicio de Actividades:</span> @eStartActivity
                     </div>
                 </td>
             </tr>

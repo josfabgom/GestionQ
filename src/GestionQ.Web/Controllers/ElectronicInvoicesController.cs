@@ -332,6 +332,14 @@ namespace GestionQ.Web.Controllers
                 return NotFound();
             }
 
+            var settingsList = await _context.SystemSettings.ToListAsync();
+            var settings = settingsList.ToDictionary(s => s.Key, s => s.Value);
+
+            ViewBag.CompanyCUIT = settings.ContainsKey("CompanyCUIT") ? settings["CompanyCUIT"] : "";
+            ViewBag.CompanyIIBB = settings.ContainsKey("CompanyIIBB") ? settings["CompanyIIBB"] : "";
+            ViewBag.CompanyStartActivity = settings.ContainsKey("CompanyStartActivity") ? settings["CompanyStartActivity"] : "";
+            ViewBag.CompanyVatCondition = settings.ContainsKey("CompanyVatCondition") ? settings["CompanyVatCondition"] : "IVA Responsable Inscripto";
+
             return View(invoice);
         }
 

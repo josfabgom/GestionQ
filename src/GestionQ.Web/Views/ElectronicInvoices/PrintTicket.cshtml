@@ -39,6 +39,11 @@
     var companyAddress = Configuration["CompanyInfo:Address"] ?? "";
     var companyPhone = Configuration["CompanyInfo:Phone"] ?? "";
     var companyEmail = Configuration["CompanyInfo:Email"] ?? "";
+    
+    var companyCuit = Configuration["CompanyInfo:Cuit"] ?? "";
+    var companyIIBB = Configuration["CompanyInfo:IIBB"] ?? "";
+    var companyStartActivity = Configuration["CompanyInfo:StartOfActivities"] ?? "";
+    var companyVatCondition = Configuration["CompanyInfo:TaxCondition"] ?? "IVA Responsable Inscripto";
 
     var invoiceText = new StringBuilder();
     invoiceText.AppendLine(CenterText("FACTURA ELECTRÓNICA"));
@@ -48,6 +53,12 @@
     if (!string.IsNullOrEmpty(companyAddress)) invoiceText.AppendLine(CenterText(companyAddress));
     if (!string.IsNullOrEmpty(companyPhone)) invoiceText.AppendLine(CenterText($"Tel: {companyPhone}"));
     if (!string.IsNullOrEmpty(companyEmail)) invoiceText.AppendLine(CenterText(companyEmail));
+    
+    if (!string.IsNullOrEmpty(companyCuit)) invoiceText.AppendLine(CenterText($"CUIT: {companyCuit}"));
+    if (!string.IsNullOrEmpty(companyIIBB)) invoiceText.AppendLine(CenterText($"IIBB: {companyIIBB}"));
+    if (!string.IsNullOrEmpty(companyStartActivity)) invoiceText.AppendLine(CenterText($"Inicio de Act.: {companyStartActivity}"));
+    
+    invoiceText.AppendLine(CenterText(companyVatCondition));
     invoiceText.AppendLine(new string('-', 35));
     
     invoiceText.AppendLine(CenterText(Model.InvoiceTypeDesc));
@@ -118,11 +129,14 @@
     caeText.AppendLine(CenterText("Comprobante Electrónico (v4.0)"));
 
     
+    long cuitLong = 0;
+    long.TryParse(companyCuit, out cuitLong);
+
     // Generate AFIP QR Code Base64 Data
     var qrObj = new {
         ver = 1,
         fecha = Model.IssueDate.ToString("yyyy-MM-dd"),
-        cuit = 30712345678L, 
+        cuit = cuitLong > 0 ? cuitLong : 30712345678L, 
         ptoVta = Model.PointOfSaleNumber,
         tipoCmp = Model.InvoiceTypeCode,
         nroCmp = Model.InvoiceNumber,
@@ -299,7 +313,12 @@
             @if (!string.IsNullOrEmpty(companyAddress)) { <div>@companyAddress</div> }
             @if (!string.IsNullOrEmpty(companyPhone)) { <div>Tel: @companyPhone</div> }
             @if (!string.IsNullOrEmpty(companyEmail)) { <div>@companyEmail</div> }
-            <div>IVA Responsable Inscripto</div>
+            
+            @if (!string.IsNullOrEmpty(companyCuit)) { <div><span class="bold">CUIT:</span> @companyCuit</div> }
+            @if (!string.IsNullOrEmpty(companyIIBB)) { <div><span class="bold">IIBB:</span> @companyIIBB</div> }
+            @if (!string.IsNullOrEmpty(companyStartActivity)) { <div><span class="bold">Inicio de Actividades:</span> @companyStartActivity</div> }
+            
+            <div class="mt-1">@companyVatCondition</div>
         </div>
         
         <div class="divider"></div>

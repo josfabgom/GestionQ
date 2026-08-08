@@ -144,6 +144,21 @@ namespace GestionQ.Web.Controllers
                 _context.Add(product);
                 await _context.SaveChangesAsync();
 
+                if (product.Stock != 0)
+                {
+                    var stockMovement = new StockMovement
+                    {
+                        Date = DateTime.Now,
+                        ProductId = product.Id,
+                        Quantity = product.Stock,
+                        Type = product.Stock > 0 ? MovementType.AdjustmentIn : MovementType.AdjustmentOut,
+                        Concept = "Stock Inicial",
+                        PreviousStock = 0,
+                        NewStock = product.Stock
+                    };
+                    _context.StockMovements.Add(stockMovement);
+                }
+
                 var priceEntry = new ProductPrice
                 {
                     ProductId = product.Id,
@@ -239,6 +254,8 @@ namespace GestionQ.Web.Controllers
                     var product = await _context.Products.FindAsync(id);
                     if (product == null) return NotFound();
 
+                    var previousStock = product.Stock;
+
                     product.InternalCode = model.InternalCode;
                     product.Barcode = model.Barcode;
                     product.Name = model.Name;
@@ -249,6 +266,22 @@ namespace GestionQ.Web.Controllers
                     product.SendToScale = model.SendToScale;
                     product.Price = model.Price;
                     product.Stock = model.Stock;
+
+                    if (previousStock != model.Stock)
+                    {
+                        var difference = model.Stock - previousStock;
+                        var stockMovement = new StockMovement
+                        {
+                            Date = DateTime.Now,
+                            ProductId = product.Id,
+                            Quantity = difference,
+                            Type = difference > 0 ? MovementType.AdjustmentIn : MovementType.AdjustmentOut,
+                            Concept = "Modificación desde ficha de producto",
+                            PreviousStock = previousStock,
+                            NewStock = model.Stock
+                        };
+                        _context.StockMovements.Add(stockMovement);
+                    }
                     product.MinimumStock = model.MinimumStock;
                     product.VatRateId = model.VatRateId;
                     product.IsActive = model.IsActive;

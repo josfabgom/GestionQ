@@ -389,8 +389,8 @@ namespace GestionQ.Infrastructure.Services
             <ImpIVA>{vatStr}</ImpIVA>
             <MonId>PES</MonId>
             <MonCotiz>1.000</MonCotiz>
+            {(req.CanMisMonExt ? "<CanMisMonExt>S</CanMisMonExt>" : "")}
             <CondicionIVAReceptorId>{req.CondicionIVAReceptorId}</CondicionIVAReceptorId>
-            {(req.CanMisMonExt ? "<Opcionales><Opcional><Id>CanMisMonExt</Id><Valor>1</Valor></Opcional></Opcionales>" : "")}
             {ivaXml}
           </FECAEDetRequest>
         </FeDetReq>
