@@ -8,7 +8,10 @@
         <i class="fa-solid fa-chart-pie"></i>
         <h1>@ViewData["Title"]</h1>
     </div>
-    <div class="top-bar-actions">
+    <div class="top-bar-actions" style="display: flex; gap: 0.5rem;">
+        <a asp-action="DailySalesByProduct" asp-route-startDate="@Model.StartDate.ToString("yyyy-MM-dd")" asp-route-endDate="@Model.EndDate.ToString("yyyy-MM-dd")" class="btn-primary" style="background: #3b82f6;">
+            <i class="fa-solid fa-file-pdf"></i> Reporte Ventas (PDF)
+        </a>
         <a asp-action="ProductChanges" class="btn-primary">
             <i class="fa-solid fa-boxes-packing"></i> Reporte de Cambios
         </a>

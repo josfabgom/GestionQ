@@ -2,6 +2,7 @@ $ErrorActionPreference = "Stop"
 $ProjectPath = ".\src\GestionQ.Web\GestionQ.Web.csproj"
 $AppFolder = ".\out\app"
 $ClientAppFolder = ".\out\app_cliente"
+$CajaPosFolder = ".\out\app_cajapos"
 $SqlBootstrapper = ".\out\SQL2022-SSEI-Expr.exe"
 $AssetsFolder = ".\src\installer_assets"
 $InstallerResources = ".\src\GestionQ.Installer\Resources"
@@ -17,7 +18,7 @@ if (Test-Path "$InstallerResources\payload.zip") { Remove-Item "$InstallerResour
 
 # 1b. Generar script SQL de estructura de base de datos
 Write-Host "Generando script SQL de la base de datos..." -ForegroundColor Yellow
-dotnet ef migrations script --project src\GestionQ.Infrastructure --startup-project src\GestionQ.Web --idempotent --output "$AssetsFolder\GestionQ_Schema.sql"
+dotnet ef migrations script --project src\GestionQ.Infrastructure --startup-project src\GestionQ.Web --idempotent --configuration Release --output "$AssetsFolder\GestionQ_Schema.sql"
 if ($LASTEXITCODE -ne 0) { Write-Host "Advertencia: No se pudo generar el script de migración SQL." -ForegroundColor Red }
 
 # 2. Publicar proyectos de la aplicación
@@ -26,6 +27,9 @@ dotnet publish $ProjectPath -c Release -r win-x64 --self-contained true -p:Publi
 
 Write-Host "Ejecutando dotnet publish (Desktop para Cliente)..." -ForegroundColor Yellow
 dotnet publish ".\src\GestionQ.Desktop\GestionQ.Desktop.csproj" -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o $ClientAppFolder
+
+Write-Host "Ejecutando dotnet publish (Caja POS)..." -ForegroundColor Yellow
+dotnet publish ".\src\GestionQ.CajaPOS\GestionQ.CajaPOS.csproj" -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o $CajaPosFolder
 
 Write-Host "Ejecutando dotnet publish (ServerMonitor)..." -ForegroundColor Yellow
 dotnet publish ".\src\GestionQ.ServerMonitor\GestionQ.ServerMonitor.csproj" -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o $AppFolder
@@ -47,6 +51,7 @@ $PayloadTmp = ".\out\payload_tmp"
 New-Item -ItemType Directory -Path $PayloadTmp -Force | Out-Null
 Copy-Item $AppFolder -Destination $PayloadTmp -Recurse
 Copy-Item $ClientAppFolder -Destination $PayloadTmp -Recurse
+Copy-Item $CajaPosFolder -Destination $PayloadTmp -Recurse
 Compress-Archive -Path "$PayloadTmp\*" -DestinationPath "$InstallerResources\payload.zip" -Force
 Remove-Item $PayloadTmp -Recurse -Force | Out-Null
 

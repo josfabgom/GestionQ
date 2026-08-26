@@ -61,7 +61,11 @@
                 </div>
                 <div class="form-group">
                     <label asp-for="EndDate" class="control-label" style="font-weight: 600; margin-bottom: 0.4rem; display: block;">Vigencia Hasta</label>
-                    <input asp-for="EndDate" class="form-control" type="date" asp-format="{0:yyyy-MM-dd}" required />
+                    <input asp-for="EndDate" id="endDateInput" class="form-control" type="date" asp-format="{0:yyyy-MM-dd}" required />
+                    <div style="margin-top: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <input asp-for="UntilStockRunsOut" class="form-check-input" type="checkbox" id="untilStockCheck" style="width: 1.2rem; height: 1.2rem; margin: 0; cursor: pointer;" onchange="toggleUntilStock()" />
+                        <label asp-for="UntilStockRunsOut" class="form-check-label" for="untilStockCheck" style="cursor: pointer; font-size: 0.9rem;">Hasta agotar stock</label>
+                    </div>
                     <span asp-validation-for="EndDate" class="text-danger"></span>
                 </div>
             </div>
@@ -106,8 +110,9 @@
                         var isChecked = Model.Products != null && Model.Products.Any(p => p.ProductId == prod.Id);
                         <div class="product-check-item form-check" data-name="@prod.Name.ToLower()" data-code="@prod.InternalCode.ToString().ToLower()" style="padding: 0.4rem 0.5rem; display: flex; align-items: center; gap: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.03);">
                             <input class="form-check-input" type="checkbox" name="selectedProductIds" value="@prod.Id" id="prod_@prod.Id" style="width: 1.1rem; height: 1.1rem; margin: 0; cursor: pointer;" @(isChecked ? "checked" : "") />
-                            <label class="form-check-label" for="prod_@prod.Id" style="cursor: pointer; color: white; font-size: 0.85rem; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                                <span style="color: var(--accent); font-weight: bold; font-family: monospace;">[@prod.InternalCode.ToString("D5")]</span> @prod.Name ($@prod.Price.ToString("N2"))
+                            <label class="form-check-label" for="prod_@prod.Id" style="cursor: pointer; color: white; font-size: 0.85rem; flex: 1; display: flex; justify-content: space-between; align-items: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                <span><span style="color: var(--accent); font-weight: bold; font-family: monospace;">[@prod.InternalCode.ToString("D5")]</span> @prod.Name ($@prod.Price.ToString("N2"))</span>
+                                <span style="font-size: 0.75rem; color: @(prod.Stock <= 0 ? "#ef4444" : "var(--text-muted)");">Stock: @prod.Stock.ToString("G29")</span>
                             </label>
                         </div>
                     }
@@ -124,6 +129,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             togglePromotionTypeFields();
+            toggleUntilStock();
             updateCheckedCount();
 
             // Escuchar cambios en los checkboxes para actualizar contador
@@ -131,6 +137,26 @@
                 chk.addEventListener('change', updateCheckedCount);
             });
         });
+
+        let previousEndDate = '';
+        function toggleUntilStock() {
+            const check = document.getElementById('untilStockCheck');
+            const endInput = document.getElementById('endDateInput');
+            if (check && endInput) {
+                if (check.checked) {
+                    if (endInput.value) previousEndDate = endInput.value;
+                    endInput.required = false;
+                    endInput.disabled = true;
+                    endInput.value = '';
+                } else {
+                    endInput.required = true;
+                    endInput.disabled = false;
+                    if (previousEndDate && !endInput.value) {
+                        endInput.value = previousEndDate;
+                    }
+                }
+            }
+        }
 
         function togglePromotionTypeFields() {
             const typeSelect = document.getElementById('PromotionTypeSelect');

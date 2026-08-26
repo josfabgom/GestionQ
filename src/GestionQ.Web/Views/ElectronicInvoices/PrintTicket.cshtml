@@ -73,6 +73,12 @@
     invoiceText.AppendLine($"Cond. IVA: {Model.CustomerTaxCondition}");
     string docType = Model.DocTypeCode == 80 ? "CUIT" : (Model.DocTypeCode == 96 ? "DNI" : "Doc");
     invoiceText.AppendLine($"{docType}:      {Model.DocNumber}");
+    
+    if (Model.CustomerTaxCondition != null && Model.CustomerTaxCondition.Contains("Consumidor Final", StringComparison.OrdinalIgnoreCase))
+    {
+        invoiceText.AppendLine();
+        invoiceText.AppendLine(CenterText("A CONSUMIDOR FINAL"));
+    }
     invoiceText.AppendLine(new string('-', 35));
     
     invoiceText.AppendLine(FormatLine("Cant Descripcion", "Total", 35));
@@ -151,7 +157,7 @@
     
     var jsonString = JsonSerializer.Serialize(qrObj);
     var base64Json = Convert.ToBase64String(Encoding.UTF8.GetBytes(jsonString));
-    var afipQrUrl = $"https://www.afip.gob.ar/fe/qr/?p={base64Json}";
+    var afipQrUrl = $"https://www.arca.gob.ar/fe/qr/?p={base64Json}";
     var qrImageUrl = $"https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={Uri.EscapeDataString(afipQrUrl)}";
 
 }
@@ -338,6 +344,11 @@
         <div><span class="bold">Cliente:</span> @Model.CustomerName</div>
         <div><span class="bold">Cond. IVA:</span> @Model.CustomerTaxCondition</div>
         <div><span class="bold">Doc:</span> @(Model.DocTypeCode == 80 ? "CUIT" : (Model.DocTypeCode == 96 ? "DNI" : "Doc")) @Model.DocNumber</div>
+        
+        @if (Model.CustomerTaxCondition != null && Model.CustomerTaxCondition.Contains("Consumidor Final", StringComparison.OrdinalIgnoreCase))
+        {
+            <div class="bold text-center mt-1 mb-1">A CONSUMIDOR FINAL</div>
+        }
 
         <div class="divider"></div>
 

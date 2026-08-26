@@ -8,10 +8,12 @@ namespace GestionQ.Web.Controllers
     public class AccountController : Controller
     {
         private readonly SignInManager<IdentityUser> _signInManager;
+        private readonly UserManager<IdentityUser> _userManager;
 
-        public AccountController(SignInManager<IdentityUser> signInManager)
+        public AccountController(SignInManager<IdentityUser> signInManager, UserManager<IdentityUser> userManager)
         {
             _signInManager = signInManager;
+            _userManager = userManager;
         }
 
         [HttpGet]
@@ -28,7 +30,18 @@ namespace GestionQ.Web.Controllers
             ViewData["ReturnUrl"] = returnUrl;
             if (ModelState.IsValid)
             {
-                var result = await _signInManager.PasswordSignInAsync(model.Email, model.Password, model.RememberMe, lockoutOnFailure: false);
+                var user = await _userManager.FindByNameAsync(model.UserName);
+                if (user != null)
+                {
+                    var roles = await _userManager.GetRolesAsync(user);
+                    if (roles.Contains("Cajero") && !roles.Contains("Admin") && !roles.Contains("Vendedor"))
+                    {
+                        ModelState.AddModelError(string.Empty, "Los cajeros solo pueden operar desde la aplicación de Punto de Venta (Caja).");
+                        return View(model);
+                    }
+                }
+
+                var result = await _signInManager.PasswordSignInAsync(model.UserName, model.Password, model.RememberMe, lockoutOnFailure: false);
                 if (result.Succeeded)
                 {
                     if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
@@ -59,9 +72,8 @@ namespace GestionQ.Web.Controllers
 
     public class LoginViewModel
     {
-        [Required(ErrorMessage = "El email es obligatorio")]
-        [EmailAddress(ErrorMessage = "Debe ser un email válido")]
-        public string Email { get; set; } = string.Empty;
+        [Required(ErrorMessage = "El usuario es obligatorio")]
+        public string UserName { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "La contraseña es obligatoria")]
         [DataType(DataType.Password)]

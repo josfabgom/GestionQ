@@ -15,10 +15,8 @@
             <tr>
                 <th>Nombre</th>
                 <th style="text-align: center;">Nro. POS</th>
-                <th>PC / Terminal</th>
-                <th>Impresora</th>
-                <th style="text-align: center;">Copias</th>
-                <th>Descripción</th>
+                <th>Sincronización</th>
+                <th>Reglas de Envío</th>
                 <th>Estado</th>
                 <th style="text-align: center;">Acciones</th>
             </tr>
@@ -27,16 +25,33 @@
             @foreach (var item in Model)
             {
                 <tr>
-                    <td style="font-weight: 600;">@item.Name</td>
+                    <td style="font-weight: 600;">
+                        @item.Name
+                        <br/>
+                        <small style="color: var(--text-muted);">
+                            @(string.IsNullOrEmpty(item.PosIdentifier) ? "No vinculada" : $"ID: {item.PosIdentifier}")
+                        </small>
+                    </td>
                     <td style="text-align: center; font-weight: 700; color: #3b82f6;">@item.PosNumber.ToString("D5")</td>
-                    <td style="font-size: 0.9rem; color: var(--text-muted);">
-                        @(string.IsNullOrEmpty(item.MachineName) ? "No vinculada" : item.MachineName)
+                    <td>
+                        @{
+                            var isOnline = item.LastSyncDate.HasValue && (DateTime.Now - item.LastSyncDate.Value).TotalMinutes < 60;
+                        }
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <div style="width: 10px; height: 10px; border-radius: 50%; background-color: @(isOnline ? "#10b981" : "#ef4444"); box-shadow: 0 0 8px @(isOnline ? "#10b981" : "#ef4444");"></div>
+                            <span style="font-size: 0.85rem; color: var(--text-muted);">
+                                @(item.LastSyncDate.HasValue ? item.LastSyncDate.Value.ToString("dd/MM HH:mm") : "Nunca")
+                            </span>
+                        </div>
+                        @if (!string.IsNullOrEmpty(item.SyncIpAddress))
+                        {
+                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">IP: @item.SyncIpAddress</div>
+                        }
                     </td>
-                    <td style="font-size: 0.9rem;">
-                        @(string.IsNullOrEmpty(item.PrinterName) ? "Predeterminada" : item.PrinterName)
+                    <td style="font-size: 0.85rem; color: var(--text-muted);">
+                        <div>🏷️ Stock/Precio: <strong>@(item.SyncOnlyWithStock ? "SÍ" : "Todos")</strong></div>
+                        <div>👥 Clientes: <strong>@(item.SyncCustomers ? "SÍ" : "NO")</strong></div>
                     </td>
-                    <td style="text-align: center; font-weight: 600;">@item.PrintCopies</td>
-                    <td>@item.Description</td>
                     <td>
                         <span class="badge @(item.IsActive ? "bg-success" : "bg-danger")" 
                               style="padding: 0.4rem 0.8rem; border-radius: 20px; font-size: 0.8rem; background: @(item.IsActive ? "rgba(16, 185, 129, 0.2)" : "rgba(239, 68, 68, 0.2)"); color: @(item.IsActive ? "#10b981" : "#ef4444");">

@@ -6,10 +6,16 @@
 
 <div class="glass-panel" style="max-width: 500px;">
     <form asp-action="Create" method="post">
+        <div asp-validation-summary="All" class="text-danger" style="color: #ef4444; margin-bottom: 1rem; font-size: 0.9rem;"></div>
         <div class="form-group">
-            <label asp-for="Email">Email / Usuario</label>
-            <input asp-for="Email" class="form-control" />
-            <span asp-validation-for="Email" class="text-danger"></span>
+            <label asp-for="UserName">Nombre de Usuario (Login)</label>
+            <input asp-for="UserName" class="form-control" />
+            <span asp-validation-for="UserName" class="text-danger"></span>
+        </div>
+        <div class="form-group">
+            <label asp-for="FullName">Nombre para Ticket (Opcional)</label>
+            <input asp-for="FullName" class="form-control" />
+            <span asp-validation-for="FullName" class="text-danger"></span>
         </div>
         <div class="form-group">
             <label asp-for="Password">Contraseña</label>
@@ -25,6 +31,11 @@
                         <option value="@role">@role</option>
                 }
             </select>
+        </div>
+        <div class="form-group">
+            <label asp-for="Pin">PIN de Caja (Opcional, 4 dígitos)</label>
+            <input asp-for="Pin" type="number" maxlength="4" class="form-control" placeholder="Ej: 1234" />
+            <span asp-validation-for="Pin" class="text-danger"></span>
         </div>
         <div class="form-group" style="margin-top: 1.5rem; display: flex; gap: 1rem;">
             <button type="submit" class="btn-primary">Registrar Usuario</button>

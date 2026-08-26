@@ -86,6 +86,15 @@ namespace GestionQ.Infrastructure.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<Guid>("GlobalId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsSynced")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("SyncedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("Type")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -422,11 +431,17 @@ namespace GestionQ.Infrastructure.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
+                    b.Property<DateTime?>("LastSyncDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("MachineName")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Name")
                         .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PosIdentifier")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("PosNumber")
@@ -437,6 +452,15 @@ namespace GestionQ.Infrastructure.Migrations
 
                     b.Property<string>("PrinterName")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("SyncCustomers")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("SyncIpAddress")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("SyncOnlyWithStock")
+                        .HasColumnType("bit");
 
                     b.HasKey("Id");
 
@@ -478,6 +502,12 @@ namespace GestionQ.Infrastructure.Migrations
 
                     b.Property<bool>("IsPesable")
                         .HasColumnType("bit");
+
+                    b.Property<bool>("IsScaleNovelty")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("LastModified")
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("LastSentToScaleDate")
                         .HasColumnType("datetime2");
@@ -569,7 +599,7 @@ namespace GestionQ.Infrastructure.Migrations
                     b.Property<int?>("BuyQuantity")
                         .HasColumnType("int");
 
-                    b.Property<DateTime>("EndDate")
+                    b.Property<DateTime?>("EndDate")
                         .HasColumnType("datetime2");
 
                     b.Property<bool>("IsActive")
@@ -590,6 +620,9 @@ namespace GestionQ.Infrastructure.Migrations
 
                     b.Property<int>("Type")
                         .HasColumnType("int");
+
+                    b.Property<bool>("UntilStockRunsOut")
+                        .HasColumnType("bit");
 
                     b.Property<decimal>("Value")
                         .HasColumnType("decimal(18,2)");
@@ -710,7 +743,13 @@ namespace GestionQ.Infrastructure.Migrations
                     b.Property<decimal>("DiscountAmount")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<Guid>("GlobalId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<bool>("IsCancelled")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsSynced")
                         .HasColumnType("bit");
 
                     b.Property<decimal>("PaymentDiscountAmount")
@@ -719,8 +758,14 @@ namespace GestionQ.Infrastructure.Migrations
                     b.Property<int?>("PointOfSaleId")
                         .HasColumnType("int");
 
+                    b.Property<bool>("RequestElectronicInvoice")
+                        .HasColumnType("bit");
+
                     b.Property<decimal>("SubTotal")
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("SyncedAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<decimal>("TotalAmount")
                         .HasColumnType("decimal(18,2)");

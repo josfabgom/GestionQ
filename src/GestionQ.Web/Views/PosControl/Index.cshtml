@@ -1,0 +1,87 @@
+@model IEnumerable<GestionQ.Domain.Entities.PointOfSale>
+@{
+    ViewData["Title"] = "Tablero de Control de Cajas POS";
+}
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <h1 class="page-title"><i class="fa-solid fa-desktop"></i> Tablero de Control de Cajas POS</h1>
+</div>
+
+@if (TempData["Message"] != null)
+{
+    <div style="background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #fca5a5; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+        @TempData["Message"]
+    </div>
+}
+
+<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem;">
+    @foreach (var pos in Model)
+    {
+        var activeRegister = pos.CashRegisters.FirstOrDefault(); // There should be at most 1 open register due to the query filter
+        bool isOpen = activeRegister != null;
+        
+        decimal totalEfectivo = 0;
+        decimal ingresos = 0;
+        decimal egresos = 0;
+        decimal saldoEsperado = 0;
+        decimal totalVentas = 0;
+        int cantVentas = 0;
+
+        if (isOpen)
+        {
+            totalEfectivo = activeRegister.Sales.SelectMany(s => s.Payments).Where(p => p.PaymentMethod?.Name == "Efectivo").Sum(p => p.Amount);
+            ingresos = activeRegister.Movements.Where(m => m.Type == "Ingreso").Sum(m => m.Amount);
+            egresos = activeRegister.Movements.Where(m => m.Type == "Egreso").Sum(m => m.Amount);
+            saldoEsperado = activeRegister.InitialBalance + totalEfectivo + ingresos - egresos;
+            totalVentas = activeRegister.Sales.Sum(s => s.TotalAmount);
+            cantVentas = activeRegister.Sales.Count;
+        }
+
+        <div class="glass-panel" style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; position: relative;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">
+                <h3 style="margin: 0; font-size: 1.25rem;">@pos.Name</h3>
+                @if (isOpen)
+                {
+                    <span style="background: rgba(16, 185, 129, 0.2); color: #10b981; padding: 0.3rem 0.6rem; border-radius: 6px; font-weight: bold; font-size: 0.8rem;">
+                        <i class="fa-solid fa-circle-check"></i> ABIERTA
+                    </span>
+                }
+                else
+                {
+                    <span style="background: rgba(239, 68, 68, 0.2); color: #ef4444; padding: 0.3rem 0.6rem; border-radius: 6px; font-weight: bold; font-size: 0.8rem;">
+                        <i class="fa-solid fa-circle-xmark"></i> CERRADA
+                    </span>
+                }
+            </div>
+
+            <div style="flex-grow: 1; font-size: 0.95rem;">
+                @if (isOpen)
+                {
+                    <p style="margin: 0.2rem 0; color: var(--text-muted);"><i class="fa-solid fa-user"></i> Cajero: <strong style="color: white;">@activeRegister.User?.UserName</strong></p>
+                    <p style="margin: 0.2rem 0; color: var(--text-muted);"><i class="fa-solid fa-clock"></i> Apertura: <strong style="color: white;">@activeRegister.OpeningDate.ToString("dd/MM/yy HH:mm")</strong></p>
+
+                    <div style="background: rgba(59, 130, 246, 0.1); border-radius: 8px; padding: 1rem; margin-top: 1rem;">
+                        <p style="margin: 0; font-size: 0.85rem; color: #93c5fd;">Ventas en Sesión (@cantVentas)</p>
+                        <h2 style="margin: 0; color: #60a5fa; font-size: 1.5rem;">$@totalVentas.ToString("N2")</h2>
+                        
+                        <p style="margin: 0.5rem 0 0 0; font-size: 0.85rem; color: #6ee7b7;">Efectivo en Caja</p>
+                        <h3 style="margin: 0; color: #10b981; font-size: 1.25rem;">$@saldoEsperado.ToString("N2")</h3>
+                    </div>
+                }
+                else
+                {
+                    <div style="display: flex; align-items: center; justify-content: center; height: 100px; color: var(--text-muted); flex-direction: column;">
+                        <i class="fa-solid fa-cash-register" style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5;"></i>
+                        <span>No hay caja activa</span>
+                    </div>
+                }
+            </div>
+
+            <div style="margin-top: auto; padding-top: 1rem; border-top: 1px solid var(--border);">
+                <a asp-action="Details" asp-route-id="@pos.Id" class="btn-primary" style="width: 100%; text-align: center; display: block; box-sizing: border-box;">
+                    <i class="fa-solid fa-magnifying-glass-chart"></i> Ver Detalles y Reportes
+                </a>
+            </div>
+        </div>
+    }
+</div>

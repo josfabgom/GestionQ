@@ -378,7 +378,42 @@ namespace GestionQ.Web.Controllers
                 }
             }
 
+            var cuitSetting = _context.SystemSettings.FirstOrDefault(s => s.Key == "Afip_Cuit");
+            var envSetting = _context.SystemSettings.FirstOrDefault(s => s.Key == "Afip_Environment");
+            
+            model.Cuit = cuitSetting?.Value;
+            model.Environment = envSetting?.Value ?? "Homologation";
+
             return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SaveAfipSettings(string cuit, string environment)
+        {
+            var cuitSetting = _context.SystemSettings.FirstOrDefault(s => s.Key == "Afip_Cuit");
+            if (cuitSetting == null)
+            {
+                _context.SystemSettings.Add(new GestionQ.Domain.Entities.SystemSetting { Key = "Afip_Cuit", Value = cuit });
+            }
+            else
+            {
+                cuitSetting.Value = cuit;
+            }
+
+            var envSetting = _context.SystemSettings.FirstOrDefault(s => s.Key == "Afip_Environment");
+            if (envSetting == null)
+            {
+                _context.SystemSettings.Add(new GestionQ.Domain.Entities.SystemSetting { Key = "Afip_Environment", Value = environment });
+            }
+            else
+            {
+                envSetting.Value = environment;
+            }
+
+            await _context.SaveChangesAsync();
+            TempData["SuccessMessage"] = "Configuración de AFIP guardada correctamente.";
+            return RedirectToAction(nameof(Certificates));
         }
 
         // POST: ElectronicInvoices/GenerateCsr
@@ -1181,5 +1216,8 @@ namespace GestionQ.Web.Controllers
         public string? CertificateSubject { get; set; }
         public string? CertificateIssuer { get; set; }
         public DateTime? CertificateExpiration { get; set; }
+        
+        public string? Cuit { get; set; }
+        public string? Environment { get; set; }
     }
 }

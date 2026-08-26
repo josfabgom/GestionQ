@@ -113,6 +113,7 @@ namespace GestionQ.Web.Controllers
                     IsPesable = model.IsPesable,
                     IsFractionable = model.IsFractionable,
                     SendToScale = model.SendToScale,
+                    IsScaleNovelty = model.SendToScale,
                     Price = model.Price,
                     Stock = model.Stock,
                     MinimumStock = model.MinimumStock,
@@ -264,6 +265,7 @@ namespace GestionQ.Web.Controllers
                     product.IsPesable = model.IsPesable;
                     product.IsFractionable = model.IsFractionable;
                     product.SendToScale = model.SendToScale;
+                    product.IsScaleNovelty = true;
                     product.Price = model.Price;
                     product.Stock = model.Stock;
 
@@ -740,7 +742,11 @@ namespace GestionQ.Web.Controllers
                                 if (assignedSubCategory != null) product.SubCategory = assignedSubCategory;
                                 if (isPesableCol != null) product.IsPesable = ParseBool(GetRowValue(isPesableCol), product.IsPesable);
                                 if (isFractionableCol != null) product.IsFractionable = ParseBool(GetRowValue(isFractionableCol), product.IsFractionable);
-                                if (sendToScaleCol != null) product.SendToScale = ParseBool(GetRowValue(sendToScaleCol), product.SendToScale);
+                                if (sendToScaleCol != null) 
+                                {
+                                    product.SendToScale = ParseBool(GetRowValue(sendToScaleCol), product.SendToScale);
+                                    product.IsScaleNovelty = true;
+                                }
                                 if (expirationDaysCol != null) product.ExpirationDays = ParseInt(GetRowValue(expirationDaysCol), product.ExpirationDays);
                                 if (minimumStockCol != null) product.MinimumStock = ParseDecimal(GetRowValue(minimumStockCol));
                                 
@@ -776,6 +782,7 @@ namespace GestionQ.Web.Controllers
                                     IsPesable = isPesableCol != null ? ParseBool(GetRowValue(isPesableCol), false) : false,
                                     IsFractionable = isFractionableCol != null ? ParseBool(GetRowValue(isFractionableCol), false) : false,
                                     SendToScale = sendToScaleCol != null ? ParseBool(GetRowValue(sendToScaleCol), false) : false,
+                                    IsScaleNovelty = true,
                                     ExpirationDays = expirationDaysCol != null ? ParseInt(GetRowValue(expirationDaysCol), 0) : 0,
                                     MinimumStock = minimumStockCol != null ? ParseDecimal(GetRowValue(minimumStockCol)) : 0,
                                     SubCategory = assignedSubCategory

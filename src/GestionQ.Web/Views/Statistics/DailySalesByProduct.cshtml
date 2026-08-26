@@ -1,0 +1,131 @@
+@model GestionQ.Web.Models.StatisticsViewModel
+@{
+    ViewData["Title"] = "Ventas Diarias por Producto";
+}
+
+<div class="top-bar">
+    <div class="top-bar-title">
+        <i class="fa-solid fa-box"></i>
+        <h1>@ViewData["Title"]</h1>
+    </div>
+    <div class="top-bar-actions">
+        <a asp-action="Index" asp-route-startDate="@Model.StartDate.ToString("yyyy-MM-dd")" asp-route-endDate="@Model.EndDate.ToString("yyyy-MM-dd")" class="btn-secondary" style="display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fa-solid fa-arrow-left"></i> Volver a Estadísticas
+        </a>
+    </div>
+</div>
+
+<div class="glass-panel" style="margin-bottom: 2rem;">
+    <form asp-action="DailySalesByProduct" method="get" style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+        <div class="form-group" style="margin: 0;">
+            <label for="startDate">Desde:</label>
+            <input type="date" id="startDate" name="startDate" class="form-control" value="@Model.StartDate.ToString("yyyy-MM-dd")" required />
+        </div>
+        <div class="form-group" style="margin: 0;">
+            <label for="endDate">Hasta:</label>
+            <input type="date" id="endDate" name="endDate" class="form-control" value="@Model.EndDate.ToString("yyyy-MM-dd")" required />
+        </div>
+        <button type="submit" class="btn-primary" style="padding: 0.5rem 1rem;">
+            <i class="fa-solid fa-filter"></i> Filtrar
+        </button>
+        
+        <button type="button" class="btn-primary" style="padding: 0.5rem 1rem; background: #3b82f6;" onclick="window.print()">
+            <i class="fa-solid fa-file-pdf"></i> Imprimir PDF
+        </button>
+    </form>
+</div>
+
+<style>
+    @@media print {
+        @@page {
+            size: A4;
+            margin: 1cm;
+        }
+        * {
+            color: black !important;
+            text-shadow: none !important;
+            box-shadow: none !important;
+        }
+        body, html {
+            background: white !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        .top-bar, .glass-panel form, .sidebar, .sidebar-toggle-btn {
+            display: none !important;
+        }
+        .main-content, .container, .container-fluid {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+        }
+        .glass-panel {
+            background: transparent !important;
+            border: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+        .table-responsive {
+            overflow: visible !important;
+            width: 100% !important;
+        }
+        table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+            font-size: 10pt !important;
+        }
+        th, td {
+            border: 1px solid #000 !important;
+            padding: 4px 6px !important;
+            word-wrap: break-word;
+        }
+        h2 {
+            margin-top: 0 !important;
+            font-size: 16pt !important;
+        }
+    }
+</style>
+
+<div class="glass-panel">
+    <h2 style="margin-top: 0; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        <i class="fa-solid fa-boxes-stacked"></i> Reporte de Ventas por Producto
+        <span style="font-size: 1rem; font-weight: normal; margin-left: auto;">
+            Del @Model.StartDate.ToString("dd/MM/yyyy") al @Model.EndDate.ToString("dd/MM/yyyy")
+        </span>
+    </h2>
+
+    @if (Model.SalesByProduct.Any())
+    {
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th style="text-align: right;">Cantidad Vendida</th>
+                        <th style="text-align: right;">Recaudación</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.SalesByProduct)
+                    {
+                        <tr>
+                            <td>@item.ProductName</td>
+                            <td style="text-align: right; font-weight: bold;">@item.TotalQuantity.ToString("N2") un.</td>
+                            <td style="text-align: right; font-weight: bold; color: #10b981;">@item.TotalAmount.ToString("C")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="empty-state">
+            <i class="fa-solid fa-box-open"></i>
+            <p>No hay ventas de productos registradas en este período.</p>
+        </div>
+    }
+</div>

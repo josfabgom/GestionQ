@@ -22,7 +22,7 @@ namespace GestionQ.Web.Controllers
             _context = context;
         }
 
-        public async Task<IActionResult> Index(string q, int? categoryId, int? subCategoryId)
+        public async Task<IActionResult> Index(string q, int? categoryId, int? subCategoryId, int? purchaseId)
         {
             var query = _context.Products
                 .Include(p => p.SubCategory)
@@ -43,11 +43,28 @@ namespace GestionQ.Web.Controllers
             if (subCategoryId.HasValue)
                 query = query.Where(p => p.SubCategoryId == subCategoryId);
 
+            if (purchaseId.HasValue)
+            {
+                var productIdsInPurchase = await _context.Set<GestionQ.Domain.Entities.PurchaseItem>()
+                    .Where(pi => pi.PurchaseId == purchaseId.Value)
+                    .Select(pi => pi.ProductId)
+                    .Distinct()
+                    .ToListAsync();
+
+                query = query.Where(p => productIdsInPurchase.Contains(p.Id));
+            }
+
             var products = await query.ToListAsync();
             
             ViewBag.Categories = await _context.Categories.ToListAsync();
             ViewBag.VatRates = await _context.VatRates.ToListAsync();
             
+            // Fetch recent purchases for the dropdown
+            ViewBag.RecentPurchases = await _context.Purchases
+                .Include(p => p.Supplier)
+                .OrderByDescending(p => p.Date)
+                .Take(20)
+                .ToListAsync();
             return View(products);
         }
 

@@ -165,6 +165,8 @@ namespace GestionQ.Installer
             {
                 installPath = @"C:\GestionQ";
             }
+            
+            _logic.IsClientOnly = RbClientOnly.IsChecked == true;
 
             try
             {

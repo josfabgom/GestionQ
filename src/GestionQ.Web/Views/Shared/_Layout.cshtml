@@ -94,6 +94,14 @@
                     </a>
                 </li>
                 }
+                @if (User.IsInRole("Admin") || User.HasClaim("Permission", Permissions.CashRegisters.View))
+                {
+                <li>
+                    <a asp-controller="PosControl" asp-action="Index" style="color: #38bdf8; font-weight: 600;">
+                        <i class="fa-solid fa-desktop"></i> Tablero POS
+                    </a>
+                </li>
+                }
                 @if (User.IsInRole("Admin") || User.HasClaim("Permission", Permissions.Customers.View))
                 {
                 <li>
@@ -102,6 +110,7 @@
                     </a>
                 </li>
                 }
+
                 @if (User.IsInRole("Admin") || User.HasClaim("Permission", Permissions.Products.View))
                 {
                 <li>

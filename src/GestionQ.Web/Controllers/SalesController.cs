@@ -250,6 +250,7 @@ namespace GestionQ.Web.Controllers
                     UserId = user.Id,
                     CashRegisterId = openRegister.Id,
                     PointOfSaleId = openRegister.PointOfSaleId,
+                    RequestElectronicInvoice = model.RequestElectronicInvoice,
                     Items = saleItems,
                     Payments = model.Payments?.Select(p => new SalePayment
                     {
@@ -274,11 +275,20 @@ namespace GestionQ.Web.Controllers
                         _context.Customers.Update(customer);
                     }
                 }
-
                 _context.Sales.Add(sale);
                 await _context.SaveChangesAsync();
-
                 await transaction.CommitAsync();
+
+                if (sale.RequestElectronicInvoice)
+                {
+                    try {
+                        await GenerateElectronicInvoiceForSale(sale.Id);
+                    } catch (Exception ex) {
+                        // Log or handle error, but sale is already committed
+                        Console.WriteLine($"Error AFIP: {ex.Message}");
+                    }
+                }
+
                 return Ok(sale.Id);
             }
             catch (Exception ex)
@@ -477,6 +487,71 @@ namespace GestionQ.Web.Controllers
 
             return Json(new { success = true, message = "Venta anulada y devuelta correctamente." });
         }
+
+        private async Task GenerateElectronicInvoiceForSale(int saleId)
+        {
+            var sale = await _context.Sales
+                .Include(s => s.Customer).ThenInclude(c => c.TaxCondition)
+                .Include(s => s.PointOfSale)
+                .Include(s => s.Items).ThenInclude(si => si.Product).ThenInclude(p => p.VatRate)
+                .FirstOrDefaultAsync(s => s.Id == saleId);
+
+            if (sale == null || (sale.ElectronicInvoice != null && sale.ElectronicInvoice.Status == "Approved")) return;
+
+            decimal netAmount = 0, vatAmount = 0, exemptAmount = 0;
+            foreach (var item in sale.Items)
+            {
+                decimal itemTotal = item.Quantity * item.UnitPrice;
+                decimal vatRatePercent = item.Product?.VatRate?.Rate ?? 21.0m;
+                if (vatRatePercent == 0) exemptAmount += itemTotal;
+                else { decimal net = itemTotal / (1 + (vatRatePercent / 100)); vatAmount += (itemTotal - net); netAmount += net; }
+            }
+
+            int defaultInvoiceTypeCode = 6, defaultCondicionIvaReceptor = 5, docTypeCode = 99;
+            string customerCuit = sale.Customer?.Cuit ?? "", customerDni = sale.Customer?.Dni ?? "";
+            if (!string.IsNullOrWhiteSpace(customerCuit)) docTypeCode = 80; else if (!string.IsNullOrWhiteSpace(customerDni)) docTypeCode = 96;
+
+            var companyTaxCondition = _config["CompanyInfo:TaxCondition"]?.ToLower() ?? "";
+            bool isMonotributista = companyTaxCondition.Contains("monotributo") || companyTaxCondition.Contains("monotributista");
+
+            if (isMonotributista) {
+                defaultInvoiceTypeCode = 11;
+                if (sale.Customer?.TaxCondition != null) {
+                    var tName = sale.Customer.TaxCondition.Name.ToLower();
+                    if (tName.Contains("inscripto")) defaultCondicionIvaReceptor = 1;
+                    else if (tName.Contains("monotributo")) defaultCondicionIvaReceptor = 6;
+                    else if (tName.Contains("exento")) defaultCondicionIvaReceptor = 4;
+                }
+            } else {
+                if (sale.Customer?.TaxCondition != null) {
+                    var tName = sale.Customer.TaxCondition.Name.ToLower();
+                    if (tName.Contains("inscripto")) { defaultInvoiceTypeCode = 1; defaultCondicionIvaReceptor = 1; }
+                    else if (tName.Contains("monotributo")) { defaultInvoiceTypeCode = 6; defaultCondicionIvaReceptor = 6; }
+                    else if (tName.Contains("exento")) { defaultInvoiceTypeCode = 6; defaultCondicionIvaReceptor = 4; }
+                }
+            }
+
+            var posId = sale.PointOfSaleId ?? 0;
+            var posNumber = sale.PointOfSale?.PosNumber ?? 1;
+            if (posId == 0) { var defaultPos = await _context.PointsOfSale.FirstOrDefaultAsync(); if (defaultPos != null) { posId = defaultPos.Id; posNumber = defaultPos.PosNumber; } }
+
+            var request = new GestionQ.Infrastructure.Services.ElectronicInvoiceRequest {
+                PointOfSaleId = posId, PointOfSaleNumber = posNumber, InvoiceTypeCode = defaultInvoiceTypeCode, ConceptCode = 1, DocTypeCode = docTypeCode,
+                DocNumber = !string.IsNullOrWhiteSpace(customerCuit) ? customerCuit : (!string.IsNullOrWhiteSpace(customerDni) ? customerDni : "0"),
+                CustomerName = sale.Customer?.Name ?? "Consumidor Final", CustomerTaxCondition = sale.Customer?.TaxCondition?.Name ?? "Consumidor Final",
+                NetAmount = netAmount, VatAmount = vatAmount, ExemptAmount = exemptAmount, TotalAmount = sale.TotalAmount, CondicionIVAReceptorId = defaultCondicionIvaReceptor
+            };
+
+            var response = await _electronicInvoicingService.RequestCAEAsync(request);
+            var ei = new ElectronicInvoice {
+                SaleId = sale.Id, PointOfSaleId = posId, PointOfSaleNumber = posNumber, InvoiceTypeCode = defaultInvoiceTypeCode, InvoiceNumber = response.InvoiceNumber,
+                IssueDate = DateTime.Now, TotalAmount = sale.TotalAmount, NetAmount = netAmount, VatAmount = vatAmount, ExemptAmount = exemptAmount,
+                Status = response.Status, CAE = response.CAE, CAEExpirationDate = response.CAEExpirationDate != default ? response.CAEExpirationDate : DateTime.Now,
+                ErrorMessage = string.Join(" | ", response.Errors)
+            };
+            _context.ElectronicInvoices.Add(ei);
+            await _context.SaveChangesAsync();
+        }
     }
 
     public class SaleRequest
@@ -487,6 +562,7 @@ namespace GestionQ.Web.Controllers
         public decimal DiscountPercentage { get; set; }
         public decimal DiscountAmount { get; set; }
         public decimal PaymentDiscountAmount { get; set; }
+        public bool RequestElectronicInvoice { get; set; }
     }
 
     public class SaleRequestItem

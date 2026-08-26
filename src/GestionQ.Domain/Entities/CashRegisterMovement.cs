@@ -6,6 +6,9 @@ namespace GestionQ.Domain.Entities
     public class CashRegisterMovement
     {
         public int Id { get; set; }
+        public Guid GlobalId { get; set; } = Guid.NewGuid();
+        public bool IsSynced { get; set; } = true;
+        public DateTime? SyncedAt { get; set; }
 
         [Required]
         public int CashRegisterId { get; set; }

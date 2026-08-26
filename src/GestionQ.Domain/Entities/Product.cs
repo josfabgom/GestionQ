@@ -36,6 +36,8 @@ namespace GestionQ.Domain.Entities
         [Display(Name = "Enviar a Balanza")]
         public bool SendToScale { get; set; } = false;
 
+        public bool IsScaleNovelty { get; set; } = false;
+
         [Display(Name = "Fecha Envío Balanza")]
         public DateTime? LastSentToScaleDate { get; set; }
 
@@ -54,6 +56,7 @@ namespace GestionQ.Domain.Entities
         public string? ImageUrl { get; set; }
 
         public DateTime CreationDate { get; set; } = DateTime.Now;
+        public DateTime LastModified { get; set; } = DateTime.Now;
         
         [Display(Name = "Días de Vencimiento")]
         public int ExpirationDays { get; set; } = 0;

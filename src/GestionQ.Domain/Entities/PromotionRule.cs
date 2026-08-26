@@ -14,7 +14,8 @@ namespace GestionQ.Domain.Entities
         public int? PayQuantity { get; set; }
         
         public DateTime StartDate { get; set; }
-        public DateTime EndDate { get; set; }
+        public DateTime? EndDate { get; set; }
+        public bool UntilStockRunsOut { get; set; } = false;
         public bool IsActive { get; set; } = true;
         public bool IsStackable { get; set; } = false;
         

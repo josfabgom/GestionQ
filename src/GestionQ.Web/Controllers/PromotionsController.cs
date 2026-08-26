@@ -122,6 +122,7 @@ namespace GestionQ.Web.Controllers
                 existing.PayQuantity = promotionRule.PayQuantity;
                 existing.StartDate = promotionRule.StartDate;
                 existing.EndDate = promotionRule.EndDate;
+                existing.UntilStockRunsOut = promotionRule.UntilStockRunsOut;
                 existing.IsActive = promotionRule.IsActive;
                 existing.IsStackable = promotionRule.IsStackable;
 
@@ -171,7 +172,7 @@ namespace GestionQ.Web.Controllers
 
         private void ValidatePromotionRule(PromotionRule rule)
         {
-            if (rule.StartDate > rule.EndDate)
+            if (rule.EndDate.HasValue && rule.StartDate > rule.EndDate.Value)
             {
                 ModelState.AddModelError(nameof(rule.StartDate), "La fecha de inicio no puede ser posterior a la fecha de fin.");
             }

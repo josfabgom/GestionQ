@@ -202,5 +202,40 @@ namespace GestionQ.Web.Controllers
             string fileName = $"Cambios_Productos_{start:yyyyMMdd}_al_{end:yyyyMMdd}.csv";
             return File(content, "text/csv", fileName);
         }
+
+        public async Task<IActionResult> DailySalesByProduct(DateTime? startDate, DateTime? endDate)
+        {
+            var start = startDate ?? DateTime.Today;
+            var end = endDate ?? DateTime.Today;
+            var endAdjusted = end.Date.AddDays(1).AddTicks(-1);
+
+            var viewModel = new StatisticsViewModel
+            {
+                StartDate = start,
+                EndDate = end
+            };
+
+            var salesQuery = _context.Sales
+                .Include(s => s.Items)
+                .ThenInclude(i => i.Product)
+                .Where(s => s.Date >= start && s.Date <= endAdjusted && !s.IsCancelled);
+
+            var sales = await salesQuery.ToListAsync();
+
+            viewModel.SalesByProduct = sales
+                .SelectMany(s => s.Items)
+                .GroupBy(i => i.ProductId)
+                .Select(g => new ProductSaleStat
+                {
+                    ProductId = g.Key,
+                    ProductName = g.First().Product?.Name ?? g.First().CustomName ?? "Producto Desconocido",
+                    TotalQuantity = g.Sum(i => i.Quantity),
+                    TotalAmount = g.Sum(i => i.Quantity * i.UnitPrice - i.DiscountAmount)
+                })
+                .OrderByDescending(p => p.TotalQuantity) // de mayor a menor por cantidad (o TotalAmount?) 
+                .ToList();
+
+            return View(viewModel);
+        }
     }
 }

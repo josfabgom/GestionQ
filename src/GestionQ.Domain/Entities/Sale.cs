@@ -6,6 +6,10 @@ namespace GestionQ.Domain.Entities
     public class Sale
     {
         public int Id { get; set; }
+        public Guid GlobalId { get; set; } = Guid.NewGuid();
+        public bool IsSynced { get; set; } = true; // Por defecto true en el servidor, false en la caja local
+        public DateTime? SyncedAt { get; set; }
+
         public DateTime Date { get; set; } = DateTime.Now;
         public int? CustomerId { get; set; }
         public Customer? Customer { get; set; }
@@ -29,6 +33,8 @@ namespace GestionQ.Domain.Entities
 
         public bool IsCancelled { get; set; } = false;
         public DateTime? CancellationDate { get; set; }
+
+        public bool RequestElectronicInvoice { get; set; } = false;
 
         public ICollection<SaleItem> Items { get; set; } = new List<SaleItem>();
         public List<SalePayment> Payments { get; set; } = new();

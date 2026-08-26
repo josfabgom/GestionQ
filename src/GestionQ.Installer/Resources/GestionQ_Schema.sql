@@ -1787,6 +1787,185 @@ BEGIN
     VALUES (N'20260730174740_AddShortDescriptionScale', N'9.0.15');
 END;
 
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260809030948_AddIsScaleNovelty'
+)
+BEGIN
+    ALTER TABLE [Products] ADD [IsScaleNovelty] bit NOT NULL DEFAULT CAST(0 AS bit);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260809030948_AddIsScaleNovelty'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20260809030948_AddIsScaleNovelty', N'9.0.15');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260809100900_AddUntilStockRunsOutToPromotions'
+)
+BEGIN
+    DECLARE @var6 sysname;
+    SELECT @var6 = [d].[name]
+    FROM [sys].[default_constraints] [d]
+    INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+    WHERE ([d].[parent_object_id] = OBJECT_ID(N'[PromotionRules]') AND [c].[name] = N'EndDate');
+    IF @var6 IS NOT NULL EXEC(N'ALTER TABLE [PromotionRules] DROP CONSTRAINT [' + @var6 + '];');
+    ALTER TABLE [PromotionRules] ALTER COLUMN [EndDate] datetime2 NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260809100900_AddUntilStockRunsOutToPromotions'
+)
+BEGIN
+    ALTER TABLE [PromotionRules] ADD [UntilStockRunsOut] bit NOT NULL DEFAULT CAST(0 AS bit);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260809100900_AddUntilStockRunsOutToPromotions'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20260809100900_AddUntilStockRunsOutToPromotions', N'9.0.15');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260820013915_AddSyncFields'
+)
+BEGIN
+    ALTER TABLE [Sales] ADD [GlobalId] uniqueidentifier NOT NULL DEFAULT '00000000-0000-0000-0000-000000000000';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260820013915_AddSyncFields'
+)
+BEGIN
+    ALTER TABLE [Sales] ADD [IsSynced] bit NOT NULL DEFAULT CAST(0 AS bit);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260820013915_AddSyncFields'
+)
+BEGIN
+    ALTER TABLE [Sales] ADD [SyncedAt] datetime2 NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260820013915_AddSyncFields'
+)
+BEGIN
+    ALTER TABLE [Products] ADD [LastModified] datetime2 NOT NULL DEFAULT '0001-01-01T00:00:00.0000000';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260820013915_AddSyncFields'
+)
+BEGIN
+    ALTER TABLE [CashRegisterMovements] ADD [GlobalId] uniqueidentifier NOT NULL DEFAULT '00000000-0000-0000-0000-000000000000';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260820013915_AddSyncFields'
+)
+BEGIN
+    ALTER TABLE [CashRegisterMovements] ADD [IsSynced] bit NOT NULL DEFAULT CAST(0 AS bit);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260820013915_AddSyncFields'
+)
+BEGIN
+    ALTER TABLE [CashRegisterMovements] ADD [SyncedAt] datetime2 NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260820013915_AddSyncFields'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20260820013915_AddSyncFields', N'9.0.15');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260820172319_AddSyncTrackingToPos'
+)
+BEGIN
+    ALTER TABLE [PointsOfSale] ADD [LastSyncDate] datetime2 NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260820172319_AddSyncTrackingToPos'
+)
+BEGIN
+    ALTER TABLE [PointsOfSale] ADD [PosIdentifier] nvarchar(max) NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260820172319_AddSyncTrackingToPos'
+)
+BEGIN
+    ALTER TABLE [PointsOfSale] ADD [SyncCustomers] bit NOT NULL DEFAULT CAST(0 AS bit);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260820172319_AddSyncTrackingToPos'
+)
+BEGIN
+    ALTER TABLE [PointsOfSale] ADD [SyncIpAddress] nvarchar(max) NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260820172319_AddSyncTrackingToPos'
+)
+BEGIN
+    ALTER TABLE [PointsOfSale] ADD [SyncOnlyWithStock] bit NOT NULL DEFAULT CAST(0 AS bit);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260820172319_AddSyncTrackingToPos'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20260820172319_AddSyncTrackingToPos', N'9.0.15');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260824183426_AddRequestElectronicInvoice'
+)
+BEGIN
+    ALTER TABLE [Sales] ADD [RequestElectronicInvoice] bit NOT NULL DEFAULT CAST(0 AS bit);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260824183426_AddRequestElectronicInvoice'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20260824183426_AddRequestElectronicInvoice', N'9.0.15');
+END;
+
 COMMIT;
 GO
 

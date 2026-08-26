@@ -29,15 +29,25 @@ namespace GestionQ.Installer
             Debug.WriteLine(message);
         }
 
+        public bool IsClientOnly { get; set; } = false;
+
         public void RunInstall(string installDir)
         {
             try
             {
                 ReportProgress("Iniciando proceso...", 10);
 
+                if (!Directory.Exists(installDir))
+                {
+                    Directory.CreateDirectory(installDir);
+                }
+
                 // 1. Stop existing services/processes if any
-                ReportProgress("Deteniendo servicios en ejecución...", 20);
-                StopService();
+                ReportProgress("Deteniendo procesos en ejecución...", 20);
+                if (!IsClientOnly)
+                {
+                    StopService();
+                }
                 try
                 {
                     var processes = Process.GetProcessesByName("GestionQ.ServerMonitor");
@@ -49,39 +59,41 @@ namespace GestionQ.Installer
                 ReportProgress("Extrayendo archivos...", 40);
                 ExtractResources(installDir, isUpdate: false);
 
-                // 3. Install SQL Server if needed
-                string sqlExePath = Path.Combine(installDir, "SQL2022-SSEI-Expr.exe");
-                if (File.Exists(sqlExePath))
+                if (!IsClientOnly)
                 {
-                    ReportProgress("Instalando SQL Server Express (puede tardar varios minutos)...", 50);
-                    try
+                    // 3. Install SQL Server if needed
+                    string sqlExePath = Path.Combine(installDir, "SQL2022-SSEI-Expr.exe");
+                    if (File.Exists(sqlExePath))
                     {
-                        RunProcess(sqlExePath, "/Q /ACTION=Install /FEATURES=SQLEngine /INSTANCENAME=SQLEXPRESS /SQLSVCACCOUNT=\"NT AUTHORITY\\Network Service\" /SQLSYSADMINACCOUNTS=\"BUILTIN\\Administrators\" /AGTSVCACCOUNT=\"NT AUTHORITY\\Network Service\" /IACCEPTSQLSERVERLICENSETERMS");
+                        ReportProgress("Instalando SQL Server Express (puede tardar varios minutos)...", 50);
+                        try
+                        {
+                            RunProcess(sqlExePath, "/Q /ACTION=Install /FEATURES=SQLEngine /INSTANCENAME=SQLEXPRESS /SQLSVCACCOUNT=\"NT AUTHORITY\\Network Service\" /SQLSYSADMINACCOUNTS=\"BUILTIN\\Administrators\" /AGTSVCACCOUNT=\"NT AUTHORITY\\Network Service\" /IACCEPTSQLSERVERLICENSETERMS");
+                        }
+                        catch (Exception ex)
+                        {
+                            LogMessage("Advertencia al instalar SQL Server: " + ex.Message);
+                        }
                     }
-                    catch (Exception ex)
-                    {
-                        // Some systems might have pending reboots or existing installs that fail the bootstrapper
-                        LogMessage("Advertencia al instalar SQL Server: " + ex.Message);
-                    }
+
+                    ReportProgress("Configurando base de datos local...", 60);
+                    SetupDatabase(installDir);
+
+                    // 4. Install Service
+                    ReportProgress("Instalando Servicio de Windows...", 80);
+                    InstallService(installDir);
+
+                    // 5. Configure Firewall
+                    ReportProgress("Abriendo puertos en el Firewall...", 90);
+                    ConfigureFirewall();
+
+                    // 6. Start Service
+                    ReportProgress("Iniciando servicio...", 95);
+                    StartService();
                 }
 
-                ReportProgress("Configurando base de datos local...", 60);
-                SetupDatabase(installDir);
-
-                // 4. Install Service
-                ReportProgress("Instalando Servicio de Windows...", 80);
-                InstallService(installDir);
-
-                // 5. Configure Firewall
-                ReportProgress("Abriendo puertos en el Firewall...", 90);
-                ConfigureFirewall();
-
-                // 6. Start Service
-                ReportProgress("Iniciando servicio...", 95);
-                StartService();
-
                 // 7. Create shortcuts and start Server Monitor
-                ReportProgress("Creando accesos directos e iniciando Monitor...", 98);
+                ReportProgress("Creando accesos directos...", 98);
                 string shortcutsScript = Path.Combine(installDir, "scripts", "launcher", "crear_accesos.ps1");
                 if (File.Exists(shortcutsScript))
                 {

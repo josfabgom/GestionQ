@@ -22,27 +22,32 @@ namespace GestionQ.Web.Controllers
         public async Task<IActionResult> Index()
         {
             var users = await _userManager.Users.ToListAsync();
-            var userRoles = new List<UserRoleViewModel>();
+            var userRolesViewModel = new List<UserRoleViewModel>();
 
             foreach (var user in users)
             {
-                var roleNames = await _userManager.GetRolesAsync(user);
-                userRoles.Add(new UserRoleViewModel
+                var roles = await _userManager.GetRolesAsync(user);
+                var claims = await _userManager.GetClaimsAsync(user);
+                var pinClaim = claims.FirstOrDefault(c => c.Type == "UserPin");
+                var fullNameClaim = claims.FirstOrDefault(c => c.Type == "FullName");
+
+                userRolesViewModel.Add(new UserRoleViewModel
                 {
                     UserId = user.Id,
                     UserName = user.UserName,
-                    Email = user.Email,
-                    Roles = string.Join(", ", roleNames)
+                    FullName = fullNameClaim?.Value,
+                    Roles = string.Join(", ", roles),
+                    Pin = pinClaim?.Value
                 });
             }
 
-            return View(userRoles);
+            return View(userRolesViewModel);
         }
 
         [Authorize(Policy = Permissions.Users.Create)]
-        public IActionResult Create()
+        public async Task<IActionResult> Create()
         {
-            ViewBag.Roles = _roleManager.Roles.Select(r => r.Name).ToList();
+            ViewBag.Roles = await _roleManager.Roles.Select(r => r.Name).ToListAsync();
             return View();
         }
 
@@ -53,7 +58,7 @@ namespace GestionQ.Web.Controllers
         {
             if (ModelState.IsValid)
             {
-                var user = new IdentityUser { UserName = model.Email, Email = model.Email };
+                var user = new IdentityUser { UserName = model.UserName };
                 var result = await _userManager.CreateAsync(user, model.Password);
 
                 if (result.Succeeded)
@@ -62,6 +67,14 @@ namespace GestionQ.Web.Controllers
                     {
                         var roleExists = await _roleManager.RoleExistsAsync(model.Role);
                         if (roleExists) await _userManager.AddToRoleAsync(user, model.Role);
+                    }
+                    if (!string.IsNullOrEmpty(model.Pin))
+                    {
+                        await _userManager.AddClaimAsync(user, new System.Security.Claims.Claim("UserPin", model.Pin));
+                    }
+                    if (!string.IsNullOrEmpty(model.FullName))
+                    {
+                        await _userManager.AddClaimAsync(user, new System.Security.Claims.Claim("FullName", model.FullName));
                     }
                     return RedirectToAction(nameof(Index));
                 }
@@ -94,13 +107,19 @@ namespace GestionQ.Web.Controllers
             if (user == null) return NotFound();
 
             var userRoles = await _userManager.GetRolesAsync(user);
+            var claims = await _userManager.GetClaimsAsync(user);
+            var pinClaim = claims.FirstOrDefault(c => c.Type == "UserPin");
+            var fullNameClaim = claims.FirstOrDefault(c => c.Type == "FullName");
+
             ViewBag.Roles = await _roleManager.Roles.Select(r => r.Name).ToListAsync();
 
             var model = new EditUserRoleViewModel
             {
                 UserId = user.Id,
-                Email = user.Email,
-                CurrentRole = userRoles.FirstOrDefault()
+                UserName = user.UserName,
+                FullName = fullNameClaim?.Value,
+                CurrentRole = userRoles.FirstOrDefault(),
+                Pin = pinClaim?.Value
             };
             return View(model);
         }
@@ -119,6 +138,24 @@ namespace GestionQ.Web.Controllers
             if (!string.IsNullOrEmpty(model.NewRole))
             {
                 await _userManager.AddToRoleAsync(user, model.NewRole);
+            }
+
+            var claims = await _userManager.GetClaimsAsync(user);
+            
+            var oldPinClaim = claims.FirstOrDefault(c => c.Type == "UserPin");
+            if (oldPinClaim != null) await _userManager.RemoveClaimAsync(user, oldPinClaim);
+            
+            if (!string.IsNullOrEmpty(model.Pin))
+            {
+                await _userManager.AddClaimAsync(user, new System.Security.Claims.Claim("UserPin", model.Pin));
+            }
+
+            var oldFullNameClaim = claims.FirstOrDefault(c => c.Type == "FullName");
+            if (oldFullNameClaim != null) await _userManager.RemoveClaimAsync(user, oldFullNameClaim);
+            
+            if (!string.IsNullOrEmpty(model.FullName))
+            {
+                await _userManager.AddClaimAsync(user, new System.Security.Claims.Claim("FullName", model.FullName));
             }
 
             return RedirectToAction(nameof(Index));
@@ -150,26 +187,38 @@ namespace GestionQ.Web.Controllers
     {
         public string UserId { get; set; } = string.Empty;
         public string? UserName { get; set; }
-        public string? Email { get; set; }
+        public string? FullName { get; set; }
         public string? Roles { get; set; }
+        public string? Pin { get; set; }
     }
 
     public class CreateUserViewModel
     {
-        [Required, EmailAddress]
-        public string Email { get; set; } = string.Empty;
+        [Required]
+        [Display(Name = "Nombre de Usuario")]
+        public string UserName { get; set; } = string.Empty;
+
+        [Display(Name = "Nombre del Cajero/Vendedor (Opcional)")]
+        public string? FullName { get; set; }
 
         [Required, DataType(DataType.Password)]
         public string Password { get; set; } = string.Empty;
 
         public string? Role { get; set; }
+        
+        [StringLength(4, MinimumLength = 4)]
+        public string? Pin { get; set; }
     }
 
     public class EditUserRoleViewModel
     {
         public string UserId { get; set; } = string.Empty;
-        public string? Email { get; set; }
+        public string? UserName { get; set; }
+        public string? FullName { get; set; }
         public string? CurrentRole { get; set; }
         public string? NewRole { get; set; }
+        
+        [StringLength(4, MinimumLength = 4)]
+        public string? Pin { get; set; }
     }
 }

@@ -104,10 +104,17 @@
                             </td>
                             <td style="font-size: 0.85rem;">
                                 <div><strong style="color: var(--text-muted);">Desde:</strong> @item.StartDate.ToString("dd/MM/yyyy")</div>
-                                <div><strong style="color: var(--text-muted);">Hasta:</strong> @item.EndDate.ToString("dd/MM/yyyy")</div>
+                                @if (item.UntilStockRunsOut || !item.EndDate.HasValue)
+                                {
+                                    <div><strong style="color: var(--text-muted);">Hasta:</strong> <span style="font-style: italic;">Agotar stock</span></div>
+                                }
+                                else
+                                {
+                                    <div><strong style="color: var(--text-muted);">Hasta:</strong> @item.EndDate.Value.ToString("dd/MM/yyyy")</div>
+                                }
                             </td>
                             <td style="text-align: center;">
-                                @if (item.IsActive && item.StartDate <= DateTime.Now && item.EndDate >= DateTime.Now)
+                                @if (item.IsActive && item.StartDate <= DateTime.Now && (!item.EndDate.HasValue || item.EndDate.Value >= DateTime.Now))
                                 {
                                     <span class="badge bg-success" style="padding: 0.35rem 0.6rem; font-weight: bold; border-radius: 6px;">Vigente</span>
                                 }

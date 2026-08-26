@@ -164,6 +164,31 @@
         <!-- Column 2: Generator & Wizard -->
         <div class="certs-col">
             
+            <div class="certs-card glass-card mb-4 border-warning-glow">
+                <h3 class="certs-card-title"><i class="bi bi-sliders text-warning"></i> Configuración de Facturación</h3>
+                <p class="text-muted text-sm mb-4">
+                    Configure el CUIT y el entorno con el que operará el sistema de facturación.
+                </p>
+                
+                <form asp-action="SaveAfipSettings" method="post">
+                    @Html.AntiForgeryToken()
+                    <div class="mb-3">
+                        <label class="form-label certs-lbl">CUIT Operativo</label>
+                        <input type="text" name="cuit" class="form-control certs-input" value="@Model.Cuit" placeholder="Ej: 30123456789" required />
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label certs-lbl">Entorno AFIP</label>
+                        <select name="environment" class="form-control certs-input">
+                            <option value="Homologation" selected="@(Model.Environment != "Production")">Pruebas / Homologación</option>
+                            <option value="Production" selected="@(Model.Environment == "Production")">Producción (Real)</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-warning w-100 btn-certs-submit text-dark fw-bold">
+                        <i class="bi bi-save2"></i> Guardar Configuración Operativa
+                    </button>
+                </form>
+            </div>
+
             <!-- Card 3: CSR Generator Form -->
             <div class="certs-card glass-card">
                 <h3 class="certs-card-title"><i class="bi bi-gear-wide-connected text-indigo"></i> 1. Generador de Clave y Solicitud (CSR)</h3>
@@ -181,7 +206,7 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label certs-lbl">CUIT Emisor (11 dígitos sin guiones)</label>
-                            <input type="text" name="cuit" class="form-control certs-input" maxlength="11" placeholder="Ej: 30712345678" required />
+                            <input type="text" name="cuit" class="form-control certs-input" maxlength="11" value="@Model.Cuit" placeholder="Ej: 30712345678" required />
                         </div>
                         <div class="mb-4">
                             <label class="form-label certs-lbl">Alias del Sistema (CN - Common Name)</label>

@@ -18,12 +18,21 @@ public class ScaleController : Controller
         _scaleService = scaleService;
     }
 
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(string searchString)
     {
-        // Obtener productos que son pesables, están explícitamente marcados para enviar, o ya fueron enviados antes
-        var pesables = await _context.Products
-            .Where(p => (p.IsPesable || p.SendToScale || p.LastSentToScaleDate != null) && p.IsActive)
-            .OrderBy(p => p.Name)
+        ViewData["CurrentFilter"] = searchString;
+
+        var query = _context.Products
+            .Where(p => (p.IsPesable || p.SendToScale || p.LastSentToScaleDate != null) && p.IsActive);
+
+        if (!string.IsNullOrEmpty(searchString))
+        {
+            query = query.Where(p => p.Name.Contains(searchString) || p.InternalCode.ToString() == searchString);
+        }
+
+        // Ordenar por los últimos cambios (ID descendente)
+        var pesables = await query
+            .OrderByDescending(p => p.Id)
             .ToListAsync();
 
         return View(pesables);
@@ -34,7 +43,7 @@ public class ScaleController : Controller
     public async Task<IActionResult> ExportCatalog()
     {
         var pesables = await _context.Products
-            .Where(p => p.SendToScale && p.IsActive)
+            .Where(p => p.SendToScale && p.IsScaleNovelty && p.IsActive)
             .ToListAsync();
 
         if (!pesables.Any())
@@ -52,7 +61,7 @@ public class ScaleController : Controller
             // Marcar como enviados
             foreach (var p in pesables)
             {
-                p.SendToScale = false;
+                p.IsScaleNovelty = false;
                 p.LastSentToScaleDate = DateTime.Now;
             }
             await _context.SaveChangesAsync();
@@ -73,7 +82,7 @@ public class ScaleController : Controller
     {
         var pesables = await _context.Products
             .Include(p => p.SubCategory)
-            .Where(p => p.SendToScale && p.IsActive)
+            .Where(p => p.SendToScale && p.IsScaleNovelty && p.IsActive)
             .ToListAsync();
 
         if (!pesables.Any())
@@ -99,7 +108,7 @@ public class ScaleController : Controller
             // Marcar como enviados
             foreach (var p in pesables)
             {
-                p.SendToScale = false;
+                p.IsScaleNovelty = false;
                 p.LastSentToScaleDate = DateTime.Now;
             }
             await _context.SaveChangesAsync();
@@ -131,6 +140,7 @@ public class ScaleController : Controller
         foreach (var p in products)
         {
             p.SendToScale = true;
+            p.IsScaleNovelty = true;
         }
 
         await _context.SaveChangesAsync();

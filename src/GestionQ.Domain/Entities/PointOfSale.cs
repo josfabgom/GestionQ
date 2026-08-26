@@ -27,6 +27,21 @@ namespace GestionQ.Domain.Entities
         public int PrintCopies { get; set; } = 1;
 
         public bool IsActive { get; set; } = true;
+        
+        [Display(Name = "Identificador de Caja (Machine Name)")]
+        public string? PosIdentifier { get; set; }
+
+        [Display(Name = "Última Sincronización")]
+        public DateTime? LastSyncDate { get; set; }
+
+        [Display(Name = "IP de Sincronización")]
+        public string? SyncIpAddress { get; set; }
+
+        [Display(Name = "Sincronizar solo con Stock y Precio")]
+        public bool SyncOnlyWithStock { get; set; } = true;
+
+        [Display(Name = "Sincronizar Clientes")]
+        public bool SyncCustomers { get; set; } = true;
 
         public List<CashRegister> CashRegisters { get; set; } = new();
         public List<Sale> Sales { get; set; } = new();

@@ -1,0 +1,119 @@
+@model GestionQ.Web.Models.AfipSettingsViewModel
+@{
+    ViewData["Title"] = "Configuración AFIP / ARCA";
+}
+
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12 d-flex justify-content-between align-items-center">
+            <h2 class="h3 mb-0 text-gray-800"><i class="fa-solid fa-file-invoice-dollar text-primary"></i> Configuración AFIP / ARCA</h2>
+        </div>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+            <i class="fa-solid fa-check-circle me-2"></i> @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+            <i class="fa-solid fa-triangle-exclamation me-2"></i> @TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Datos de la Empresa y Certificado</h6>
+                </div>
+                <div class="card-body">
+                    <form asp-action="Index" enctype="multipart/form-data" method="post">
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label asp-for="Cuit" class="form-label fw-bold"></label>
+                                <input asp-for="Cuit" class="form-control" placeholder="Ej: 30123456789" />
+                                <span asp-validation-for="Cuit" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="Environment" class="form-label fw-bold"></label>
+                                <select asp-for="Environment" class="form-select">
+                                    <option value="Homologation">Pruebas / Homologación</option>
+                                    <option value="Production">Producción (Real)</option>
+                                </select>
+                                <span asp-validation-for="Environment" class="text-danger small"></span>
+                            </div>
+                        </div>
+
+                        <hr class="my-4" />
+                        <h5 class="mb-3">Certificado Digital</h5>
+                        
+                        @if (Model.HasCertificateConfigured)
+                        {
+                            <div class="alert alert-info">
+                                <i class="fa-solid fa-certificate me-2"></i> Ya hay un certificado configurado: <strong>@Model.ConfiguredCertificateInfo</strong>
+                                <br />
+                                <small>Si deseas reemplazarlo, sube uno nuevo a continuación.</small>
+                            </div>
+                        }
+
+                        <div class="mb-3">
+                            <label asp-for="CertificateFile" class="form-label fw-bold"></label>
+                            <input asp-for="CertificateFile" type="file" class="form-control" accept=".pfx,.crt" />
+                            <div class="form-text">Puedes subir un archivo .pfx o un archivo .crt.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="PrivateKeyFile" class="form-label fw-bold"></label>
+                            <input asp-for="PrivateKeyFile" type="file" class="form-control" accept=".key" />
+                            <div class="form-text">Si subiste un .crt, debes subir también el archivo .key (Clave privada). Si subiste un .pfx, no es necesario.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="CertificatePassword" class="form-label fw-bold"></label>
+                            <input asp-for="CertificatePassword" type="password" class="form-control" />
+                            <div class="form-text">Solo necesario si el certificado es un .pfx y tiene contraseña.</div>
+                        </div>
+
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-save me-1"></i> Guardar Configuración</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Estado de Conexión</h6>
+                </div>
+                <div class="card-body">
+                    <p>Verifica si el sistema puede conectarse a los servidores de Facturación Electrónica de AFIP con la configuración actual.</p>
+                    
+                    <form asp-action="TestConnection" method="post">
+                        <button type="submit" class="btn btn-outline-info w-100">
+                            <i class="fa-solid fa-network-wired me-1"></i> Probar Conexión con AFIP
+                        </button>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-secondary">Ayuda Puntos de Venta</h6>
+                </div>
+                <div class="card-body small">
+                    <p>Recuerda que para que una Caja POS facture, debes ir a la sección <strong>Puntos de Venta</strong> y configurarle el <strong>Nro. de Punto de Venta (AFIP)</strong> que diste de alta en la web de AFIP.</p>
+                    <p>Todas las Cajas utilizarán el certificado que subas en esta pantalla.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

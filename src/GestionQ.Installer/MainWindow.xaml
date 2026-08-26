@@ -22,8 +22,17 @@
             <!-- Page 1: Welcome -->
             <StackPanel x:Name="PageWelcome" Visibility="Visible">
                 <TextBlock Text="Bienvenido al asistente de instalación de GestionQ." FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
-                <TextBlock Text="Este asistente te guiará paso a paso para instalar el servidor de Punto de Venta, la base de datos SQL y configurar todo lo necesario." TextWrapping="Wrap" Margin="0,0,0,10"/>
-                <TextBlock Text="Haz clic en Siguiente para continuar." TextWrapping="Wrap"/>
+                <TextBlock Text="Este asistente te guiará paso a paso para instalar GestionQ en esta computadora." TextWrapping="Wrap" Margin="0,0,0,20"/>
+                
+                <Border Background="#E3F2FD" BorderBrush="#90CAF9" BorderThickness="1" Padding="15" CornerRadius="5">
+                    <StackPanel>
+                        <RadioButton x:Name="RbFullInstall" Content="Instalación Completa (Servidor + Cliente + POS)" IsChecked="True" FontWeight="Bold" Margin="0,0,0,10"/>
+                        <TextBlock Text="Elige esta opción para la PC Principal que almacenará la base de datos." TextWrapping="Wrap" Margin="20,0,0,15" Foreground="#555"/>
+                        
+                        <RadioButton x:Name="RbClientOnly" Content="Instalación SOLO CLIENTE (Cliente + POS)" FontWeight="Bold" Margin="0,0,0,10"/>
+                        <TextBlock Text="Elige esta opción para terminales secundarias que se conectarán al Servidor Principal." TextWrapping="Wrap" Margin="20,0,0,0" Foreground="#555"/>
+                    </StackPanel>
+                </Border>
             </StackPanel>
 
             <!-- Page 2: Settings -->

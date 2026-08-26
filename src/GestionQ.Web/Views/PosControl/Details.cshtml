@@ -1,0 +1,197 @@
+@model GestionQ.Domain.Entities.PointOfSale
+@{
+    ViewData["Title"] = $"Control POS: {Model.Name}";
+    var activeRegister = ViewBag.ActiveRegister as GestionQ.Domain.Entities.CashRegister;
+    var historyRegisters = ViewBag.HistoryRegisters as List<GestionQ.Domain.Entities.CashRegister>;
+}
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <div>
+        <a asp-action="Index" style="color: var(--text-muted); text-decoration: none; font-size: 0.9rem; margin-bottom: 0.5rem; display: inline-block;">
+            <i class="fa-solid fa-arrow-left"></i> Volver al Tablero
+        </a>
+        <h1 class="page-title" style="margin: 0;"><i class="fa-solid fa-cash-register"></i> @Model.Name</h1>
+    </div>
+    
+    @if (activeRegister != null)
+    {
+        <form asp-action="ForceClose" method="post" onsubmit="return confirm('¿Estás seguro de que deseas forzar el cierre de esta caja de manera remota?');">
+            <input type="hidden" name="id" value="@activeRegister.Id" />
+            <button type="submit" class="btn-danger" style="background: #ef4444; padding: 0.75rem 1.5rem; font-size: 1.1rem;">
+                <i class="fa-solid fa-lock"></i> Cierre de Caja Remoto
+            </button>
+        </form>
+    }
+</div>
+
+@if (TempData["Message"] != null)
+{
+    <div style="background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #fca5a5; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+        @TempData["Message"]
+    </div>
+}
+@if (TempData["SuccessMessage"] != null)
+{
+    <div style="background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #6ee7b7; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+        @TempData["SuccessMessage"]
+    </div>
+}
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+    <!-- Columna Izquierda: Activa -->
+    <div class="glass-panel" style="padding: 1.5rem;">
+        <h2 style="margin-top: 0; color: #60a5fa; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">
+            <i class="fa-solid fa-satellite-dish"></i> Monitoreo en Vivo
+        </h2>
+        
+        @if (activeRegister != null)
+        {
+            decimal totalEfectivo = activeRegister.Sales.SelectMany(s => s.Payments).Where(p => p.PaymentMethod?.Name == "Efectivo").Sum(p => p.Amount);
+            decimal ingresos = activeRegister.Movements.Where(m => m.Type == "Ingreso").Sum(m => m.Amount);
+            decimal egresos = activeRegister.Movements.Where(m => m.Type == "Egreso").Sum(m => m.Amount);
+            decimal saldoEsperado = activeRegister.InitialBalance + totalEfectivo + ingresos - egresos;
+            
+            var productSummary = activeRegister.Sales
+                .SelectMany(s => s.Items)
+                .GroupBy(i => i.Product?.Name ?? "Desconocido")
+                .Select(g => new { Name = g.Key, Quantity = g.Sum(x => x.Quantity), Total = g.Sum(x => x.Quantity * x.UnitPrice) })
+                .OrderByDescending(p => p.Quantity)
+                .ToList();
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+                <div style="background: rgba(30, 41, 59, 0.5); padding: 1rem; border-radius: 8px;">
+                    <p style="margin: 0; color: var(--text-muted); font-size: 0.9rem;">Cajero Activo</p>
+                    <h3 style="margin: 0; color: white;">@activeRegister.User?.UserName</h3>
+                </div>
+                <div style="background: rgba(30, 41, 59, 0.5); padding: 1rem; border-radius: 8px;">
+                    <p style="margin: 0; color: var(--text-muted); font-size: 0.9rem;">Apertura</p>
+                    <h3 style="margin: 0; color: white; font-size: 1.1rem;">@activeRegister.OpeningDate.ToString("dd/MM/yyyy HH:mm")</h3>
+                </div>
+            </div>
+
+            <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem; text-align: center;">
+                <h4 style="margin: 0; color: #6ee7b7; font-size: 1.1rem;">Efectivo Esperado en Caja</h4>
+                <h1 style="margin: 0.5rem 0 0 0; color: #10b981; font-size: 3rem;">$@saldoEsperado.ToString("N2")</h1>
+            </div>
+
+            <h4 style="color: #93c5fd; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">Resumen de Cantidades Vendidas</h4>
+            @if (productSummary.Any())
+            {
+                <table class="table" style="font-size: 0.9rem;">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th style="text-align: right;">Cantidad</th>
+                            <th style="text-align: right;">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var p in productSummary.Take(10))
+                        {
+                            <tr>
+                                <td>@p.Name</td>
+                                <td style="text-align: right; font-weight: bold;">@p.Quantity.ToString("0.##")</td>
+                                <td style="text-align: right;">$@p.Total.ToString("N2")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            <h4 style="color: #93c5fd; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; margin-top: 1.5rem;">Últimos Tickets Vendidos</h4>
+            @if (activeRegister.Sales != null && activeRegister.Sales.Any())
+            {
+                <div style="max-height: 300px; overflow-y: auto;">
+                    <table class="table" style="font-size: 0.85rem;">
+                        <thead>
+                            <tr>
+                                <th>Nro</th>
+                                <th>Fecha</th>
+                                <th>Total</th>
+                                <th>Medio</th>
+                                <th>Detalle</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var sale in activeRegister.Sales.OrderByDescending(s => s.Date).Take(15))
+                            {
+                                <tr>
+                                    <td>#@sale.Id</td>
+                                    <td>@sale.Date.ToString("HH:mm")</td>
+                                    <td style="font-weight: bold; color: #10b981;">$@sale.TotalAmount.ToString("N2")</td>
+                                    <td>
+                                        @if (sale.Payments != null && sale.Payments.Any())
+                                        {
+                                            @string.Join(", ", sale.Payments.Select(p => p.PaymentMethod?.Name))
+                                        }
+                                        else
+                                        {
+                                            <span style="opacity:0.5">-</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <a asp-controller="Sales" asp-action="Details" asp-route-id="@sale.Id" class="btn-secondary" style="padding: 0.2rem 0.4rem; font-size: 0.75rem;">Ver</a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <p style="color: var(--text-muted); font-style: italic;">No hay ventas registradas en esta sesión aún.</p>
+            }
+        }
+        else
+        {
+            <div style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
+                <i class="fa-solid fa-moon" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;"></i>
+                <h3>Punto de Venta Inactivo</h3>
+                <p>No hay ninguna caja abierta en este momento.</p>
+            </div>
+        }
+    </div>
+
+    <!-- Columna Derecha: Histórico -->
+    <div class="glass-panel" style="padding: 1.5rem; display: flex; flex-direction: column;">
+        <h2 style="margin-top: 0; color: #a78bfa; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">
+            <i class="fa-solid fa-clock-rotate-left"></i> Histórico de Cajas
+        </h2>
+        
+        @if (historyRegisters != null && historyRegisters.Any())
+        {
+            <div style="overflow-y: auto; flex-grow: 1;">
+                <table class="table" style="font-size: 0.9rem;">
+                    <thead>
+                        <tr>
+                            <th>Fecha Cierre</th>
+                            <th>Cajero</th>
+                            <th style="text-align: right;">Cierre Efectivo</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var reg in historyRegisters)
+                        {
+                            <tr>
+                                <td>@reg.ClosingDate?.ToString("dd/MM/yy HH:mm")</td>
+                                <td>@reg.User?.UserName</td>
+                                <td style="text-align: right; font-weight: bold;">$@(reg.FinalCashBalance?.ToString("N2") ?? "0.00")</td>
+                                <td style="text-align: right;">
+                                    <a asp-controller="CashRegisters" asp-action="Details" asp-route-id="@reg.Id" class="btn-secondary" style="padding: 0.3rem 0.5rem; font-size: 0.8rem;">Ver</a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
+                <i class="fa-solid fa-folder-open" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;"></i>
+                <p>No hay historial de cajas cerradas para este POS.</p>
+            </div>
+        }
+    </div>
+</div>

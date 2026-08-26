@@ -10,6 +10,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace GestionQ.Infrastructure.Services
@@ -19,35 +20,57 @@ namespace GestionQ.Infrastructure.Services
         private readonly ILogger<ArcaElectronicInvoicingService> _logger;
         private readonly HttpClient _httpClient;
         
-        private readonly string _wsaaUrl;
-        private readonly string _wsfeUrl;
+        private string _wsaaUrl;
+        private string _wsfeUrl;
         
         private const string WSFE_SERVICE_NAME = "wsfe";
         
         private string _cuit; // CUIT del titular del certificado, cargado dinámicamente
+        private string _certPath;
+        private string _keyPath;
+        private string _certPassword;
 
         private static string _cachedToken;
         private static string _cachedSign;
         private static DateTime _tokenExpiration = DateTime.MinValue;
 
-        public ArcaElectronicInvoicingService(ILogger<ArcaElectronicInvoicingService> logger, HttpClient httpClient, IConfiguration configuration)
+        private readonly IServiceProvider _serviceProvider;
+        private readonly IConfiguration _configuration;
+
+        public ArcaElectronicInvoicingService(ILogger<ArcaElectronicInvoicingService> logger, HttpClient httpClient, IConfiguration configuration, IServiceProvider serviceProvider)
         {
             _logger = logger;
             _httpClient = httpClient;
-            _cuit = configuration["CompanyInfo:Cuit"] ?? string.Empty;
+            _configuration = configuration;
+            _serviceProvider = serviceProvider;
+        }
+
+        private async Task LoadSettingsAsync()
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<GestionQ.Infrastructure.Data.ApplicationDbContext>();
+            var settings = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ToDictionaryAsync(db.SystemSettings, x => x.Key, x => x.Value);
             
-            bool isProduction = false;
-            bool.TryParse(configuration["Afip:UseProduction"], out isProduction);
+            _cuit = settings.GetValueOrDefault("Afip_Cuit", _configuration["CompanyInfo:Cuit"] ?? string.Empty);
+            _certPath = settings.GetValueOrDefault("Afip_CertificatePath", "");
+            _keyPath = settings.GetValueOrDefault("Afip_PrivateKeyPath", "");
+            _certPassword = settings.GetValueOrDefault("Afip_CertificatePassword", "");
+            
+            bool isProduction = settings.GetValueOrDefault("Afip_Environment") == "Production";
+            if (!isProduction) 
+            {
+                bool.TryParse(_configuration["Afip:UseProduction"], out isProduction);
+            }
             
             if (isProduction)
             {
-                _wsaaUrl = configuration["Afip:Production:WsaaUrl"] ?? "https://wsaa.afip.gov.ar/ws/services/LoginCms";
-                _wsfeUrl = configuration["Afip:Production:WsfeUrl"] ?? "https://servicios1.afip.gov.ar/wsfev1/service.asmx";
+                _wsaaUrl = _configuration["Afip:Production:WsaaUrl"] ?? "https://wsaa.afip.gov.ar/ws/services/LoginCms";
+                _wsfeUrl = _configuration["Afip:Production:WsfeUrl"] ?? "https://servicios1.afip.gov.ar/wsfev1/service.asmx";
             }
             else
             {
-                _wsaaUrl = configuration["Afip:Homologation:WsaaUrl"] ?? "https://wsaahomo.afip.gov.ar/ws/services/LoginCms";
-                _wsfeUrl = configuration["Afip:Homologation:WsfeUrl"] ?? "https://wswhomo.afip.gov.ar/wsfev1/service.asmx";
+                _wsaaUrl = _configuration["Afip:Homologation:WsaaUrl"] ?? "https://wsaahomo.afip.gov.ar/ws/services/LoginCms";
+                _wsfeUrl = _configuration["Afip:Homologation:WsfeUrl"] ?? "https://wswhomo.afip.gov.ar/wsfev1/service.asmx";
             }
         }
 
@@ -57,6 +80,7 @@ namespace GestionQ.Infrastructure.Services
 
             try
             {
+                await LoadSettingsAsync();
                 await EnsureAuthenticatedAsync();
 
                 int nextVoucherNumber = await GetLastAuthorizedVoucherAsync(request.PointOfSaleNumber, request.InvoiceTypeCode) + 1;
@@ -91,6 +115,7 @@ namespace GestionQ.Infrastructure.Services
 
         public async Task<int> GetLastAuthorizedVoucherAsync(int posNumber, int voucherTypeCode)
         {
+            await LoadSettingsAsync();
             await EnsureAuthenticatedAsync();
 
             string soapEnvelope = $@"<?xml version=""1.0"" encoding=""utf-8""?>
@@ -154,6 +179,8 @@ namespace GestionQ.Infrastructure.Services
         {
             try
             {
+                await LoadSettingsAsync();
+                
                 string soapEnvelope = $@"<?xml version=""1.0"" encoding=""utf-8""?>
 <soap:Envelope xmlns:xsi=""http://www.w3.org/2001/XMLSchema-instance"" xmlns:xsd=""http://www.w3.org/2001/XMLSchema"" xmlns:soap=""http://schemas.xmlsoap.org/soap/envelope/"">
   <soap:Body>
@@ -217,30 +244,36 @@ namespace GestionQ.Infrastructure.Services
                 catch { /* Ignore and request new token */ }
             }
 
-            var keyPath = Path.Combine(certsFolder, "private.key");
-            var crtPath = Path.Combine(certsFolder, "certificate.crt");
+            var keyPath = string.IsNullOrEmpty(_keyPath) ? Path.Combine(certsFolder, "private.key") : _keyPath;
+            var crtPath = string.IsNullOrEmpty(_certPath) ? Path.Combine(certsFolder, "certificate.crt") : _certPath;
 
-            if (!File.Exists(keyPath) || !File.Exists(crtPath))
-            {
-                throw new Exception("Faltan las credenciales criptográficas (private.key o certificate.crt) para autenticarse en ARCA.");
-            }
-
-            // 1. Create X509Certificate2 directly from PEM strings
-            string keyPem = await File.ReadAllTextAsync(keyPath);
-            string crtPem = await File.ReadAllTextAsync(crtPath);
             X509Certificate2 cert;
             try
             {
-                cert = X509Certificate2.CreateFromPem(crtPem, keyPem);
-                // Windows may require ephemeral key set for signing CMS
-                if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows))
+                if (crtPath.EndsWith(".pfx", StringComparison.OrdinalIgnoreCase))
                 {
-                    cert = new X509Certificate2(cert.Export(X509ContentType.Pkcs12, "temp"), "temp", X509KeyStorageFlags.EphemeralKeySet);
+                    if (!File.Exists(crtPath)) throw new Exception($"No se encuentra el archivo: {crtPath}");
+                    cert = new X509Certificate2(crtPath, _certPassword, X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.Exportable);
+                }
+                else
+                {
+                    if (!File.Exists(keyPath) || !File.Exists(crtPath))
+                    {
+                        throw new Exception("Faltan las credenciales criptográficas (private.key o certificate.crt/pfx) para autenticarse en ARCA.");
+                    }
+                    string keyPem = await File.ReadAllTextAsync(keyPath);
+                    string crtPem = await File.ReadAllTextAsync(crtPath);
+                    cert = X509Certificate2.CreateFromPem(crtPem, keyPem);
+                    
+                    if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows))
+                    {
+                        cert = new X509Certificate2(cert.Export(X509ContentType.Pkcs12, "temp"), "temp", X509KeyStorageFlags.EphemeralKeySet);
+                    }
                 }
             }
             catch (Exception ex)
             {
-                throw new Exception($"Error al leer el certificado PEM: {ex.Message}");
+                throw new Exception($"Error al leer el certificado: {ex.Message}");
             }
 
             // 2. Generate LoginTicketRequest XML

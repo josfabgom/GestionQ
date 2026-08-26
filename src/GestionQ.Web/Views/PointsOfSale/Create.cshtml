@@ -15,20 +15,30 @@
         </div>
 
         <div class="form-group" style="margin-top: 1rem;">
-            <label asp-for="PosNumber" class="control-label">Nro. de Punto de Venta (Ej. 1, 2...)</label>
+            <label asp-for="PosNumber" class="control-label fw-bold text-primary"><i class="fa-solid fa-file-invoice-dollar"></i> Nro. de Punto de Venta (AFIP / Fiscal)</label>
             <input asp-for="PosNumber" class="form-control" type="number" min="1" max="99999" required />
+            <div class="form-text text-muted small">Este es el número fiscal asignado en la web de AFIP (ej. 1, 2, 3...) para facturar desde esta caja.</div>
             <span asp-validation-for="PosNumber" class="text-danger"></span>
         </div>
 
         <div class="form-group" style="margin-top: 1rem;">
-            <label asp-for="MachineName" class="control-label">Nombre de la PC / Identificador</label>
+            <label asp-for="MachineName" class="control-label">Nombre de la PC / Impresión</label>
+            <input asp-for="MachineName" class="form-control" id="machineNameInput" placeholder="Ej. PC-CAJA-01..." />
+            <span asp-validation-for="MachineName" class="text-danger"></span>
+        </div>
+
+        <h3 style="margin-top: 2rem; margin-bottom: 1rem; color: #a78bfa; font-size: 1.2rem; border-bottom: 1px solid #333; padding-bottom: 0.5rem;">Sincronización POS Offline</h3>
+
+        <div class="form-group" style="margin-top: 1rem;">
+            <label asp-for="PosIdentifier" class="control-label">Identificador de Caja (Machine Name de la PC destino)</label>
             <div style="display: flex; gap: 0.5rem;">
-                <input asp-for="MachineName" class="form-control" id="machineNameInput" placeholder="Ej. PC-CAJA-01..." />
+                <input asp-for="PosIdentifier" class="form-control" id="posIdentifierInput" />
                 <button type="button" class="btn-secondary" onclick="detectMachineName()" style="white-space: nowrap; font-size: 0.8rem; background: #3b82f6; border: none; color: white;">
-                    <i class="fas fa-sync-alt"></i> Detectar PC actual
+                    <i class="fas fa-sync-alt"></i> Detectar mi PC actual
                 </button>
             </div>
-            <span asp-validation-for="MachineName" class="text-danger"></span>
+            <small style="color: var(--text-muted);">Debe coincidir exactamente con el nombre de la PC donde corre la Caja POS.</small>
+            <span asp-validation-for="PosIdentifier" class="text-danger"></span>
         </div>
 
         <script>
@@ -37,23 +47,34 @@
                     const response = await fetch('/POSConfig/DetectMachineName');
                     const data = await response.json();
                     if (data.name) {
-                        document.getElementById('machineNameInput').value = data.name;
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'PC Detectada',
-                            text: 'Se ha identificado: ' + data.name,
-                            timer: 2000,
-                            showConfirmButton: false
-                        });
+                        document.getElementById('posIdentifierInput').value = data.name;
                     }
                 } catch (error) {
                     console.error('Error detectando PC:', error);
-                    alert('No se pudo detectar el nombre de la PC automáticamente.');
                 }
             }
         </script>
 
         <div class="form-group" style="margin-top: 1rem;">
+            <div class="form-check">
+                <input asp-for="SyncOnlyWithStock" class="form-check-input" type="checkbox" id="syncStockCheck" checked>
+                <label class="form-check-label" for="syncStockCheck" style="color: var(--text-muted); margin-left: 0.5rem;">
+                    Sincronizar SOLO artículos con Precio y Stock (Recomendado)
+                </label>
+            </div>
+            <small style="display:block; margin-left:1.5rem; color: var(--text-muted);">Si se desmarca, el POS descargará todo el catálogo aunque no tenga precio ni stock.</small>
+        </div>
+
+        <div class="form-group" style="margin-top: 1rem;">
+            <div class="form-check">
+                <input asp-for="SyncCustomers" class="form-check-input" type="checkbox" id="syncCustomersCheck" checked>
+                <label class="form-check-label" for="syncCustomersCheck" style="color: var(--text-muted); margin-left: 0.5rem;">
+                    Sincronizar Base de Datos de Clientes
+                </label>
+            </div>
+        </div>
+
+        <div class="form-group" style="margin-top: 2rem;">
             <label asp-for="Description" class="control-label">Descripción / Ubicación</label>
             <input asp-for="Description" class="form-control" placeholder="Ej. Sector entrada, Planta alta..." />
             <span asp-validation-for="Description" class="text-danger"></span>

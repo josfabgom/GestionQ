@@ -46,6 +46,15 @@
         </div>
     }
 
+    <form asp-action="Index" method="get" style="margin-bottom: 1.5rem; display: flex; gap: 10px;">
+        <input type="text" name="searchString" value="@ViewData["CurrentFilter"]" class="form-control" placeholder="Buscar por nombre o código interno..." style="max-width: 400px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: #fff; padding: 0.5rem 1rem; border-radius: 4px;" />
+        <button type="submit" class="btn-primary"><i class="fa-solid fa-magnifying-glass"></i> Buscar</button>
+        @if (!string.IsNullOrEmpty(ViewData["CurrentFilter"]?.ToString()))
+        {
+            <a asp-action="Index" class="btn-secondary" style="display: flex; align-items: center; justify-content: center; text-decoration: none;"><i class="fa-solid fa-xmark"></i></a>
+        }
+    </form>
+
     <form id="resendForm" asp-action="MarkToResend" method="post">
         <div class="table-responsive">
             <table class="table">
@@ -74,7 +83,7 @@
                             <td style="font-weight: 500;">@item.Name</td>
                             <td>$ @item.Price.ToString("N2")</td>
                             <td>
-                                @if (item.SendToScale)
+                                @if (item.IsScaleNovelty)
                                 {
                                     <span class="badge" style="background-color: #ef4444; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8em;"><i class="fa-solid fa-triangle-exclamation"></i> Novedad</span>
                                 }

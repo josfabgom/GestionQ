@@ -11,8 +11,10 @@
     <table class="table">
         <thead>
             <tr>
-                <th>Email / Usuario</th>
+                <th>Usuario (Login)</th>
+                <th>Nombre para Ticket</th>
                 <th>Rol Asignado</th>
+                <th>PIN Caja</th>
                 <th>Acciones</th>
             </tr>
         </thead>
@@ -20,13 +22,17 @@
             @foreach (var user in Model)
             {
                 <tr>
-                    <td style="font-weight: 600;">@user.Email</td>
+                    <td style="font-weight: 600;">@user.UserName</td>
+                    <td>@(string.IsNullOrEmpty(user.FullName) ? "N/A" : user.FullName)</td>
                     <td style="color: var(--accent);">
                         @(string.IsNullOrEmpty(user.Roles) ? "Sin Rol" : user.Roles)
                     </td>
+                    <td>
+                        @(string.IsNullOrEmpty(user.Pin) ? "No Configurado" : user.Pin)
+                    </td>
                     <td style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                        <button type="button" class="btn-secondary" style="padding: 0.2rem 0.6rem; font-size: 0.9rem;" onclick="openPasswordModal('@user.UserId', '@user.Email')">Cambiar Clave</button>
-                        <a asp-action="EditRole" asp-route-id="@user.UserId" class="btn-secondary" style="padding: 0.2rem 0.6rem; font-size: 0.9rem;">Editar Rol</a>
+                        <button type="button" class="btn-secondary" style="padding: 0.2rem 0.6rem; font-size: 0.9rem;" onclick="openPasswordModal('@user.UserId', '@user.UserName')">Cambiar Clave</button>
+                        <a asp-action="EditRole" asp-route-id="@user.UserId" class="btn-secondary" style="padding: 0.2rem 0.6rem; font-size: 0.9rem;">Editar</a>
                         <form asp-action="Delete" asp-route-id="@user.UserId" method="post"
                             onsubmit="return confirm('¿Eliminar usuario del sistema?');">
                             <button type="submit" class="btn-danger">Eliminar</button>
