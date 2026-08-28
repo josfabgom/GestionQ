@@ -43,20 +43,32 @@ namespace GestionQ.Installer
                 }
 
                 // 1. Stop existing services/processes if any
-                ReportProgress("Deteniendo procesos en ejecución...", 20);
+                ReportProgress("Deteniendo servicios y procesos...", 10);
                 if (!IsClientOnly)
                 {
                     StopService();
                 }
+
                 try
                 {
-                    var processes = Process.GetProcessesByName("GestionQ.ServerMonitor");
-                    foreach (var p in processes) { p.Kill(); p.WaitForExit(2000); }
+                    var procsToKill = new[] { "GestionQ.ServerMonitor", "GestionQ.CajaPOS", "GestionQ.Desktop" };
+                    foreach (var procName in procsToKill)
+                    {
+                        var processes = Process.GetProcessesByName(procName);
+                        foreach (var p in processes) 
+                        { 
+                            p.Kill(); 
+                            p.WaitForExit(2000); 
+                        }
+                    }
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    LogMessage("Advertencia al detener procesos: " + ex.Message);
+                }
 
-                // 2. Extract Embedded Resources
-                ReportProgress("Extrayendo archivos...", 40);
+                // 2. Extract payload
+                ReportProgress("Extrayendo archivos de la aplicación...", 20);
                 ExtractResources(installDir, isUpdate: false);
 
                 if (!IsClientOnly)
