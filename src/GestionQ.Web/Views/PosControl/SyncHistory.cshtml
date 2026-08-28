@@ -1,0 +1,84 @@
+@model List<GestionQ.Web.Models.SyncHistoryGroupViewModel>
+@{
+    ViewData["Title"] = "Historial de Envíos a Cajas POS";
+}
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <h1 class="page-title"><i class="fa-solid fa-clock-rotate-left"></i> Historial de Envíos a Cajas</h1>
+    <a asp-action="Index" class="btn btn-secondary"><i class="fa-solid fa-arrow-left"></i> Volver al Tablero</a>
+</div>
+
+<p style="color: #a1a1aa; margin-bottom: 2rem;">
+    Aquí puedes auditar cada vez que se enviaron actualizaciones de catálogo (precios, stock, nombres) a las terminales POS.
+</p>
+
+@if (!Model.Any())
+{
+    <div class="glass-card" style="text-align: center; padding: 3rem;">
+        <i class="fa-solid fa-folder-open" style="font-size: 3rem; color: #4b5563; margin-bottom: 1rem;"></i>
+        <h3 style="color: #9ca3af;">Aún no hay envíos registrados</h3>
+        <p style="color: #6b7280;">El historial comenzará a llenarse una vez que realices tu primer envío de cambios a las cajas POS.</p>
+    </div>
+}
+else
+{
+    <div class="accordion" id="historyAccordion">
+        @for (int i = 0; i < Model.Count; i++)
+        {
+            var group = Model[i];
+            var collapseId = $"collapse{i}";
+            var headingId = $"heading{i}";
+
+            <div class="accordion-item" style="background: #1e1e2f; border: 1px solid #333; margin-bottom: 1rem; border-radius: 8px; overflow: hidden;">
+                <h2 class="accordion-header" id="@headingId">
+                    <button class="accordion-button @(i == 0 ? "" : "collapsed")" type="button" data-bs-toggle="collapse" data-bs-target="#@collapseId" aria-expanded="@(i == 0 ? "true" : "false")" aria-controls="@collapseId" style="background: #25263a; color: #f8f9fa; box-shadow: none;">
+                        <div style="display: flex; justify-content: space-between; width: 100%; padding-right: 1rem;">
+                            <span><i class="fa-solid fa-calendar-check" style="color: #22c55e;"></i> Envío Lote: <strong>@group.SyncDate.ToString("dd/MM/yyyy HH:mm:ss")</strong></span>
+                            <span class="badge bg-primary">@group.Logs.Count artículos actualizados</span>
+                        </div>
+                    </button>
+                </h2>
+                <div id="@collapseId" class="accordion-collapse collapse @(i == 0 ? "show" : "")" aria-labelledby="@headingId" data-bs-parent="#historyAccordion">
+                    <div class="accordion-body" style="padding: 0;">
+                        <div class="table-responsive">
+                            <table class="table table-dark table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 25%">Artículo</th>
+                                        <th style="width: 50%">Modificación Realizada</th>
+                                        <th style="width: 25%">Fecha original del cambio</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var log in group.Logs)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <a asp-controller="Products" asp-action="Edit" asp-route-id="@log.ProductId" style="color: #60a5fa; text-decoration: none;">
+                                                    <i class="fa-solid fa-box"></i> @log.ProductName
+                                                </a>
+                                            </td>
+                                            <td>
+                                                @if (log.ChangeDescription.Contains("Creación"))
+                                                {
+                                                    <span class="badge bg-success"><i class="fa-solid fa-plus"></i> Nuevo Artículo</span>
+                                                }
+                                                else
+                                                {
+                                                    <span style="color: #e2e8f0;">@log.ChangeDescription</span>
+                                                }
+                                            </td>
+                                            <td style="color: #9ca3af; font-size: 0.9em;">
+                                                @log.DateChanged.ToString("dd/MM/yyyy HH:mm:ss")
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}

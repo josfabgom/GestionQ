@@ -30,9 +30,16 @@ namespace GestionQ.Api.Controllers
         {
             var query = _context.Products.AsNoTracking().AsQueryable();
             
+            var approvedSetting = await _context.SystemSettings.FirstOrDefaultAsync(s => s.Key == "LastApprovedProductSyncDate");
+            DateTime maxDate = approvedSetting != null && DateTime.TryParse(approvedSetting.Value, out var parsed) 
+                ? parsed 
+                : DateTime.MinValue; // If not set, don't send any products (must be manually authorized first)
+
+            query = query.Where(p => p.LastModified <= maxDate);
+
             if (request.LastSyncDate.HasValue)
             {
-                query = query.Where(p => p.LastModified >= request.LastSyncDate.Value);
+                query = query.Where(p => p.LastModified > request.LastSyncDate.Value);
             }
 
             var products = await query.Select(p => new ProductSyncDto

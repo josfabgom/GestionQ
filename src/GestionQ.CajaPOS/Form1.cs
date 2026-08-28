@@ -60,10 +60,10 @@ namespace GestionQ.CajaPOS
 
         public Form1()
         {
-            _authClient = new AuthClient("http://localhost:5144");
+            _authClient = new AuthClient(AppConfig.ServerUrl);
             InitializeUI();
             
-            _syncWorker = new SyncWorker("http://localhost:5144");
+            _syncWorker = new SyncWorker(AppConfig.ServerUrl);
             _syncWorker.OnSyncCompleted += () => {
                 this.Invoke((MethodInvoker)delegate {
                     LoadInitialDataAsync();
@@ -215,9 +215,19 @@ namespace GestionQ.CajaPOS
             lblTitle.AutoSize = true;
             lblTitle.Location = new Point(0, 10);
             lblTitle.ForeColor = Color.WhiteSmoke;
-            lblItemsCount = new Label { Text = "0 ítems cargados", ForeColor = accentColor, Font = new Font("Segoe UI", 10, FontStyle.Bold), AutoSize = true, Location = new Point(leftPanel.Width - 150, 15), Anchor = AnchorStyles.Top | AnchorStyles.Right };
+
+            FlowLayoutPanel headerRightPanel = new FlowLayoutPanel 
+            { 
+                Dock = DockStyle.Right, 
+                FlowDirection = FlowDirection.RightToLeft, 
+                AutoSize = true, 
+                WrapContents = false,
+                Padding = new Padding(0, 10, 0, 0)
+            };
+
+            lblItemsCount = new Label { Text = "0 ítems cargados", ForeColor = accentColor, Font = new Font("Segoe UI", 10, FontStyle.Bold), AutoSize = true, Margin = new Padding(10, 5, 0, 0) };
             
-            btnSync = new Button { Text = "🔄 Sincronizar", AutoSize = true, FlatStyle = FlatStyle.Flat, ForeColor = textColor, Location = new Point(leftPanel.Width - 300, 10), Anchor = AnchorStyles.Top | AnchorStyles.Right };
+            btnSync = new Button { Text = "🔄 Sincronizar", AutoSize = true, FlatStyle = FlatStyle.Flat, ForeColor = textColor, Margin = new Padding(10, 0, 0, 0) };
             btnSync.FlatAppearance.BorderSize = 0;
             btnSync.Click += async (s, e) => {
                 btnSync.Text = "⏳ Sincronizando...";
@@ -234,7 +244,7 @@ namespace GestionQ.CajaPOS
                 }
             };
 
-            btnCloseRegister = new Button { Text = "🔒 Cerrar Caja", AutoSize = true, FlatStyle = FlatStyle.Flat, ForeColor = Color.FromArgb(239, 68, 68), Location = new Point(leftPanel.Width - 450, 10), Anchor = AnchorStyles.Top | AnchorStyles.Right };
+            btnCloseRegister = new Button { Text = "🔒 Cerrar Caja", AutoSize = true, FlatStyle = FlatStyle.Flat, ForeColor = Color.FromArgb(239, 68, 68), Margin = new Padding(10, 0, 0, 0) };
             btnCloseRegister.FlatAppearance.BorderSize = 0;
             btnCloseRegister.Click += async (s, e) => {
                 var closeForm = new CloseRegisterForm(_authClient, _cashRegisterId);
@@ -248,10 +258,8 @@ namespace GestionQ.CajaPOS
                     Application.Restart();
                 }
             };
-
-            headerLeft.Controls.Add(lblTitle);
             
-            btnAddMovement = new Button { Text = "💸 Retiro Efectivo", AutoSize = true, FlatStyle = FlatStyle.Flat, ForeColor = Color.FromArgb(0, 123, 255), Anchor = AnchorStyles.Top | AnchorStyles.Right };
+            btnAddMovement = new Button { Text = "💸 Retiro Efectivo", AutoSize = true, FlatStyle = FlatStyle.Flat, ForeColor = Color.FromArgb(0, 123, 255), Margin = new Padding(10, 0, 0, 0) };
             btnAddMovement.FlatAppearance.BorderSize = 0;
             btnAddMovement.Click += (s, e) => {
                 var movementForm = new MovementForm(_authClient, _cashRegisterId);
@@ -271,19 +279,23 @@ namespace GestionQ.CajaPOS
                 }
             };
             
-            headerLeft.Controls.Add(btnAddMovement);
-            headerLeft.Controls.Add(btnCloseRegister);
-            headerLeft.Controls.Add(btnSync);
-            headerLeft.Controls.Add(lblItemsCount);
+            headerRightPanel.Controls.Add(lblItemsCount);
+            headerRightPanel.Controls.Add(btnSync);
+            headerRightPanel.Controls.Add(btnCloseRegister);
+            headerRightPanel.Controls.Add(btnAddMovement);
+
+            headerLeft.Controls.Add(headerRightPanel);
+            headerLeft.Controls.Add(lblTitle);
             
             gridItems = new DataGridView
             {
-                Dock = DockStyle.Fill, BackgroundColor = bgColor, BorderStyle = BorderStyle.None,
+                Dock = DockStyle.Fill, BackgroundColor = Color.FromArgb(20, 21, 30), BorderStyle = BorderStyle.None,
                 CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal, GridColor = Color.FromArgb(40, 42, 54),
                 EnableHeadersVisualStyles = false, AllowUserToAddRows = false, ReadOnly = true,
                 SelectionMode = DataGridViewSelectionMode.FullRowSelect, RowHeadersVisible = false, RowTemplate = { Height = 80 }
             };
             gridItems.DefaultCellStyle.BackColor = panelColor; 
+            gridItems.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(28, 30, 42);
             gridItems.DefaultCellStyle.ForeColor = textColor;
             gridItems.DefaultCellStyle.Font = new Font("Segoe UI", 12);
             gridItems.DefaultCellStyle.SelectionBackColor = Color.FromArgb(45, 48, 66); 
@@ -292,6 +304,7 @@ namespace GestionQ.CajaPOS
             gridItems.ColumnHeadersDefaultCellStyle.BackColor = bgColor; 
             gridItems.ColumnHeadersDefaultCellStyle.ForeColor = Color.Gray;
             gridItems.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+            gridItems.ColumnHeadersDefaultCellStyle.WrapMode = DataGridViewTriState.False;
             gridItems.ColumnHeadersHeight = 45;
             gridItems.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None;
             
@@ -299,13 +312,13 @@ namespace GestionQ.CajaPOS
             gridItems.Columns.Add("Name", "PRODUCTO"); 
             gridItems.Columns.Add("Price", "PRECIO UNIT.");
             
-            var btnMinus = new DataGridViewButtonColumn { Name = "btnMinus", HeaderText = "", Text = "-", UseColumnTextForButtonValue = true, Width = 40, FlatStyle = FlatStyle.Flat };
+            var btnMinus = new DataGridViewButtonColumn { Name = "btnMinus", HeaderText = "", Text = "-", UseColumnTextForButtonValue = true, Width = 45, FlatStyle = FlatStyle.Flat };
             btnMinus.DefaultCellStyle.BackColor = Color.FromArgb(45, 48, 66); btnMinus.DefaultCellStyle.ForeColor = Color.White;
             gridItems.Columns.Add(btnMinus);
             
             gridItems.Columns.Add("Quantity", "CANTIDAD"); 
             
-            var btnPlus = new DataGridViewButtonColumn { Name = "btnPlus", HeaderText = "", Text = "+", UseColumnTextForButtonValue = true, Width = 40, FlatStyle = FlatStyle.Flat };
+            var btnPlus = new DataGridViewButtonColumn { Name = "btnPlus", HeaderText = "", Text = "+", UseColumnTextForButtonValue = true, Width = 45, FlatStyle = FlatStyle.Flat };
             btnPlus.DefaultCellStyle.BackColor = Color.FromArgb(45, 48, 66); btnPlus.DefaultCellStyle.ForeColor = Color.White;
             gridItems.Columns.Add(btnPlus);
             
@@ -313,9 +326,9 @@ namespace GestionQ.CajaPOS
             
             gridItems.Columns["Id"].Visible = false; 
             gridItems.Columns["Name"].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
-            gridItems.Columns["Price"].AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells;
-            gridItems.Columns["Quantity"].AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells;
-            gridItems.Columns["SubTotal"].AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells;
+            gridItems.Columns["Price"].Width = 140;
+            gridItems.Columns["Quantity"].Width = 100;
+            gridItems.Columns["SubTotal"].Width = 150;
             
             gridItems.Columns["Price"].HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight;
             gridItems.Columns["Quantity"].HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter;

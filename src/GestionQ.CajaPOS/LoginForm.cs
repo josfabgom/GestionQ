@@ -43,8 +43,22 @@ namespace GestionQ.CajaPOS
             btnLogin.Click += BtnLogin_Click;
             this.Controls.Add(btnLogin);
 
-            lblError = new Label { ForeColor = Color.Red, Font = new Font("Segoe UI", 9), Width = 300, Location = new Point(25, 200), TextAlign = ContentAlignment.MiddleCenter };
+            lblError = new Label { ForeColor = Color.Red, Font = new Font("Segoe UI", 9), Width = 300, Location = new Point(25, 190), TextAlign = ContentAlignment.MiddleCenter };
             this.Controls.Add(lblError);
+
+            Button btnConfig = new Button { Text = "⚙️ Servidor", Font = new Font("Segoe UI", 9), AutoSize = true, Location = new Point(10, 220), FlatStyle = FlatStyle.Flat, ForeColor = Color.Gray };
+            btnConfig.FlatAppearance.BorderSize = 0;
+            btnConfig.Click += (s, e) => {
+                string currentUrl = AppConfig.ServerUrl;
+                string input = Microsoft.VisualBasic.Interaction.InputBox("Ingrese la URL o IP del Servidor Central (ej. http://192.168.1.10:5144):", "Configurar Servidor", currentUrl);
+                if (!string.IsNullOrWhiteSpace(input) && input != currentUrl)
+                {
+                    AppConfig.ServerUrl = input;
+                    MessageBox.Show("La configuración se ha guardado. La aplicación se reiniciará para aplicar los cambios.", "Configuración", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    Application.Restart();
+                }
+            };
+            this.Controls.Add(btnConfig);
         }
 
         private async void BtnLogin_Click(object sender, EventArgs e)

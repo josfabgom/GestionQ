@@ -34,6 +34,7 @@ namespace GestionQ.Infrastructure.Data
         public DbSet<PromotionRule> PromotionRules { get; set; }
         public DbSet<PromotionRuleProduct> PromotionRuleProducts { get; set; }
         public DbSet<Department> Departments { get; set; }
+        public DbSet<ProductChangeLog> ProductChangeLogs { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -59,6 +60,85 @@ namespace GestionQ.Infrastructure.Data
                 .WithMany()
                 .HasForeignKey(d => d.VirtualProductId)
                 .OnDelete(DeleteBehavior.Restrict);
+        }
+
+        public override int SaveChanges()
+        {
+            ProcessProductChanges();
+            return base.SaveChanges();
+        }
+
+        public override System.Threading.Tasks.Task<int> SaveChangesAsync(System.Threading.CancellationToken cancellationToken = default)
+        {
+            ProcessProductChanges();
+            return base.SaveChangesAsync(cancellationToken);
+        }
+
+        private void ProcessProductChanges()
+        {
+            var entries = ChangeTracker.Entries<Product>()
+                .Where(e => e.State == EntityState.Modified || e.State == EntityState.Added)
+                .ToList(); // Evaluamos antes de agregar nuevos registros
+
+            foreach (var entry in entries)
+            {
+                if (entry.State == EntityState.Modified)
+                {
+                    entry.Entity.LastModified = System.DateTime.Now;
+                }
+
+                string changes = "";
+                if (entry.State == EntityState.Added)
+                {
+                    changes = "Creación de artículo";
+                }
+                else
+                {
+                    var changeParts = new System.Collections.Generic.List<string>();
+                    foreach(var prop in entry.Properties.Where(p => p.IsModified))
+                    {
+                        var propName = prop.Metadata.Name;
+                        if (propName == "LastModified" || propName == "CreationDate") continue;
+                        
+                        string original = prop.OriginalValue?.ToString() ?? "N/A";
+                        string current = prop.CurrentValue?.ToString() ?? "N/A";
+                        
+                        if (original != current)
+                        {
+                            string nombreES = propName switch {
+                                "Price" => "Precio",
+                                "Stock" => "Stock",
+                                "Name" => "Nombre",
+                                "InternalCode" => "Código Int.",
+                                "Barcode" => "Cód. Barras",
+                                "IsActive" => "Estado",
+                                "Cost" => "Costo",
+                                _ => propName
+                            };
+
+                            if (propName == "Price" || propName == "Cost") {
+                                decimal.TryParse(original, out decimal oPrice);
+                                decimal.TryParse(current, out decimal cPrice);
+                                original = oPrice.ToString("C2");
+                                current = cPrice.ToString("C2");
+                            }
+
+                            changeParts.Add($"{nombreES} ({original} ➡️ {current})");
+                        }
+                    }
+                    if (changeParts.Count == 0) continue; 
+                    changes = string.Join(", ", changeParts);
+                }
+
+                this.Set<ProductChangeLog>().Add(new ProductChangeLog
+                {
+                    ProductId = entry.Entity.Id,
+                    ProductName = entry.Entity.Name,
+                    ChangeDescription = changes,
+                    DateChanged = System.DateTime.Now,
+                    DateSentToPos = null // Pendiente
+                });
+            }
         }
     }
 }

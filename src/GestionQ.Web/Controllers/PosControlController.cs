@@ -38,7 +38,71 @@ namespace GestionQ.Web.Controllers
                 .OrderBy(pos => pos.Name)
                 .ToListAsync();
 
+            var approvedSetting = await _context.SystemSettings.FirstOrDefaultAsync(s => s.Key == "LastApprovedProductSyncDate");
+            DateTime maxDate = approvedSetting != null && DateTime.TryParse(approvedSetting.Value, out var parsed) 
+                ? parsed 
+                : DateTime.MinValue;
+
+            int pendingCount = await _context.Products.CountAsync(p => p.LastModified > maxDate);
+
+            ViewBag.PendingProductsCount = pendingCount;
+            ViewBag.LastApprovedDate = maxDate != DateTime.MinValue ? maxDate.ToString("dd/MM/yyyy HH:mm") : "Nunca";
+
             return View(pointsOfSale);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Policy = Permissions.CashRegisters.View)]
+        public async Task<IActionResult> AuthorizeProductSync()
+        {
+            var syncDate = DateTime.Now;
+
+            var setting = await _context.SystemSettings.FirstOrDefaultAsync(s => s.Key == "LastApprovedProductSyncDate");
+            if (setting == null)
+            {
+                setting = new SystemSetting { Key = "LastApprovedProductSyncDate", Value = syncDate.ToString("O") };
+                _context.SystemSettings.Add(setting);
+            }
+            else
+            {
+                setting.Value = syncDate.ToString("O");
+            }
+
+            // Marcar todos los logs pendientes con la fecha de envío
+            var pendingLogs = await _context.ProductChangeLogs
+                .Where(l => l.DateSentToPos == null)
+                .ToListAsync();
+
+            foreach (var log in pendingLogs)
+            {
+                log.DateSentToPos = syncDate;
+            }
+
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "Artículos y Precios enviados. Las cajas POS se actualizarán en el próximo ciclo (máx 1 min).";
+            return RedirectToAction(nameof(Index));
+        }
+
+        public async Task<IActionResult> SyncHistory()
+        {
+            var logs = await _context.ProductChangeLogs
+                .Where(l => l.DateSentToPos != null)
+                .OrderByDescending(l => l.DateSentToPos)
+                .ThenByDescending(l => l.DateChanged)
+                .ToListAsync();
+
+            var historyGroups = logs
+                .GroupBy(l => l.DateSentToPos.Value)
+                .Select(g => new SyncHistoryGroupViewModel
+                {
+                    SyncDate = g.Key,
+                    Logs = g.ToList()
+                })
+                .ToList();
+
+            return View(historyGroups);
         }
 
         // Detalles de un POS específico, mostrando la caja viva y el histórico
