@@ -109,7 +109,13 @@ namespace GestionQ.Installer
                 string shortcutsScript = Path.Combine(installDir, "scripts", "launcher", "crear_accesos.ps1");
                 if (File.Exists(shortcutsScript))
                 {
-                    RunProcess("powershell.exe", $"-NoProfile -ExecutionPolicy Bypass -File \"{shortcutsScript}\"");
+                    ReportProgress("Creando accesos directos...", 95);
+                    string args = $"-NoProfile -ExecutionPolicy Bypass -File \"{shortcutsScript}\"";
+                    if (IsClientOnly)
+                    {
+                        args += " -ClientOnly";
+                    }
+                    RunProcess("powershell.exe", args);
                 }
                 
                 string monitorPath = Path.Combine(installDir, "app", "GestionQ.ServerMonitor.exe");
@@ -154,7 +160,12 @@ namespace GestionQ.Installer
                 string shortcutsScript = Path.Combine(installDir, "scripts", "launcher", "crear_accesos.ps1");
                 if (File.Exists(shortcutsScript))
                 {
-                    RunProcess("powershell.exe", $"-NoProfile -ExecutionPolicy Bypass -File \"{shortcutsScript}\"");
+                    string args = $"-NoProfile -ExecutionPolicy Bypass -File \"{shortcutsScript}\"";
+                    if (IsClientOnly)
+                    {
+                        args += " -ClientOnly";
+                    }
+                    RunProcess("powershell.exe", args);
                 }
 
                 ReportProgress("Reiniciando servicio...", 95);

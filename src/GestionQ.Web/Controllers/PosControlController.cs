@@ -47,6 +47,7 @@ namespace GestionQ.Web.Controllers
 
             ViewBag.PendingProductsCount = pendingCount;
             ViewBag.LastApprovedDate = maxDate != DateTime.MinValue ? maxDate.ToString("dd/MM/yyyy HH:mm") : "Nunca";
+            ViewBag.LastApprovedDateObj = maxDate != DateTime.MinValue ? (DateTime?)maxDate : null;
 
             return View(pointsOfSale);
         }

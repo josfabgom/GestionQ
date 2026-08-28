@@ -55,7 +55,7 @@ namespace GestionQ.Api.Controllers
             }).ToListAsync();
 
             // Sincronizar clientes
-            var customers = await _context.Customers.AsNoTracking().Select(c => new CustomerSyncDto
+            var customers = await _context.Customers.Select(c => new CustomerSyncDto
             {
                 Id = c.Id,
                 Name = c.Name,
@@ -66,14 +66,23 @@ namespace GestionQ.Api.Controllers
                 IsActive = c.IsActive
             }).ToListAsync();
 
-            // Sincronizar departamentos
-            var departments = await _context.Departments.AsNoTracking().Select(d => new DepartmentSyncDto
+            var departments = await _context.Departments.Select(d => new DepartmentSyncDto
             {
                 Id = d.Id,
                 Name = d.Name,
                 Hotkey = d.Hotkey,
                 VirtualProductId = d.VirtualProductId
             }).ToListAsync();
+
+            if (!string.IsNullOrEmpty(request.PosIdentifier))
+            {
+                var pos = await _context.PointsOfSale.FirstOrDefaultAsync(p => p.PosIdentifier == request.PosIdentifier);
+                if (pos != null)
+                {
+                    pos.LastSyncDate = DateTime.Now;
+                    await _context.SaveChangesAsync();
+                }
+            }
 
             return Ok(new SyncPullResponse { 
                 Products = products,

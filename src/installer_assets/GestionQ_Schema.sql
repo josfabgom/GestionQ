@@ -1966,6 +1966,40 @@ BEGIN
     VALUES (N'20260824183426_AddRequestElectronicInvoice', N'9.0.15');
 END;
 
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260828104350_AddProductChangeLog'
+)
+BEGIN
+    CREATE TABLE [ProductChangeLogs] (
+        [Id] int NOT NULL IDENTITY,
+        [ProductId] int NOT NULL,
+        [ProductName] nvarchar(max) NOT NULL,
+        [ChangeDescription] nvarchar(max) NOT NULL,
+        [DateChanged] datetime2 NOT NULL,
+        [DateSentToPos] datetime2 NULL,
+        CONSTRAINT [PK_ProductChangeLogs] PRIMARY KEY ([Id]),
+        CONSTRAINT [FK_ProductChangeLogs_Products_ProductId] FOREIGN KEY ([ProductId]) REFERENCES [Products] ([Id]) ON DELETE CASCADE
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260828104350_AddProductChangeLog'
+)
+BEGIN
+    CREATE INDEX [IX_ProductChangeLogs_ProductId] ON [ProductChangeLogs] ([ProductId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260828104350_AddProductChangeLog'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20260828104350_AddProductChangeLog', N'9.0.15');
+END;
+
 COMMIT;
 GO
 

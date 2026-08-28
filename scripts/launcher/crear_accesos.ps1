@@ -1,3 +1,7 @@
+param (
+    [switch]$ClientOnly
+)
+
 $ErrorActionPreference = "Stop"
 $WshShell = New-Object -ComObject WScript.Shell
 $DesktopPath = [System.Environment]::GetFolderPath("Desktop")
@@ -6,10 +10,16 @@ $BaseDir = Resolve-Path "$PSScriptRoot\..\..\"
 
 # 1. Acceso directo: Iniciar GestionQ
 $StartShortcut = $WshShell.CreateShortcut("$DesktopPath\Iniciar GestionQ.lnk")
-$StartShortcut.TargetPath = "wscript.exe"
-$VbsStartPath = Join-Path $BaseDir "Iniciar-GestionQ.vbs"
-$StartShortcut.Arguments = "`"$VbsStartPath`""
-$StartShortcut.WorkingDirectory = "$BaseDir"
+if ($ClientOnly) {
+    $StartShortcut.TargetPath = Join-Path $BaseDir "app_cliente\GestionQ.Desktop.exe"
+    $StartShortcut.WorkingDirectory = Join-Path $BaseDir "app_cliente"
+} else {
+    $StartShortcut.TargetPath = "wscript.exe"
+    $VbsStartPath = Join-Path $BaseDir "Iniciar-GestionQ.vbs"
+    $StartShortcut.Arguments = "`"$VbsStartPath`""
+    $StartShortcut.WorkingDirectory = "$BaseDir"
+}
+
 $IconPath = Join-Path $BaseDir "app_cliente\favicon.ico"
 if (Test-Path $IconPath) {
     $StartShortcut.IconLocation = "$IconPath"
@@ -17,15 +27,17 @@ if (Test-Path $IconPath) {
 $StartShortcut.Description = "Iniciar el sistema de Punto de Venta GestionQ"
 $StartShortcut.Save()
 
-# 2. Acceso directo: Detener GestionQ
-$StopShortcut = $WshShell.CreateShortcut("$DesktopPath\Detener GestionQ.lnk")
-$StopShortcut.TargetPath = "wscript.exe"
-$VbsStopPath = Join-Path $BaseDir "Detener-GestionQ.vbs"
-$StopShortcut.Arguments = "`"$VbsStopPath`""
-$StopShortcut.WorkingDirectory = "$BaseDir"
-$StopShortcut.IconLocation = "shell32.dll, 131"
-$StopShortcut.Description = "Detener el servidor de GestionQ"
-$StopShortcut.Save()
+if (-not $ClientOnly) {
+    # 2. Acceso directo: Detener GestionQ
+    $StopShortcut = $WshShell.CreateShortcut("$DesktopPath\Detener GestionQ.lnk")
+    $StopShortcut.TargetPath = "wscript.exe"
+    $VbsStopPath = Join-Path $BaseDir "Detener-GestionQ.vbs"
+    $StopShortcut.Arguments = "`"$VbsStopPath`""
+    $StopShortcut.WorkingDirectory = "$BaseDir"
+    $StopShortcut.IconLocation = "shell32.dll, 131"
+    $StopShortcut.Description = "Detener el servidor de GestionQ"
+    $StopShortcut.Save()
+
 
 # 3. Acceso directo: Monitor de Servidor
 $MonitorShortcut = $WshShell.CreateShortcut("$DesktopPath\Monitor GestionQ.lnk")
@@ -35,6 +47,7 @@ $MonitorShortcut.Arguments = "`"$VbsMonitorPath`""
 $MonitorShortcut.WorkingDirectory = "$BaseDir"
 $MonitorShortcut.Description = "Monitor del servidor de GestionQ"
 $MonitorShortcut.Save()
+}
 
 # 4. Acceso directo: Caja POS
 $PosShortcut = $WshShell.CreateShortcut("$DesktopPath\GestionQ Caja POS.lnk")
