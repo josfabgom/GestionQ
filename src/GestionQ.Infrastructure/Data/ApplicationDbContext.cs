@@ -132,7 +132,7 @@ namespace GestionQ.Infrastructure.Data
 
                 this.Set<ProductChangeLog>().Add(new ProductChangeLog
                 {
-                    ProductId = entry.Entity.Id,
+                    Product = entry.Entity,
                     ProductName = entry.Entity.Name,
                     ChangeDescription = changes,
                     DateChanged = System.DateTime.Now,
