@@ -831,7 +831,7 @@ namespace GestionQ.CajaPOS
 
             using var modal = new Form();
             modal.Text = "Finalizar Venta";
-            modal.Size = new Size(400, 350);
+            modal.Size = new Size(400, 390);
             modal.StartPosition = FormStartPosition.CenterParent;
             modal.BackColor = Color.FromArgb(20, 20, 30);
             modal.ForeColor = Color.White;
@@ -842,8 +842,8 @@ namespace GestionQ.CajaPOS
             var title = new Label { Text = "Medio de Pago", Font = new Font("Segoe UI", 16, FontStyle.Bold), ForeColor = Color.LightSkyBlue, AutoSize = true, Location = new Point(40, 20) };
             var lblTotalText = new Label { Text = $"Total a cobrar: ${total:N2}", Font = new Font("Segoe UI", 14, FontStyle.Bold), ForeColor = Color.YellowGreen, AutoSize = true, Location = new Point(40, 60) };
             
-            var lblMethod = new Label { Text = "Medio de Pago", Location = new Point(40, 100), AutoSize = true };
-            var localCmbPaymentMethod = new ComboBox { Location = new Point(40, 125), Width = 300, Font = new Font("Segoe UI", 12), DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Color.FromArgb(30, 30, 45), ForeColor = Color.White };
+            var lblMethod = new Label { Text = "Medio de Pago", Location = new Point(40, 115), AutoSize = true };
+            var localCmbPaymentMethod = new ComboBox { Location = new Point(40, 140), Width = 300, Font = new Font("Segoe UI", 12), DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Color.FromArgb(30, 30, 45), ForeColor = Color.White };
             
             using var db = new LocalDbContext();
             var paymentMethods = await db.PaymentMethods.Where(p => p.IsActive).ToListAsync();
@@ -852,12 +852,12 @@ namespace GestionQ.CajaPOS
             localCmbPaymentMethod.DisplayMember = "Name";
             localCmbPaymentMethod.ValueMember = "Id";
 
-            var lblPagaCon = new Label { Text = "Paga con ($)", Location = new Point(40, 170), AutoSize = true };
-            var txtPagaCon = new TextBox { Text = total.ToString("0.00"), Location = new Point(40, 195), Width = 140, Font = new Font("Segoe UI", 14), BackColor = Color.FromArgb(30, 30, 45), ForeColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
+            var lblPagaCon = new Label { Text = "Paga con ($)", Location = new Point(40, 185), AutoSize = true };
+            var txtPagaCon = new TextBox { Text = total.ToString("0.00"), Location = new Point(40, 210), Width = 140, Font = new Font("Segoe UI", 14), BackColor = Color.FromArgb(30, 30, 45), ForeColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
             
-            var lblVueltoModal = new Label { Text = "Vuelto: $0.00", Location = new Point(200, 195), AutoSize = true, Font = new Font("Segoe UI", 12, FontStyle.Bold), ForeColor = Color.Gold };
+            var lblVueltoModal = new Label { Text = "Vuelto: $0.00", Location = new Point(200, 210), AutoSize = true, Font = new Font("Segoe UI", 12, FontStyle.Bold), ForeColor = Color.Gold };
 
-            var btnConfirm = new Button { Text = "✔️ CONFIRMAR [Enter]", Location = new Point(40, 250), Width = 300, Height = 40, BackColor = Color.FromArgb(16, 185, 129), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 12, FontStyle.Bold) };
+            var btnConfirm = new Button { Text = "✔️ CONFIRMAR [Enter]", Location = new Point(40, 280), Width = 300, Height = 40, BackColor = Color.FromArgb(16, 185, 129), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 12, FontStyle.Bold) };
             btnConfirm.FlatAppearance.BorderSize = 0;
 
             modal.Controls.AddRange(new Control[] { title, lblTotalText, lblMethod, localCmbPaymentMethod, lblPagaCon, txtPagaCon, lblVueltoModal, btnConfirm });
@@ -876,15 +876,17 @@ namespace GestionQ.CajaPOS
                     
                     lblTotalText.Text = $"Total a cobrar: ${sale.TotalAmount:N2}";
                     if (sale.PaymentDiscountAmount > 0)
-                        lblTotalText.Text += $" (Desc: -${sale.PaymentDiscountAmount:N2})";
+                        lblTotalText.Text += $"\n(Desc: -${sale.PaymentDiscountAmount:N2})";
                         
                     txtPagaCon.Text = sale.TotalAmount.ToString("0.00");
                 }
             };
             
-            // Trigger calculation
+            // Trigger calculation manually to ensure it applies when opening
             if (localCmbPaymentMethod.Items.Count > 0) {
-                localCmbPaymentMethod.SelectedIndex = 0; 
+                int defaultIdx = localCmbPaymentMethod.SelectedIndex;
+                localCmbPaymentMethod.SelectedIndex = -1;
+                localCmbPaymentMethod.SelectedIndex = defaultIdx >= 0 ? defaultIdx : 0; 
             }
 
             txtPagaCon.TextChanged += (s, ev) => {
