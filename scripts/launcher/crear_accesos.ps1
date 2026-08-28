@@ -54,7 +54,7 @@ try {
     $g.FillEllipse($brush, $rect)
     $font = New-Object System.Drawing.Font("Arial", 16, [System.Drawing.FontStyle]::Bold)
     $brushText = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::White)
-    $format = New-Object System.Drawing.StringFormat()
+    $format = New-Object System.Drawing.StringFormat
     $format.Alignment = [System.Drawing.StringAlignment]::Center
     $format.LineAlignment = [System.Drawing.StringAlignment]::Center
     $g.DrawString("POS", $font, $brushText, $rect, $format)
