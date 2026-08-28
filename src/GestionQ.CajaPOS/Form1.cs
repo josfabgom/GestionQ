@@ -142,6 +142,12 @@ namespace GestionQ.CajaPOS
             try {
                 Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions.ExecuteSqlRaw(db.Database, "ALTER TABLE Sales ADD COLUMN RequestElectronicInvoice INTEGER NOT NULL DEFAULT 0;");
             } catch { }
+            try {
+                Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions.ExecuteSqlRaw(db.Database, "ALTER TABLE PaymentMethods ADD COLUMN DiscountValidFrom TEXT;");
+            } catch { }
+            try {
+                Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions.ExecuteSqlRaw(db.Database, "ALTER TABLE PaymentMethods ADD COLUMN DiscountValidTo TEXT;");
+            } catch { }
             
             var customers = await db.Customers.ToListAsync();
             customers.Insert(0, new Customer { Id = 0, Name = "Consumidor Final" });
@@ -856,10 +862,35 @@ namespace GestionQ.CajaPOS
 
             modal.Controls.AddRange(new Control[] { title, lblTotalText, lblMethod, localCmbPaymentMethod, lblPagaCon, txtPagaCon, lblVueltoModal, btnConfirm });
 
+            localCmbPaymentMethod.SelectedIndexChanged += (s, ev) => {
+                var selectedPm = localCmbPaymentMethod.SelectedItem as PaymentMethod;
+                if (selectedPm != null)
+                {
+                    decimal pct = selectedPm.DiscountPercentage;
+                    DateTime now = DateTime.Now.Date;
+                    if (selectedPm.DiscountValidFrom.HasValue && now < selectedPm.DiscountValidFrom.Value.Date) pct = 0;
+                    if (selectedPm.DiscountValidTo.HasValue && now > selectedPm.DiscountValidTo.Value.Date) pct = 0;
+                    
+                    sale.PaymentDiscountAmount = total * (pct / 100m);
+                    sale.TotalAmount = total - sale.PaymentDiscountAmount;
+                    
+                    lblTotalText.Text = $"Total a cobrar: ${sale.TotalAmount:N2}";
+                    if (sale.PaymentDiscountAmount > 0)
+                        lblTotalText.Text += $" (Desc: -${sale.PaymentDiscountAmount:N2})";
+                        
+                    txtPagaCon.Text = sale.TotalAmount.ToString("0.00");
+                }
+            };
+            
+            // Trigger calculation
+            if (localCmbPaymentMethod.Items.Count > 0) {
+                localCmbPaymentMethod.SelectedIndex = 0; 
+            }
+
             txtPagaCon.TextChanged += (s, ev) => {
                 var input = txtPagaCon.Text.Replace(".", ",");
                 if (decimal.TryParse(input, out decimal paga)) {
-                    var diff = paga - total;
+                    var diff = paga - sale.TotalAmount;
                     lblVueltoModal.Text = diff >= 0 ? $"Vuelto: ${diff:N2}" : $"Falta: ${Math.Abs(diff):N2}";
                     lblVueltoModal.ForeColor = diff >= 0 ? Color.Gold : Color.Tomato;
                 }
@@ -869,8 +900,9 @@ namespace GestionQ.CajaPOS
                 sale.Payments.Add(new SalePayment 
                 { 
                     PaymentMethodId = (int)localCmbPaymentMethod.SelectedValue, 
-                    Amount = total 
+                    Amount = sale.TotalAmount 
                 });
+                sale.DiscountAmount += sale.PaymentDiscountAmount;
 
                 using var context = new LocalDbContext();
                 context.Sales.Add(sale); 
@@ -995,7 +1027,22 @@ namespace GestionQ.CajaPOS
                 sb.AppendLine($"{item.Quantity,4} {pName,-18} ${(item.Quantity * item.UnitPrice),7:0.00}");
             }
             sb.AppendLine("---------------------------------");
-            sb.AppendLine($"TOTAL:                  ${sale.TotalAmount,7:0.00}");
+            if (sale.PaymentDiscountAmount > 0)
+            {
+                sb.AppendLine($"SUBTOTAL:               ${sale.SubTotal,7:0.00}");
+                sb.AppendLine($"DESC. PAGO:            -${sale.PaymentDiscountAmount,7:0.00}");
+                sb.AppendLine($"TOTAL:                  ${sale.TotalAmount,7:0.00}");
+            }
+            else if (sale.DiscountAmount > 0)
+            {
+                sb.AppendLine($"SUBTOTAL:               ${sale.SubTotal,7:0.00}");
+                sb.AppendLine($"DESCUENTO:             -${sale.DiscountAmount,7:0.00}");
+                sb.AppendLine($"TOTAL:                  ${sale.TotalAmount,7:0.00}");
+            }
+            else
+            {
+                sb.AppendLine($"TOTAL:                  ${sale.TotalAmount,7:0.00}");
+            }
             sb.AppendLine($"Medio de Pago: {paymentMethodName}");
             sb.AppendLine("=================================");
             sb.AppendLine("      GRACIAS POR SU COMPRA");

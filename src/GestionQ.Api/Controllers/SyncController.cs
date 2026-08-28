@@ -74,6 +74,16 @@ namespace GestionQ.Api.Controllers
                 VirtualProductId = d.VirtualProductId
             }).ToListAsync();
 
+            var paymentMethods = await _context.PaymentMethods.Select(p => new PaymentMethodSyncDto
+            {
+                Id = p.Id,
+                Name = p.Name,
+                IsActive = p.IsActive,
+                DiscountPercentage = p.DiscountPercentage,
+                DiscountValidFrom = p.DiscountValidFrom,
+                DiscountValidTo = p.DiscountValidTo
+            }).ToListAsync();
+
             if (!string.IsNullOrEmpty(request.PosIdentifier))
             {
                 var pos = await _context.PointsOfSale.FirstOrDefaultAsync(p => p.PosIdentifier == request.PosIdentifier);
@@ -87,7 +97,8 @@ namespace GestionQ.Api.Controllers
             return Ok(new SyncPullResponse { 
                 Products = products,
                 Customers = customers,
-                Departments = departments
+                Departments = departments,
+                PaymentMethods = paymentMethods
             });
         }
 
@@ -108,6 +119,7 @@ namespace GestionQ.Api.Controllers
                     TotalAmount = saleDto.TotalAmount,
                     SubTotal = saleDto.SubTotal,
                     DiscountAmount = saleDto.DiscountAmount,
+                    PaymentDiscountAmount = saleDto.PaymentDiscountAmount,
                     UserId = saleDto.UserId,
                     IsSynced = true,
                     SyncedAt = DateTime.Now,

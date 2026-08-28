@@ -23,6 +23,8 @@ namespace GestionQ.Domain.DTOs
         public string Name { get; set; } = string.Empty;
         public bool IsActive { get; set; }
         public decimal DiscountPercentage { get; set; }
+        public DateTime? DiscountValidFrom { get; set; }
+        public DateTime? DiscountValidTo { get; set; }
     }
 
     public class CustomerSyncDto
@@ -71,6 +73,7 @@ namespace GestionQ.Domain.DTOs
         public decimal TotalAmount { get; set; }
         public decimal SubTotal { get; set; }
         public decimal DiscountAmount { get; set; }
+        public decimal PaymentDiscountAmount { get; set; }
         public string? UserId { get; set; }
         public int? CashRegisterId { get; set; }
         public string? CustomerDni { get; set; } // Used to match customer

@@ -2000,6 +2000,31 @@ BEGIN
     VALUES (N'20260828104350_AddProductChangeLog', N'9.0.15');
 END;
 
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260828230448_AddPaymentMethodDiscountDates'
+)
+BEGIN
+    ALTER TABLE [PaymentMethods] ADD [DiscountValidFrom] datetime2 NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260828230448_AddPaymentMethodDiscountDates'
+)
+BEGIN
+    ALTER TABLE [PaymentMethods] ADD [DiscountValidTo] datetime2 NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260828230448_AddPaymentMethodDiscountDates'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20260828230448_AddPaymentMethodDiscountDates', N'9.0.15');
+END;
+
 COMMIT;
 GO
 

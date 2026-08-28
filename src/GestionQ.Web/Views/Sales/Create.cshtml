@@ -272,10 +272,12 @@
 
             <!-- Contenedores Ocultos para envío de datos de pago -->
             <div style="display: none;">
-                <select id="paymentMethod1" class="form-control">
+                    <select id="paymentMethod1" class="form-control">
                     @foreach (var pm in ViewBag.PaymentMethods as IEnumerable<GestionQ.Domain.Entities.PaymentMethod>)
                     {
-                        <option value="@pm.Id" selected="@(pm.Name == "Efectivo")" data-discount="@pm.DiscountPercentage.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)">@pm.Name</option>
+                        var vf = pm.DiscountValidFrom?.ToString("yyyy-MM-dd");
+                        var vt = pm.DiscountValidTo?.ToString("yyyy-MM-dd");
+                        <option value="@pm.Id" selected="@(pm.Name == "Efectivo")" data-valid-from="@vf" data-valid-to="@vt" data-discount="@pm.DiscountPercentage.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)">@pm.Name</option>
                     }
                 </select>
                 <input type="number" id="paymentAmount1" />
@@ -283,7 +285,9 @@
                     <option value="" data-discount="0.00"></option>
                     @foreach (var pm in ViewBag.PaymentMethods as IEnumerable<GestionQ.Domain.Entities.PaymentMethod>)
                     {
-                        <option value="@pm.Id" data-discount="@pm.DiscountPercentage.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)">@pm.Name</option>
+                        var vf = pm.DiscountValidFrom?.ToString("yyyy-MM-dd");
+                        var vt = pm.DiscountValidTo?.ToString("yyyy-MM-dd");
+                        <option value="@pm.Id" data-valid-from="@vf" data-valid-to="@vt" data-discount="@pm.DiscountPercentage.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)">@pm.Name</option>
                     }
                 </select>
                 <input type="number" id="paymentAmount2" />
@@ -2070,13 +2074,33 @@
             const netTotal = Math.max(0, brutoSubtotal - totalDiscount);
 
             // Calcular descuento por medio de pago
+            function getValidDiscount(selectEl) {
+                if (!selectEl || selectEl.selectedIndex < 0) return 0;
+                const opt = selectEl.options[selectEl.selectedIndex];
+                const pct = parseFloat(opt.getAttribute('data-discount')) || 0;
+                if (pct <= 0) return 0;
+                
+                const vf = opt.getAttribute('data-valid-from');
+                const vt = opt.getAttribute('data-valid-to');
+                const now = new Date();
+                now.setHours(0,0,0,0);
+                
+                if (vf) {
+                    const fromDate = new Date(vf + 'T00:00:00');
+                    if (now < fromDate) return 0;
+                }
+                if (vt) {
+                    const toDate = new Date(vt + 'T00:00:00');
+                    if (now > toDate) return 0;
+                }
+                return pct;
+            }
+
             const pm1Select = document.getElementById('paymentMethod1');
             const pm2Select = document.getElementById('paymentMethod2');
             
-            const discountPercent1 = pm1Select && pm1Select.selectedIndex >= 0 ? 
-                parseFloat(pm1Select.options[pm1Select.selectedIndex].getAttribute('data-discount')) || 0 : 0;
-            const discountPercent2 = pm2Select && pm2Select.selectedIndex >= 0 ? 
-                parseFloat(pm2Select.options[pm2Select.selectedIndex].getAttribute('data-discount')) || 0 : 0;
+            const discountPercent1 = getValidDiscount(pm1Select);
+            const discountPercent2 = getValidDiscount(pm2Select);
 
             const isSplitOpen = document.getElementById('splitPaymentPanel').style.display !== 'none';
             let paymentDiscount = 0;

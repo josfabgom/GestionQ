@@ -74,7 +74,7 @@ namespace GestionQ.CajaPOS
                     NewCustomers = unsyncedCustomers.Select(c => new CustomerSyncDto { Dni = c.Dni, Name = c.Name, Email = c.Email, Phone = c.Phone, Cuit = c.Cuit }).ToList(),
                     Sales = unsyncedSales.Select(s => {
                         var customer = s.CustomerId.HasValue ? db.Customers.Find(s.CustomerId.Value) : null;
-                        return new SaleSyncDto { GlobalId = s.GlobalId, Date = s.Date, TotalAmount = s.TotalAmount, SubTotal = s.SubTotal, DiscountAmount = s.DiscountAmount, UserId = s.UserId, CashRegisterId = s.CashRegisterId, CustomerDni = customer?.Dni, RequestElectronicInvoice = s.RequestElectronicInvoice, Items = s.Items.Select(i => new SaleItemSyncDto { ProductId = i.ProductId, Quantity = i.Quantity, UnitPrice = i.UnitPrice, DiscountAmount = i.DiscountAmount }).ToList(), Payments = s.Payments.Select(p => new SalePaymentSyncDto { PaymentMethodId = p.PaymentMethodId, Amount = p.Amount, TransactionReference = p.TransactionReference }).ToList() };
+                        return new SaleSyncDto { GlobalId = s.GlobalId, Date = s.Date, TotalAmount = s.TotalAmount, SubTotal = s.SubTotal, DiscountAmount = s.DiscountAmount, PaymentDiscountAmount = s.PaymentDiscountAmount, UserId = s.UserId, CashRegisterId = s.CashRegisterId, CustomerDni = customer?.Dni, RequestElectronicInvoice = s.RequestElectronicInvoice, Items = s.Items.Select(i => new SaleItemSyncDto { ProductId = i.ProductId, Quantity = i.Quantity, UnitPrice = i.UnitPrice, DiscountAmount = i.DiscountAmount }).ToList(), Payments = s.Payments.Select(p => new SalePaymentSyncDto { PaymentMethodId = p.PaymentMethodId, Amount = p.Amount, TransactionReference = p.TransactionReference }).ToList() };
                     }).ToList(),
                     Movements = unsyncedMovements.Select(m => new MovementSyncDto { GlobalId = m.GlobalId, Amount = m.Amount, Type = m.Type, Description = m.Description, Date = m.Date, CashRegisterId = m.CashRegisterId }).ToList()
                 };
@@ -147,7 +147,7 @@ namespace GestionQ.CajaPOS
                         db.PaymentMethods.RemoveRange(currentPms);
                         foreach (var pm in result.PaymentMethods)
                         {
-                            db.PaymentMethods.Add(new PaymentMethod { Id = pm.Id, Name = pm.Name, IsActive = pm.IsActive, DiscountPercentage = pm.DiscountPercentage });
+                            db.PaymentMethods.Add(new PaymentMethod { Id = pm.Id, Name = pm.Name, IsActive = pm.IsActive, DiscountPercentage = pm.DiscountPercentage, DiscountValidFrom = pm.DiscountValidFrom, DiscountValidTo = pm.DiscountValidTo });
                         }
                     }
 

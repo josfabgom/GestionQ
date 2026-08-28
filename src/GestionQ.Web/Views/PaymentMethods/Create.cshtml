@@ -24,6 +24,18 @@
             <span asp-validation-for="DiscountPercentage" class="text-danger"></span>
         </div>
 
+        <div class="form-group" style="margin-top: 1rem;">
+            <label asp-for="DiscountValidFrom" class="control-label">Descuento Vigente Desde</label>
+            <input asp-for="DiscountValidFrom" class="form-control" type="date" />
+            <span asp-validation-for="DiscountValidFrom" class="text-danger"></span>
+        </div>
+
+        <div class="form-group" style="margin-top: 1rem;">
+            <label asp-for="DiscountValidTo" class="control-label">Descuento Vigente Hasta</label>
+            <input asp-for="DiscountValidTo" class="form-control" type="date" />
+            <span asp-validation-for="DiscountValidTo" class="text-danger"></span>
+        </div>
+
         <div class="form-group" style="margin-top: 1.5rem; display: flex; gap: 1rem;">
             <input type="submit" value="Guardar" class="btn-primary" />
             <a asp-action="Index" class="btn-secondary">Volver</a>

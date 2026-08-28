@@ -16,5 +16,13 @@ namespace GestionQ.Domain.Entities
 
         [Display(Name = "Porcentaje de Descuento (%)")]
         public decimal DiscountPercentage { get; set; } = 0;
+
+        [Display(Name = "Descuento Vigente Desde")]
+        [DataType(DataType.Date)]
+        public DateTime? DiscountValidFrom { get; set; }
+
+        [Display(Name = "Descuento Vigente Hasta")]
+        [DataType(DataType.Date)]
+        public DateTime? DiscountValidTo { get; set; }
     }
 }
