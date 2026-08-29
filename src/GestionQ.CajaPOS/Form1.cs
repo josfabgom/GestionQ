@@ -28,6 +28,11 @@ namespace GestionQ.CajaPOS
         private ListBox lstSearch = new();
         private FlowLayoutPanel panelDepartments = new();
         private Label lblVuelto = new();
+        private Button btnSettings = new();
+        private Label lblSubTotalValue = new();
+        private Label lblSubTotalText = new();
+        private Label lblPromoDiscountValue = new();
+        private Label lblPromoDiscountText = new();
         private Button btnSync = new();
         private Label lblMultiplier = new();
         private decimal _nextQuantity = 1;
@@ -233,6 +238,19 @@ namespace GestionQ.CajaPOS
 
             lblItemsCount = new Label { Text = "0 ítems cargados", ForeColor = accentColor, Font = new Font("Segoe UI", 10, FontStyle.Bold), AutoSize = true, Margin = new Padding(10, 5, 0, 0) };
             
+            btnSettings = new Button { Text = "⚙️ Configurar", AutoSize = true, FlatStyle = FlatStyle.Flat, ForeColor = textColor, Margin = new Padding(10, 0, 0, 0) };
+            btnSettings.FlatAppearance.BorderSize = 0;
+            btnSettings.Click += (s, e) => {
+                string currentUrl = AppConfig.ServerUrl;
+                string newUrl = Microsoft.VisualBasic.Interaction.InputBox("Ingresa la IP o URL del Servidor Principal (ej: http://192.168.1.50:5144):", "Configuración de Servidor", currentUrl);
+                if (!string.IsNullOrWhiteSpace(newUrl) && newUrl != currentUrl)
+                {
+                    AppConfig.ServerUrl = newUrl;
+                    MessageBox.Show("Configuración guardada. La caja se reiniciará para aplicar los cambios.", "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    Application.Restart();
+                    Environment.Exit(0);
+                }
+            };
             btnSync = new Button { Text = "🔄 Sincronizar", AutoSize = true, FlatStyle = FlatStyle.Flat, ForeColor = textColor, Margin = new Padding(10, 0, 0, 0) };
             btnSync.FlatAppearance.BorderSize = 0;
             btnSync.Click += async (s, e) => {
@@ -286,7 +304,7 @@ namespace GestionQ.CajaPOS
             };
             
             headerRightPanel.Controls.Add(lblItemsCount);
-            headerRightPanel.Controls.Add(btnSync);
+            headerRightPanel.Controls.Add(btnSync); headerRightPanel.Controls.Add(btnSettings);
             headerRightPanel.Controls.Add(btnCloseRegister);
             headerRightPanel.Controls.Add(btnAddMovement);
 
@@ -315,7 +333,7 @@ namespace GestionQ.CajaPOS
             gridItems.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None;
             
             gridItems.Columns.Add("Id", "ID"); 
-            gridItems.Columns.Add("Name", "PRODUCTO"); 
+            gridItems.Columns.Add("OriginalName", "OriginalName"); gridItems.Columns.Add("Name", "PRODUCTO"); gridItems.Columns["OriginalName"].Visible = false; 
             gridItems.Columns.Add("Price", "PRECIO UNIT.");
             
             var btnMinus = new DataGridViewButtonColumn { Name = "btnMinus", HeaderText = "", Text = "-", UseColumnTextForButtonValue = true, Width = 45, FlatStyle = FlatStyle.Flat };
@@ -343,7 +361,7 @@ namespace GestionQ.CajaPOS
             var priceStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleRight, Format = "C2", Font = new Font("Segoe UI", 12, FontStyle.Bold), ForeColor = Color.White };
             gridItems.Columns["Price"].DefaultCellStyle = priceStyle;
             gridItems.Columns["SubTotal"].DefaultCellStyle = priceStyle;
-            gridItems.Columns["Name"].DefaultCellStyle = new DataGridViewCellStyle { Font = new Font("Segoe UI", 14, FontStyle.Bold) };
+            gridItems.Columns["Name"].DefaultCellStyle = new DataGridViewCellStyle { Font = new Font("Segoe UI", 14, FontStyle.Bold), WrapMode = DataGridViewTriState.True, Padding = new Padding(5, 10, 5, 10) }; gridItems.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
             gridItems.Columns["Quantity"].DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter, Font = new Font("Segoe UI", 14, FontStyle.Bold) };
             
             gridItems.CellContentClick += GridItems_CellContentClick;
@@ -357,18 +375,26 @@ namespace GestionQ.CajaPOS
             
             Panel rightPanel = new Panel { Dock = DockStyle.Fill };
             
-            Panel totalBox = new Panel { Height = 100, Dock = DockStyle.Top, BackColor = Color.FromArgb(10, 10, 15), Margin = new Padding(0, 0, 0, 20) };
-            totalBox.Paint += (s, e) => ControlPaint.DrawBorder(e.Graphics, totalBox.ClientRectangle, greenColor, 1, ButtonBorderStyle.Solid, greenColor, 1, ButtonBorderStyle.Solid, greenColor, 1, ButtonBorderStyle.Solid, greenColor, 1, ButtonBorderStyle.Solid);
-            Label lblTotalText = new Label { Text = "TOTAL A COBRAR", ForeColor = greenColor, Font = new Font("Segoe UI", 10, FontStyle.Bold), AutoSize = true, Location = new Point(totalBox.Width - 150, 10), Anchor = AnchorStyles.Top | AnchorStyles.Right };
-            lblTotal = new Label { Text = "$0,00", ForeColor = greenColor, Font = new Font("Segoe UI", 36, FontStyle.Bold), AutoSize = true, Location = new Point(totalBox.Width - 200, 30), Anchor = AnchorStyles.Top | AnchorStyles.Right };
-            totalBox.Controls.Add(lblTotalText); totalBox.Controls.Add(lblTotal);
+            Panel totalContainer = new Panel { Dock = DockStyle.Bottom, Height = 210, Padding = new Padding(0, 10, 0, 0) };
             
-            Panel vueltoBox = new Panel { Height = 40, Dock = DockStyle.Top, BackColor = Color.FromArgb(10, 10, 15), Margin = new Padding(0, 20, 0, 20) };
-            Color redColor = Color.FromArgb(239, 68, 68);
-            vueltoBox.Paint += (s, e) => ControlPaint.DrawBorder(e.Graphics, vueltoBox.ClientRectangle, redColor, 1, ButtonBorderStyle.Solid, redColor, 1, ButtonBorderStyle.Solid, redColor, 1, ButtonBorderStyle.Solid, redColor, 1, ButtonBorderStyle.Solid);
-            Label lblVueltoText = new Label { Text = "Vuelto / Diferencia:", AutoSize = true, Location = new Point(10, 10) };
-            lblVuelto = new Label { Text = "Resta: -$0,00", ForeColor = redColor, Font = new Font("Consolas", 14, FontStyle.Bold), AutoSize = true, Location = new Point(vueltoBox.Width - 150, 10), Anchor = AnchorStyles.Top | AnchorStyles.Right };
-            vueltoBox.Controls.Add(lblVueltoText); vueltoBox.Controls.Add(lblVuelto);
+            Panel totalBox = new Panel { Height = 160, Dock = DockStyle.Top, BackColor = Color.FromArgb(10, 10, 15), Margin = new Padding(0, 0, 0, 10) };
+            totalBox.Paint += (s, e) => ControlPaint.DrawBorder(e.Graphics, totalBox.ClientRectangle, greenColor, 1, ButtonBorderStyle.Solid, greenColor, 1, ButtonBorderStyle.Solid, greenColor, 1, ButtonBorderStyle.Solid, greenColor, 1, ButtonBorderStyle.Solid);
+            
+            lblSubTotalText = new Label { Text = "SubTotal:", ForeColor = Color.LightGray, Font = new Font("Segoe UI", 10, FontStyle.Bold), AutoSize = true, Location = new Point(totalBox.Width - 150, 15), Anchor = AnchorStyles.Top | AnchorStyles.Right };
+            lblSubTotalValue = new Label { Text = ",00", ForeColor = Color.LightGray, Font = new Font("Segoe UI", 12, FontStyle.Bold), AutoSize = true, Location = new Point(totalBox.Width - 100, 15), Anchor = AnchorStyles.Top | AnchorStyles.Right };
+            
+            lblPromoDiscountText = new Label { Text = "Descuento Promociones:", ForeColor = Color.LightSkyBlue, Font = new Font("Segoe UI", 10, FontStyle.Bold), AutoSize = true, Location = new Point(totalBox.Width - 150, 45), Anchor = AnchorStyles.Top | AnchorStyles.Right };
+            lblPromoDiscountValue = new Label { Text = "-,00", ForeColor = Color.LightSkyBlue, Font = new Font("Segoe UI", 12, FontStyle.Bold), AutoSize = true, Location = new Point(totalBox.Width - 100, 45), Anchor = AnchorStyles.Top | AnchorStyles.Right };
+            
+            Label lblTotalText = new Label { Text = "TOTAL A COBRAR", ForeColor = greenColor, Font = new Font("Segoe UI", 10, FontStyle.Bold), AutoSize = true, Location = new Point(totalBox.Width - 150, 80), Anchor = AnchorStyles.Top | AnchorStyles.Right };
+            lblTotal = new Label { Text = ",00", ForeColor = greenColor, Font = new Font("Segoe UI", 36, FontStyle.Bold), AutoSize = true, Location = new Point(totalBox.Width - 200, 95), Anchor = AnchorStyles.Top | AnchorStyles.Right };
+            
+            totalBox.Controls.Add(lblSubTotalText); totalBox.Controls.Add(lblSubTotalValue);
+            totalBox.Controls.Add(lblPromoDiscountText); totalBox.Controls.Add(lblPromoDiscountValue);
+            totalBox.Controls.Add(lblTotalText); totalBox.Controls.Add(lblTotal);
+            totalContainer.Controls.Add(totalBox);
+            
+            
             
             FlowLayoutPanel controlsPanel = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, Padding = new Padding(0, 10, 0, 0) };
             
@@ -405,18 +431,16 @@ namespace GestionQ.CajaPOS
             Button btnFinalize = new Button { Text = "✔️ FINALIZAR VENTA [F12]", Height = 60, Width = rightPanel.Width, Dock = DockStyle.Bottom, BackColor = accentColor, ForeColor = Color.White, Font = new Font("Segoe UI", 14, FontStyle.Bold), FlatStyle = FlatStyle.Flat };
             btnFinalize.FlatAppearance.BorderSize = 0; btnFinalize.Click += BtnFinalize_Click;
             
-            rightPanel.Controls.Add(controlsPanel); rightPanel.Controls.Add(vueltoBox); rightPanel.Controls.Add(totalBox); rightPanel.Controls.Add(btnFinalize);
-            mainLayout.Controls.Add(leftPanel, 0, 0); mainLayout.Controls.Add(rightPanel, 1, 0);
+            rightPanel.Controls.Add(controlsPanel);  rightPanel.Controls.Add(btnFinalize);
+            leftPanel.Controls.Add(totalContainer); mainLayout.Controls.Add(leftPanel, 0, 0); mainLayout.Controls.Add(rightPanel, 1, 0);
             this.Controls.Add(mainLayout);
             
             this.Resize += (s, e) => {
                 lblItemsCount.Left = headerLeft.Width - lblItemsCount.Width - 10;
-                btnSync.Left = lblItemsCount.Left - btnSync.Width - 20;
-                btnCloseRegister.Left = btnSync.Left - btnCloseRegister.Width - 20;
+                btnSync.Left = lblItemsCount.Left - btnSync.Width - 20; btnSettings.Left = btnSync.Left - btnSettings.Width - 20;
+                btnCloseRegister.Left = btnSettings.Left - btnCloseRegister.Width - 20;
                 btnAddMovement.Left = btnCloseRegister.Left - btnAddMovement.Width - 20;
-                lblTotalText.Left = totalBox.Width - lblTotalText.Width - 10;
-                lblTotal.Left = totalBox.Width - lblTotal.Width - 10;
-                lblVuelto.Left = vueltoBox.Width - lblVuelto.Width - 10;
+                
                 
                 foreach(Control c in controlsPanel.Controls) { c.Width = rightPanel.Width - 20; }
                 txtBarcode.Width = gbScan.Width - 90;
@@ -778,7 +802,7 @@ namespace GestionQ.CajaPOS
             {
                 // We add the product name and a mockup "Stock" text to match the requested design
                 string displayString = $"{name} ({stock:0.##})";
-                gridItems.Rows.Add(id, displayString, price, "-", qty, "+", price * qty);
+                gridItems.Rows.Add(id, displayString, displayString, price, "-", qty, "+", price * qty);
             }
             UpdateTotals();
         }
@@ -802,7 +826,7 @@ namespace GestionQ.CajaPOS
             if (lblItemsCount.Parent != null)
             {
                 lblItemsCount.Left = lblItemsCount.Parent.Width - lblItemsCount.Width - 10;
-                btnSync.Left = lblItemsCount.Left - btnSync.Width - 20;
+                btnSync.Left = lblItemsCount.Left - btnSync.Width - 20; btnSettings.Left = btnSync.Left - btnSettings.Width - 20;
             }
         }
 

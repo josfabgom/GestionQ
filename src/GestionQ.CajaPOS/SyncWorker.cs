@@ -92,6 +92,10 @@ namespace GestionQ.CajaPOS
 
             // 2. PULL
             var lastSyncDate = await db.Products.MaxAsync(p => (DateTime?)p.LastModified);
+            if (await db.Products.AnyAsync(p => p.ImageUrl == null))
+            {
+                lastSyncDate = null;
+            }
             var pullRequest = new SyncPullRequest { 
                 LastSyncDate = lastSyncDate,
                 PosIdentifier = this.PosIdentifier
@@ -104,6 +108,20 @@ namespace GestionQ.CajaPOS
                 var result = await pullResponse.Content.ReadFromJsonAsync<SyncPullResponse>();
                 if (result != null)
                 {
+                    if (result.CompanyInfo != null)
+                    {
+                        var settings = await db.SystemSettings.ToListAsync();
+                        db.SystemSettings.RemoveRange(settings);
+                        
+                        db.SystemSettings.Add(new SystemSetting { Key = "CompanyName", Value = result.CompanyInfo.Name });
+                        db.SystemSettings.Add(new SystemSetting { Key = "CompanyLogoUrl", Value = result.CompanyInfo.LogoUrl });
+                        
+                        if (!string.IsNullOrEmpty(result.CompanyInfo.LogoUrl))
+                        {
+                            await DownloadImageAsync(result.CompanyInfo.LogoUrl);
+                        }
+                    }
+
                     if (result.Products.Any())
                     {
                         foreach (var pDto in result.Products)
@@ -111,11 +129,16 @@ namespace GestionQ.CajaPOS
                             var localProduct = await db.Products.FirstOrDefaultAsync(p => p.Id == pDto.Id);
                             if (localProduct == null)
                             {
-                                db.Products.Add(new Product { Id = pDto.Id, InternalCode = pDto.InternalCode, Barcode = pDto.Barcode, Name = pDto.Name, Price = pDto.Price, Stock = pDto.Stock, IsActive = pDto.IsActive, LastModified = pDto.LastModified, CreationDate = DateTime.Now });
+                                db.Products.Add(new Product { Id = pDto.Id, InternalCode = pDto.InternalCode, Barcode = pDto.Barcode, Name = pDto.Name, Price = pDto.Price, Stock = pDto.Stock, IsActive = pDto.IsActive, LastModified = pDto.LastModified, CreationDate = DateTime.Now, ImageUrl = pDto.ImageUrl });
                             }
                             else
                             {
-                                localProduct.InternalCode = pDto.InternalCode; localProduct.Barcode = pDto.Barcode; localProduct.Name = pDto.Name; localProduct.Price = pDto.Price; localProduct.Stock = pDto.Stock; localProduct.IsActive = pDto.IsActive; localProduct.LastModified = pDto.LastModified;
+                                localProduct.InternalCode = pDto.InternalCode; localProduct.Barcode = pDto.Barcode; localProduct.Name = pDto.Name; localProduct.Price = pDto.Price; localProduct.Stock = pDto.Stock; localProduct.IsActive = pDto.IsActive; localProduct.LastModified = pDto.LastModified; localProduct.ImageUrl = pDto.ImageUrl;
+                            }
+
+                            if (!string.IsNullOrEmpty(pDto.ImageUrl))
+                            {
+                                await DownloadImageAsync(pDto.ImageUrl);
                             }
                         }
                     }
@@ -151,6 +174,21 @@ namespace GestionQ.CajaPOS
                         }
                     }
 
+                    if (result.ActivePromotions != null)
+                    {
+                        var promosSetting = await db.SystemSettings.FirstOrDefaultAsync(s => s.Key == "ActivePromotions");
+                        string promosText = result.ActivePromotions.Any() ? System.Text.Json.JsonSerializer.Serialize(result.ActivePromotions) : "[]";
+                        
+                        if (promosSetting == null)
+                        {
+                            db.SystemSettings.Add(new SystemSetting { Key = "ActivePromotions", Value = promosText });
+                        }
+                        else
+                        {
+                            promosSetting.Value = promosText;
+                        }
+                    }
+
                     await db.SaveChangesAsync();
                     dataChanged = true;
                 }
@@ -158,6 +196,31 @@ namespace GestionQ.CajaPOS
             
             // Para simplificar, asumimos que siempre notificamos si hubo conexión exitosa
             OnSyncCompleted?.Invoke();
+        }
+
+        private async Task DownloadImageAsync(string relativeUrl)
+        {
+            try
+            {
+                string localPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, relativeUrl.TrimStart('/'));
+                string directory = System.IO.Path.GetDirectoryName(localPath);
+                if (directory != null && !System.IO.Directory.Exists(directory))
+                {
+                    System.IO.Directory.CreateDirectory(directory);
+                }
+
+                bool isLogo = relativeUrl.Contains("logo.png");
+                if (isLogo || !System.IO.File.Exists(localPath))
+                {
+                    var fullUrl = $"{_serverUrl}/{relativeUrl.TrimStart('/')}";
+                    var imageBytes = await _httpClient.GetByteArrayAsync(fullUrl);
+                    await System.IO.File.WriteAllBytesAsync(localPath, imageBytes);
+                }
+            }
+            catch
+            {
+                // Ignore download errors to not break sync
+            }
         }
     }
 }

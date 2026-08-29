@@ -15,6 +15,7 @@ namespace GestionQ.CajaPOS
         public DbSet<CashRegisterMovement> Movements { get; set; }
         public DbSet<PaymentMethod> PaymentMethods { get; set; }
         public DbSet<SalePayment> SalePayments { get; set; }
+        public DbSet<SystemSetting> SystemSettings { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {

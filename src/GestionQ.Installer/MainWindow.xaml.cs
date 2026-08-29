@@ -15,6 +15,12 @@ namespace GestionQ.Installer
         public MainWindow()
         {
             InitializeComponent();
+            if (AppDomain.CurrentDomain.FriendlyName.IndexOf("Cliente", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                RbClientOnly.IsChecked = true;
+                RbFullInstall.Visibility = Visibility.Collapsed;
+                RbFullInstall.IsEnabled = false;
+            }
             _logic = new InstallerLogic();
             
             _logic.OnProgressChanged += (status, percent) =>

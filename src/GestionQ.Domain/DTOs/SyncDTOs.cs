@@ -15,6 +15,26 @@ namespace GestionQ.Domain.DTOs
         public List<CustomerSyncDto> Customers { get; set; } = new();
         public List<DepartmentSyncDto> Departments { get; set; } = new();
         public List<PaymentMethodSyncDto> PaymentMethods { get; set; } = new();
+        public CompanyInfoSyncDto? CompanyInfo { get; set; }
+        public List<PromotionSyncDto> ActivePromotions { get; set; } = new();
+    }
+
+    public class PromotionSyncDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Details { get; set; } = string.Empty;
+        public string Type { get; set; } = string.Empty; // "Percentage", "FixedAmount", "XForY", "Volume"
+        public decimal Value { get; set; }
+        public int? BuyQuantity { get; set; }
+        public int? PayQuantity { get; set; }
+        public List<int> ProductIds { get; set; } = new();
+    }
+
+    public class CompanyInfoSyncDto
+    {
+        public string Name { get; set; } = string.Empty;
+        public string LogoUrl { get; set; } = string.Empty;
     }
 
     public class PaymentMethodSyncDto
@@ -56,6 +76,7 @@ namespace GestionQ.Domain.DTOs
         public decimal Stock { get; set; }
         public bool IsActive { get; set; }
         public DateTime LastModified { get; set; }
+        public string? ImageUrl { get; set; }
     }
 
     public class SyncPushRequest

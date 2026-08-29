@@ -239,6 +239,17 @@ namespace GestionQ.Web.Controllers
                     await System.IO.File.WriteAllTextAsync(appSettingsPath, node.ToJsonString(options));
                 }
 
+                if (model.LogoFile != null && model.LogoFile.Length > 0)
+                {
+                    var imagesFolder = Path.Combine(_env.WebRootPath, "images");
+                    if (!Directory.Exists(imagesFolder)) Directory.CreateDirectory(imagesFolder);
+                    var filePath = Path.Combine(imagesFolder, "logo.png");
+                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await model.LogoFile.CopyToAsync(stream);
+                    }
+                }
+
                 TempData["SuccessMessage"] = "Identidad de la empresa actualizada correctamente.";
                 return RedirectToAction(nameof(SystemSettings));
             }

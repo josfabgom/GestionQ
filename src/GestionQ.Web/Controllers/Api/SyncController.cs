@@ -15,10 +15,12 @@ namespace GestionQ.Web.Controllers.Api
     public class SyncController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly Microsoft.Extensions.Configuration.IConfiguration _config;
 
-        public SyncController(ApplicationDbContext context)
+        public SyncController(ApplicationDbContext context, Microsoft.Extensions.Configuration.IConfiguration config)
         {
             _context = context;
+            _config = config;
         }
 
         private async Task<PointOfSale> GetOrCreatePosAsync(string identifier)
@@ -77,7 +79,8 @@ namespace GestionQ.Web.Controllers.Api
                 Price = p.Price,
                 Stock = p.Stock,
                 IsActive = p.IsActive,
-                LastModified = p.LastModified
+                LastModified = p.LastModified,
+                ImageUrl = p.ImageUrl
             }).ToListAsync();
 
             var customers = new List<CustomerSyncDto>();
@@ -111,11 +114,52 @@ namespace GestionQ.Web.Controllers.Api
                 DiscountPercentage = pm.DiscountPercentage
             }).ToListAsync();
 
+            var companyInfo = new CompanyInfoSyncDto
+            {
+                Name = _config["CompanyInfo:Name"] ?? "GestionQ",
+                LogoUrl = "/images/logo.png"
+            };
+
+            var activePromos = await _context.PromotionRules
+                .Include(p => p.Products)
+                .ThenInclude(p => p.Product)
+                .Where(p => p.IsActive)
+                .Select(p => new PromotionSyncDto
+                {
+                    Id = p.Id,
+                    Name = p.Name,
+                    Details = p.Type == GestionQ.Domain.Entities.PromotionType.Percentage ? $"Descuento: {p.Value}%" :
+                              p.Type == GestionQ.Domain.Entities.PromotionType.FixedAmount ? $"Descuento: ${p.Value}" :
+                              p.Type == GestionQ.Domain.Entities.PromotionType.XForY ? $"Lleva {p.BuyQuantity} Paga {p.PayQuantity}" :
+                              $"Volumen: {p.Value}",
+                    // We append the products string to Details
+                })
+                .ToListAsync();
+            
+            // Re-fetch to format details locally (EF Core string.Join limitation workaround)
+            var activePromosEntities = await _context.PromotionRules.Include(p => p.Products).ThenInclude(p => p.Product).Where(p => p.IsActive).ToListAsync();
+            var activePromosResult = activePromosEntities.Select(p => new PromotionSyncDto {
+                Id = p.Id,
+                Name = "• " + p.Name,
+                Details = (p.Type == GestionQ.Domain.Entities.PromotionType.Percentage ? $"Descuento: {p.Value}%" :
+                           p.Type == GestionQ.Domain.Entities.PromotionType.FixedAmount ? $"Descuento: ${p.Value}" :
+                           p.Type == GestionQ.Domain.Entities.PromotionType.XForY ? $"Lleva {p.BuyQuantity} Paga {p.PayQuantity}" :
+                           $"Volumen: {p.Value}") + "\r\nProductos aplicables:\r\n" + string.Join("\r\n", p.Products.Select(pr => "- " + pr.Product?.Name)) + 
+                           $"\r\nVálido hasta: {(p.EndDate.HasValue ? p.EndDate.Value.ToString("dd/MM/yyyy") : "Sin límite")}",
+                Type = p.Type.ToString(),
+                Value = p.Value,
+                BuyQuantity = p.BuyQuantity,
+                PayQuantity = p.PayQuantity,
+                ProductIds = p.Products.Select(pr => pr.ProductId).ToList()
+            }).ToList();
+
             return Ok(new SyncPullResponse { 
                 Products = products,
                 Customers = customers,
                 Departments = departments,
-                PaymentMethods = paymentMethods
+                PaymentMethods = paymentMethods,
+                CompanyInfo = companyInfo,
+                ActivePromotions = activePromosResult
             });
         }
 
