@@ -260,11 +260,11 @@ namespace GestionQ.CajaPOS
                 {
                     await _syncWorker.PerformSyncAsync();
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
                     btnSync.Text = "⚠️ Error Sync";
                     btnSync.ForeColor = Color.Red;
-                    MessageBox.Show("No se pudo conectar con la central.\nRevise su conexión o asegúrese de que el servidor esté activo.", "Error de conexión", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show($"No se pudo conectar con la central en {AppConfig.ServerUrl}.\nError técnico: {ex.Message}", "Error de conexión", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
             };
 
@@ -954,7 +954,7 @@ namespace GestionQ.CajaPOS
                 
                 _ = Task.Run(async () => {
                     try { await _syncWorker.PerformSyncAsync(); }
-                    catch (Exception) { 
+                    catch (Exception ex) { 
                         this.Invoke((MethodInvoker)delegate {
                             btnSync.Text = "⚠️ Error Sync";
                             btnSync.ForeColor = Color.Red;
@@ -1082,3 +1082,4 @@ namespace GestionQ.CajaPOS
         }
     }
 }
+

@@ -16,7 +16,7 @@ namespace GestionQ.CajaPOS
                 {
                     var url = File.ReadAllText(ConfigFile).Trim();
                     if (url.EndsWith("/")) url = url.TrimEnd('/');
-                    if (!url.StartsWith("http")) url = "http://" + url;
+                    if (!url.StartsWith("http")) url = "http://" + url; if (url.LastIndexOf(":") == url.IndexOf(":")) url = url + ":5144";
                     return url;
                 }
                 return "http://localhost:5144";
@@ -28,3 +28,5 @@ namespace GestionQ.CajaPOS
         }
     }
 }
+
+
