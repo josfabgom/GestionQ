@@ -47,7 +47,7 @@ namespace GestionQ.Installer
         {
             // Auto-detect existing installation
             string defaultPath = @"C:\GestionQ";
-            if (File.Exists(Path.Combine(defaultPath, "app", "GestionQ.Web.exe")))
+            if (File.Exists(Path.Combine(defaultPath, "app", "GestionQ.Web.exe")) || File.Exists(Path.Combine(defaultPath, "app_cliente", "GestionQ.Desktop.exe")))
             {
                 isUpdating = true;
                 TxtHeader.Text = "Actualización de GestionQ";
@@ -213,3 +213,4 @@ namespace GestionQ.Installer
         }
     }
 }
+

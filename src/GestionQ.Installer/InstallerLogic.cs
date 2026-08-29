@@ -46,7 +46,7 @@ namespace GestionQ.Installer
                 ReportProgress("Deteniendo servicios y procesos...", 10);
                 if (!IsClientOnly)
                 {
-                    StopService();
+                    if (!IsClientOnly) { StopService(); }
                 }
 
                 try
@@ -139,11 +139,11 @@ namespace GestionQ.Installer
             {
                 ReportProgress("Iniciando actualización...", 10);
                 
-                StopService();
+                if (!IsClientOnly) { StopService(); }
                 try
                 {
-                    var processes = Process.GetProcessesByName("GestionQ.ServerMonitor");
-                    foreach (var p in processes) { p.Kill(); p.WaitForExit(2000); }
+                    var procsToKill = new[] { "GestionQ.ServerMonitor", "GestionQ.CajaPOS", "GestionQ.Desktop" }; foreach (var procName in procsToKill) { var processes = Process.GetProcessesByName(procName);
+                    foreach (var p in processes) { p.Kill(); p.WaitForExit(2000); } }
                 }
                 catch { }
 
@@ -153,8 +153,7 @@ namespace GestionQ.Installer
                 ReportProgress("Base de datos será actualizada al iniciar el servicio...", 60);
                 // SetupDatabase(installDir); // EF Core automaticamente migra al arrancar
 
-                ReportProgress("Verificando Servicio de Windows...", 70);
-                InstallService(installDir);
+                if (!IsClientOnly) { ReportProgress("Verificando Servicio de Windows...", 70); InstallService(installDir); }
 
                 ReportProgress("Actualizando accesos directos...", 80);
                 string shortcutsScript = Path.Combine(installDir, "scripts", "launcher", "crear_accesos.ps1");
@@ -168,8 +167,7 @@ namespace GestionQ.Installer
                     RunProcess("powershell.exe", args);
                 }
 
-                ReportProgress("Reiniciando servicio...", 95);
-                StartService();
+                if (!IsClientOnly) { ReportProgress("Reiniciando servicio...", 95); StartService(); }
                 
                 string monitorPath = Path.Combine(installDir, "app", "GestionQ.ServerMonitor.exe");
                 if (File.Exists(monitorPath))
@@ -310,7 +308,7 @@ namespace GestionQ.Installer
 
         private void InstallService(string installDir)
         {
-            StopService();
+            if (!IsClientOnly) { StopService(); }
             RunProcess("sc.exe", $"delete {ServiceName}", ignoreErrors: true);
             Thread.Sleep(2000);
 
@@ -394,3 +392,5 @@ namespace GestionQ.Installer
         }
     }
 }
+
+
