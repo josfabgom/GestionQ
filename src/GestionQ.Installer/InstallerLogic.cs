@@ -51,7 +51,7 @@ namespace GestionQ.Installer
 
                 try
                 {
-                    var procsToKill = new[] { "GestionQ.ServerMonitor", "GestionQ.CajaPOS", "GestionQ.Desktop" };
+                    var procsToKill = new[] { "GestionQ.ServerMonitor", "GestionQ.CajaPOS", "GestionQ.Desktop", "ngrok", "GestionQ.Web" };
                     foreach (var procName in procsToKill)
                     {
                         var processes = Process.GetProcessesByName(procName);
@@ -106,7 +106,7 @@ namespace GestionQ.Installer
 
                 // 7. Create shortcuts and start Server Monitor
                 ReportProgress("Creando accesos directos...", 98);
-                string shortcutsScript = Path.Combine(installDir, "scripts", "launcher", "crear_accesos.ps1");
+                string shortcutsScript = Path.Combine(installDir, "app", "scripts", "launcher", "crear_accesos.ps1");
                 if (File.Exists(shortcutsScript))
                 {
                     ReportProgress("Creando accesos directos...", 95);
@@ -118,11 +118,7 @@ namespace GestionQ.Installer
                     RunProcess("powershell.exe", args);
                 }
                 
-                string monitorPath = Path.Combine(installDir, "app", "GestionQ.ServerMonitor.exe");
-                if (File.Exists(monitorPath))
-                {
-                    Process.Start(new ProcessStartInfo { FileName = monitorPath, UseShellExecute = true });
-                }
+                LaunchApps(installDir);
 
                 ReportProgress("¡Instalación completada!", 100);
             }
@@ -142,7 +138,7 @@ namespace GestionQ.Installer
                 if (!IsClientOnly) { StopService(); }
                 try
                 {
-                    var procsToKill = new[] { "GestionQ.ServerMonitor", "GestionQ.CajaPOS", "GestionQ.Desktop" }; foreach (var procName in procsToKill) { var processes = Process.GetProcessesByName(procName);
+                    var procsToKill = new[] { "GestionQ.ServerMonitor", "GestionQ.CajaPOS", "GestionQ.Desktop", "ngrok", "GestionQ.Web" }; foreach (var procName in procsToKill) { var processes = Process.GetProcessesByName(procName);
                     foreach (var p in processes) { p.Kill(); p.WaitForExit(2000); } }
                 }
                 catch { }
@@ -156,7 +152,7 @@ namespace GestionQ.Installer
                 if (!IsClientOnly) { ReportProgress("Verificando Servicio de Windows...", 70); InstallService(installDir); }
 
                 ReportProgress("Actualizando accesos directos...", 80);
-                string shortcutsScript = Path.Combine(installDir, "scripts", "launcher", "crear_accesos.ps1");
+                string shortcutsScript = Path.Combine(installDir, "app", "scripts", "launcher", "crear_accesos.ps1");
                 if (File.Exists(shortcutsScript))
                 {
                     string args = $"-NoProfile -ExecutionPolicy Bypass -File \"{shortcutsScript}\"";
@@ -169,11 +165,7 @@ namespace GestionQ.Installer
 
                 if (!IsClientOnly) { ReportProgress("Reiniciando servicio...", 95); StartService(); }
                 
-                string monitorPath = Path.Combine(installDir, "app", "GestionQ.ServerMonitor.exe");
-                if (File.Exists(monitorPath))
-                {
-                    Process.Start(new ProcessStartInfo { FileName = monitorPath, UseShellExecute = true });
-                }
+                LaunchApps(installDir);
 
                 ReportProgress("¡Actualización completada!", 100);
             }
@@ -365,6 +357,31 @@ namespace GestionQ.Installer
             }
         }
 
+                private void LaunchApps(string installDir)
+        {
+            if (!IsClientOnly)
+            {
+                string monitorPath = Path.Combine(installDir, "app", "GestionQ.ServerMonitor.exe");
+                if (File.Exists(monitorPath))
+                {
+                    Process.Start(new ProcessStartInfo { FileName = monitorPath, UseShellExecute = true });
+                }
+            }
+            else
+            {
+                string desktopPath = Path.Combine(installDir, "app_cliente", "GestionQ.Desktop.exe");
+                if (File.Exists(desktopPath))
+                {
+                    Process.Start(new ProcessStartInfo { FileName = desktopPath, UseShellExecute = true });
+                }
+                string posPath = Path.Combine(installDir, "app_cajapos", "GestionQ.CajaPOS.exe");
+                if (File.Exists(posPath))
+                {
+                    Process.Start(new ProcessStartInfo { FileName = posPath, UseShellExecute = true });
+                }
+            }
+        }
+
         private void RunProcess(string fileName, string arguments, bool ignoreErrors = false)
         {
             var startInfo = new ProcessStartInfo
@@ -392,5 +409,7 @@ namespace GestionQ.Installer
         }
     }
 }
+
+
 
 

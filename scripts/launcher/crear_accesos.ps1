@@ -6,7 +6,7 @@ $ErrorActionPreference = "Stop"
 $WshShell = New-Object -ComObject WScript.Shell
 $DesktopPath = [System.Environment]::GetFolderPath("Desktop")
 
-$BaseDir = Resolve-Path "$PSScriptRoot\..\..\"
+$BaseDir = Resolve-Path "$PSScriptRoot\..\..\..\"
 
 # 1. Acceso directo: Iniciar GestionQ
 $StartShortcut = $WshShell.CreateShortcut("$DesktopPath\Iniciar GestionQ.lnk")
@@ -90,3 +90,4 @@ $PosShortcut.Description = "Sistema de Facturación de Caja de GestionQ"
 $PosShortcut.Save()
 
 Write-Host "¡Accesos directos creados correctamente en tu Escritorio!" -ForegroundColor Green
+
