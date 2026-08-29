@@ -6,8 +6,8 @@ $CajaPosFolder = ".\out\app_cajapos"
 $SqlBootstrapper = ".\out\SQL2022-SSEI-Expr.exe"
 $AssetsFolder = ".\src\installer_assets"
 $InstallerResources = ".\src\GestionQ.Installer\Resources"
-$FinalExePath = ".\out\Instalar_GestionQ.exe"
-$UpdateZipPath = ".\out\GestionQ_Actualizacion.zip"
+$FinalExePath = ".\out\Instalar_Cliente_GestionQ.exe"
+$UpdateZipPath = ".\out\GestionQ_Cliente_Actualizacion.zip"
 
 Write-Host "Iniciando empaquetado del Instalador Gráfico (WPF) para GestionQ..." -ForegroundColor Cyan
 
@@ -78,7 +78,7 @@ if (Test-Path ".\out\installer_publish\GestionQ.Installer.exe") {
 Write-Host "Creando paquete de actualización..." -ForegroundColor Yellow
 $UpdateTmp = ".\out\update_tmp"
 New-Item -ItemType Directory -Path $UpdateTmp -Force | Out-Null
-Copy-Item $FinalExePath -Destination "$UpdateTmp\Instalar_GestionQ.exe" -Force
+Copy-Item $FinalExePath -Destination "$UpdateTmp\Instalar_Cliente_GestionQ.exe" -Force
 Compress-Archive -Path "$UpdateTmp\*" -DestinationPath $UpdateZipPath -Force
 Remove-Item $UpdateTmp -Recurse -Force | Out-Null
 Write-Host "Paquete de actualización creado en: $UpdateZipPath" -ForegroundColor Green
@@ -86,4 +86,5 @@ Write-Host "Paquete de actualización creado en: $UpdateZipPath" -ForegroundColo
 Write-Host "========================================================" -ForegroundColor Green
 Write-Host "Proceso finalizado con éxito." -ForegroundColor Green
 Write-Host "========================================================" -ForegroundColor Green
+
 
