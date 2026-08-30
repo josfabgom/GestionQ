@@ -48,7 +48,7 @@ Copy-Item ".\scripts\launcher\*" -Destination $DestLauncherScripts -Force
 # 4. Crear payload.zip para embeber en el Instalador WPF
 Write-Host "Empaquetando payload.zip..." -ForegroundColor Yellow
 $PayloadTmp = ".\out\payload_tmp"
-New-Item -ItemType Directory -Path $PayloadTmp -Force | Out-Null
+if (Test-Path $PayloadTmp) { Remove-Item $PayloadTmp -Recurse -Force } New-Item -ItemType Directory -Path $PayloadTmp -Force | Out-Null
 Copy-Item $AppFolder -Destination $PayloadTmp -Recurse
 Copy-Item $ClientAppFolder -Destination $PayloadTmp -Recurse
 Copy-Item $CajaPosFolder -Destination $PayloadTmp -Recurse
@@ -86,5 +86,6 @@ Write-Host "Paquete de actualización creado en: $UpdateZipPath" -ForegroundColo
 Write-Host "========================================================" -ForegroundColor Green
 Write-Host "Proceso finalizado con éxito." -ForegroundColor Green
 Write-Host "========================================================" -ForegroundColor Green
+
 
 
