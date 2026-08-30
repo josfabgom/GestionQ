@@ -145,6 +145,9 @@ namespace GestionQ.CajaPOS
             using var db = new LocalDbContext();
             db.Database.EnsureCreated();
             try {
+                Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions.ExecuteSqlRaw(db.Database, "CREATE TABLE IF NOT EXISTS SystemSettings (Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, `"Key`" TEXT NOT NULL, Value TEXT NULL, Description TEXT NULL);");
+            } catch { }
+            try {
                 Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions.ExecuteSqlRaw(db.Database, "ALTER TABLE Sales ADD COLUMN RequestElectronicInvoice INTEGER NOT NULL DEFAULT 0;");
             } catch { }
             try {
@@ -1082,4 +1085,6 @@ namespace GestionQ.CajaPOS
         }
     }
 }
+
+
 
