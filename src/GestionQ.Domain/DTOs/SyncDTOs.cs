@@ -17,6 +17,15 @@ namespace GestionQ.Domain.DTOs
         public List<PaymentMethodSyncDto> PaymentMethods { get; set; } = new();
         public CompanyInfoSyncDto? CompanyInfo { get; set; }
         public List<PromotionSyncDto> ActivePromotions { get; set; } = new();
+        public List<PosUserSyncDto> Users { get; set; } = new();
+    }
+
+    public class PosUserSyncDto
+    {
+        public string Id { get; set; } = string.Empty;
+        public string UserName { get; set; } = string.Empty;
+        public string FullName { get; set; } = string.Empty;
+        public string Pin { get; set; } = string.Empty;
     }
 
     public class PromotionSyncDto
@@ -79,12 +88,29 @@ namespace GestionQ.Domain.DTOs
         public string? ImageUrl { get; set; }
     }
 
+    public class OfflineCashRegisterSyncDto
+    {
+        public Guid GlobalId { get; set; }
+        public string UserId { get; set; } = string.Empty;
+        public DateTime OpeningDate { get; set; }
+        public DateTime? ClosingDate { get; set; }
+        public decimal InitialBalance { get; set; }
+        public decimal? FinalCashBalance { get; set; }
+    }
+
     public class SyncPushRequest
     {
         public string PosIdentifier { get; set; } = string.Empty;
         public List<CustomerSyncDto> NewCustomers { get; set; } = new();
         public List<SaleSyncDto> Sales { get; set; } = new();
         public List<MovementSyncDto> Movements { get; set; } = new();
+        public List<OfflineCashRegisterSyncDto> OfflineCashRegisters { get; set; } = new();
+    }
+
+    public class SyncPushResponse
+    {
+        public bool Success { get; set; }
+        public Dictionary<Guid, int> RegisterIdMap { get; set; } = new();
     }
 
     public class SaleSyncDto
@@ -97,8 +123,11 @@ namespace GestionQ.Domain.DTOs
         public decimal PaymentDiscountAmount { get; set; }
         public string? UserId { get; set; }
         public int? CashRegisterId { get; set; }
+        public Guid? OfflineCashRegisterGlobalId { get; set; }
         public string? CustomerDni { get; set; } // Used to match customer
         public bool RequestElectronicInvoice { get; set; }
+        public bool IsCancelled { get; set; } = false;
+        public DateTime? CancellationDate { get; set; }
         public List<SaleItemSyncDto> Items { get; set; } = new();
         public List<SalePaymentSyncDto> Payments { get; set; } = new();
     }
@@ -126,6 +155,7 @@ namespace GestionQ.Domain.DTOs
         public string Description { get; set; } = string.Empty;
         public DateTime Date { get; set; }
         public int? CashRegisterId { get; set; }
+        public Guid? OfflineCashRegisterGlobalId { get; set; }
     }
 
     // POS Auth & Register DTOs
@@ -172,6 +202,7 @@ namespace GestionQ.Domain.DTOs
         public string? UserId { get; set; }
         public string? UserName { get; set; }
         public string? FullName { get; set; }
+        public int? PosNumber { get; set; }
     }
 }
 

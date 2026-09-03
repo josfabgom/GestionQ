@@ -1,4 +1,4 @@
-@model GestionQ.Domain.Entities.PointOfSale
+﻿@model GestionQ.Domain.Entities.PointOfSale
 @{
     ViewData["Title"] = $"Control POS: {Model.Name}";
     var activeRegister = ViewBag.ActiveRegister as GestionQ.Domain.Entities.CashRegister;
@@ -46,12 +46,13 @@
         
         @if (activeRegister != null)
         {
-            decimal totalEfectivo = activeRegister.Sales.SelectMany(s => s.Payments).Where(p => p.PaymentMethod?.Name == "Efectivo").Sum(p => p.Amount);
+            var validSales = activeRegister.Sales.Where(s => !s.IsCancelled).ToList();
+            decimal totalEfectivo = validSales.SelectMany(s => s.Payments).Where(p => p.PaymentMethod?.Name == "Efectivo").Sum(p => p.Amount);
             decimal ingresos = activeRegister.Movements.Where(m => m.Type == "Ingreso").Sum(m => m.Amount);
             decimal egresos = activeRegister.Movements.Where(m => m.Type == "Egreso").Sum(m => m.Amount);
             decimal saldoEsperado = activeRegister.InitialBalance + totalEfectivo + ingresos - egresos;
             
-            var productSummary = activeRegister.Sales
+            var productSummary = validSales
                 .SelectMany(s => s.Items)
                 .GroupBy(i => i.Product?.Name ?? "Desconocido")
                 .Select(g => new { Name = g.Key, Quantity = g.Sum(x => x.Quantity), Total = g.Sum(x => x.Quantity * x.UnitPrice) })
@@ -114,12 +115,19 @@
                         <tbody>
                             @foreach (var sale in activeRegister.Sales.OrderByDescending(s => s.Date).Take(15))
                             {
-                                <tr>
-                                    <td>#@sale.Id</td>
+                                var rowStyle = sale.IsCancelled ? "opacity: 0.6;" : "";
+                                <tr style="@rowStyle">
+                                    <td>@(Model.PosNumber.ToString("D5"))-@(sale.Id.ToString("D8"))</td>
                                     <td>@sale.Date.ToString("HH:mm")</td>
-                                    <td style="font-weight: bold; color: #10b981;">$@sale.TotalAmount.ToString("N2")</td>
+                                    <td style="font-weight: bold; color: @(sale.IsCancelled ? "#ef4444" : "#10b981"); text-decoration: @(sale.IsCancelled ? "line-through" : "none");">
+                                        $@sale.TotalAmount.ToString("N2")
+                                    </td>
                                     <td>
-                                        @if (sale.Payments != null && sale.Payments.Any())
+                                        @if (sale.IsCancelled)
+                                        {
+                                            <span style="background: rgba(239, 68, 68, 0.2); color: #ef4444; padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.7rem; font-weight: bold;">ANULADA</span>
+                                        }
+                                        else if (sale.Payments != null && sale.Payments.Any())
                                         {
                                             @string.Join(", ", sale.Payments.Select(p => p.PaymentMethod?.Name))
                                         }
@@ -195,3 +203,5 @@
         }
     </div>
 </div>
+
+

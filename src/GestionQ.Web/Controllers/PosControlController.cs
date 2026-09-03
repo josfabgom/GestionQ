@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -32,7 +32,7 @@ namespace GestionQ.Web.Controllers
                     .ThenInclude(cr => cr.User)
                 .Include(pos => pos.CashRegisters.Where(cr => cr.ClosingDate == null))
                     .ThenInclude(cr => cr.Sales)
-                        .ThenInclude(s => s.Payments)
+                        .ThenInclude(s => s.Payments).ThenInclude(p => p.PaymentMethod)
                 .Include(pos => pos.CashRegisters.Where(cr => cr.ClosingDate == null))
                     .ThenInclude(cr => cr.Movements)
                 .OrderBy(pos => pos.Name)
@@ -119,8 +119,7 @@ namespace GestionQ.Web.Controllers
                 .Include(c => c.User)
                 .Include(c => c.Movements)
                 .Include(c => c.Sales)
-                    .ThenInclude(s => s.Payments)
-                    .ThenInclude(p => p.PaymentMethod)
+                    .ThenInclude(s => s.Payments).ThenInclude(p => p.PaymentMethod)
                 .Include(c => c.Sales)
                     .ThenInclude(s => s.Items)
                     .ThenInclude(i => i.Product)
@@ -147,8 +146,7 @@ namespace GestionQ.Web.Controllers
             var register = await _context.CashRegisters
                 .Include(c => c.Movements)
                 .Include(c => c.Sales)
-                    .ThenInclude(s => s.Payments)
-                    .ThenInclude(p => p.PaymentMethod)
+                    .ThenInclude(s => s.Payments).ThenInclude(p => p.PaymentMethod)
                 .FirstOrDefaultAsync(c => c.Id == id);
 
             if (register == null) return NotFound();
@@ -158,8 +156,7 @@ namespace GestionQ.Web.Controllers
                 return RedirectToAction(nameof(Details), new { id = register.PointOfSaleId });
             }
 
-            decimal totalEfectivoVentas = register.Sales
-                .SelectMany(s => s.Payments)
+            decimal totalEfectivoVentas = register.Sales.Where(s => !s.IsCancelled).SelectMany(s => s.Payments)
                 .Where(p => p.PaymentMethod?.Name == "Efectivo")
                 .Sum(p => p.Amount);
 
@@ -186,3 +183,6 @@ namespace GestionQ.Web.Controllers
         }
     }
 }
+
+
+

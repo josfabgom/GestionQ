@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using GestionQ.Domain.Entities;
@@ -6,7 +6,8 @@ using GestionQ.Domain.Entities;
 namespace GestionQ.Infrastructure.Data
 {
     public class ApplicationDbContext : IdentityDbContext<IdentityUser>
-    {
+{
+    public bool IgnoreStockChangesForLogging { get; set; } = false;
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
 
         public DbSet<Customer> Customers { get; set; }
@@ -103,8 +104,10 @@ namespace GestionQ.Infrastructure.Data
                         string original = prop.OriginalValue?.ToString() ?? "N/A";
                         string current = prop.CurrentValue?.ToString() ?? "N/A";
                         
-                        if (original != current)
+                                                if (original != current)
                         {
+                            if (propName == "Stock" && IgnoreStockChangesForLogging) continue;
+
                             string nombreES = propName switch {
                                 "Price" => "Precio",
                                 "Stock" => "Stock",
@@ -142,3 +145,4 @@ namespace GestionQ.Infrastructure.Data
         }
     }
 }
+

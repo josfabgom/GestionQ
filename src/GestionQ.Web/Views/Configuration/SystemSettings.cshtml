@@ -8,76 +8,36 @@
     <i class="fa-solid fa-arrow-left"></i> Volver a Configuración
 </a>
 
-<h1 class="page-title">Ajustes del Sistema (BD y Logo)</h1>
+<h1 class="page-title">Ajustes del Sistema</h1>
 
-@if (TempData["SuccessMessage"] != null)
+@if (TempData["ErrorMessage"] != null)
 {
-    <div
-        style="background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #6ee7b7; padding: 1rem; border-radius: 8px; margin-bottom: 2rem;">
-        @TempData["SuccessMessage"]
+    <div style="background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #fca5a5; padding: 1rem; border-radius: 8px; margin-bottom: 2rem;">
+        <i class="fa-solid fa-triangle-exclamation"></i> @TempData["ErrorMessage"]
     </div>
 }
 
-<div style="display: flex; gap: 2rem; flex-wrap: wrap; align-items: stretch;">
+@if (TempData["SuccessMessage"] != null)
+{
+    <div style="background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #6ee7b7; padding: 1rem; border-radius: 8px; margin-bottom: 2rem;">
+        <i class="fa-solid fa-check-circle"></i> @TempData["SuccessMessage"]
+    </div>
+}
 
-    <!-- Formulario de Conexión a BD -->
-    <div class="glass-panel" style="flex: 1; min-width: 320px;">
-        <h3
-            style="margin-top:0; color: #a78bfa; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">
-            <i class="fa-solid fa-database"></i> Conexión SQL Server</h3>
-        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">Ajuste los parámetros del motor
-            de base de datos. Si la BD conectada aún no tiene las tablas, el sistema las intentará auto-generar al
-            reiniciar.</p>
-
-        <form asp-action="SystemSettings" enctype="multipart/form-data">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-
-            <div class="form-group">
-                <label asp-for="Server" class="control-label"></label>
-                <input asp-for="Server" class="form-control" />
-                <span asp-validation-for="Server" class="text-danger"></span>
-            </div>
-
-            <div class="form-group" style="margin-top: 1rem;">
-                <label asp-for="Database" class="control-label"></label>
-                <input asp-for="Database" class="form-control" />
-                <span asp-validation-for="Database" class="text-danger"></span>
-            </div>
-
-            <div style="display: flex; gap: 1rem; margin-top: 1rem;">
-                <div class="form-group" style="flex: 1;">
-                    <label asp-for="User" class="control-label"></label>
-                    <input asp-for="User" class="form-control" />
-                    <span asp-validation-for="User" class="text-danger"></span>
-                </div>
-                <div class="form-group" style="flex: 1;">
-                    <label asp-for="Password" class="control-label"></label>
-                    <input asp-for="Password" type="password" class="form-control" id="Password" />
-                    <span asp-validation-for="Password" class="text-danger"></span>
-                </div>
-            </div>
-
-            <div class="form-group" style="margin-top: 1.5rem; display: flex; gap: 1rem;">
-                <button type="button" class="btn-secondary" style="flex: 1;" onclick="testConnection()">
-                    Probar Conexión
-                </button>
-            </div>
-
-            <h3
-                style="margin-top: 2rem; color: #3b82f6; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">
-                <i class="fa-solid fa-building"></i> Identidad de la Empresa</h3>
+<form asp-action="SystemSettings" enctype="multipart/form-data">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 2rem; align-items: start;">
+        
+        <!-- PANEL IZQUIERDO: EMPRESA Y TEMA -->
+        <div class="glass-panel" style="padding: 1.5rem;">
+            <h3 style="margin-top:0; color: #3b82f6; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">
+                <i class="fa-solid fa-building"></i> Identidad de la Empresa
+            </h3>
             <p style="color: var(--text-muted); font-size: 0.9rem;">Información general que se utilizará en tickets, reportes y pantalla general.</p>
 
             <div class="form-group" style="margin-top: 1rem;">
                 <label asp-for="CompanyName" class="control-label"></label>
                 <input asp-for="CompanyName" class="form-control" />
                 <span asp-validation-for="CompanyName" class="text-danger"></span>
-            </div>
-
-            <div class="form-group" style="margin-top: 1rem;">
-                <label asp-for="LogoFile" class="control-label"></label>
-                <input asp-for="LogoFile" type="file" class="form-control" accept="image/*" />
-                <span asp-validation-for="LogoFile" class="text-danger"></span>
             </div>
 
             <div class="form-group" style="margin-top: 1rem;">
@@ -137,17 +97,86 @@
                 </div>
             </div>
 
-            <div class="form-group" style="margin-top: 1.5rem; display: flex; justify-content: flex-end;">
-                <button type="submit" asp-action="UpdateCompanyIdentity" class="btn-primary" style="padding: 0.6rem 1.2rem;">
-                    <i class="fa-solid fa-save"></i> Guardar Identidad
+            <h3 style="margin-top: 2rem; color: #3b82f6; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">
+                <i class="fa-solid fa-image"></i> Logotipo Empresa
+            </h3>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">Sube un archivo de imagen transparente (.png) para reemplazar el diseño de menú lateral y pantalla de login.</p>
+
+            <div class="form-group" style="margin-top: 1rem;">
+                <input asp-for="LogoFile" type="file" accept="image/png, image/jpeg" class="form-control" style="background: rgba(0,0,0,0.2); padding: 0.5rem;" />
+                <span asp-validation-for="LogoFile" class="text-danger"></span>
+            </div>
+
+            <div class="form-group" style="margin-top: 1.5rem; text-align: right;">
+                <button type="submit" asp-action="UpdateCompanyIdentity" class="btn-secondary" style="padding: 0.5rem 1rem;">
+                    <i class="fa-solid fa-save"></i> Guardar Identidad y Logo
                 </button>
             </div>
 
-            <h3
-                style="margin-top: 2rem; color: #10b981; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">
-                <i class="fa-solid fa-truck"></i> Configuración de Compras</h3>
-            <p style="color: var(--text-muted); font-size: 0.9rem;">Parámetros para la gestión de ingresos de proveedores.</p>
+            <h3 style="margin-top: 2rem; color: #a855f7; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">
+                <i class="fa-solid fa-palette"></i> Apariencia y Tema
+            </h3>
+            <div style="display: flex; gap: 1rem; align-items: flex-end; margin-top: 1rem;">
+                <div class="form-group" style="flex: 1; margin: 0;">
+                    <select asp-for="UITheme" class="form-control" style="background: rgba(0,0,0,0.2);">
+                        <option value="violet">Premium Violeta-Índigo (Por defecto)</option>
+                        <option value="emerald">Verde Esmeralda / Cyberpunk</option>
+                        <option value="sapphire">Azul Zafiro Clásico</option>
+                        <option value="ruby">Rojo Rubí / Carmesí</option>
+                        <option value="amber">Naranja Ámbar / Dorado</option>
+                    </select>
+                    <span asp-validation-for="UITheme" class="text-danger"></span>
+                </div>
+                <button type="submit" asp-action="UpdateUITheme" class="btn-secondary" style="padding: 0.5rem 1rem;">
+                    <i class="fa-solid fa-paint-roller"></i> Aplicar Tema
+                </button>
+            </div>
+        </div>
 
+        <!-- PANEL DERECHO: BD Y OPERACIONES -->
+        <div class="glass-panel" style="padding: 1.5rem;">
+            <h3 style="margin-top:0; color: #a78bfa; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">
+                <i class="fa-solid fa-database"></i> Conexión SQL Server
+            </h3>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">Ajuste los parámetros del motor de base de datos.</p>
+
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+            <div class="form-group" style="margin-top: 1rem;">
+                <label asp-for="Server" class="control-label"></label>
+                <input asp-for="Server" class="form-control" />
+                <span asp-validation-for="Server" class="text-danger"></span>
+            </div>
+
+            <div class="form-group" style="margin-top: 1rem;">
+                <label asp-for="Database" class="control-label"></label>
+                <input asp-for="Database" class="form-control" />
+                <span asp-validation-for="Database" class="text-danger"></span>
+            </div>
+
+            <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                <div class="form-group" style="flex: 1;">
+                    <label asp-for="User" class="control-label"></label>
+                    <input asp-for="User" class="form-control" />
+                    <span asp-validation-for="User" class="text-danger"></span>
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label asp-for="Password" class="control-label"></label>
+                    <input asp-for="Password" type="password" class="form-control" id="Password" />
+                    <span asp-validation-for="Password" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 1rem; text-align: right;">
+                <button type="button" class="btn-secondary" style="padding: 0.5rem 1rem;" onclick="testConnection()">
+                    <i class="fa-solid fa-plug"></i> Probar Conexión
+                </button>
+            </div>
+
+            <h3 style="margin-top: 2rem; color: #10b981; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">
+                <i class="fa-solid fa-truck"></i> Configuración de Compras
+            </h3>
+            
             <div class="form-group" style="margin-top: 1rem;">
                 <label asp-for="NextInternalSupplierNumber" class="control-label"></label>
                 <input asp-for="NextInternalSupplierNumber" type="number" class="form-control" style="max-width: 200px;" />
@@ -155,106 +184,102 @@
                 <span asp-validation-for="NextInternalSupplierNumber" class="text-danger"></span>
             </div>
 
-            <h3
-                style="margin-top: 2rem; color: #f59e0b; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">
-                <i class="fa-solid fa-scale-balanced"></i> Configuración de Balanza (Kretz)</h3>
-            <p style="color: var(--text-muted); font-size: 0.9rem;">Ruta local de la carpeta IN del driver JDataGate.</p>
-
+            <h3 style="margin-top: 2rem; color: #f59e0b; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">
+                <i class="fa-solid fa-scale-balanced"></i> Configuración de Balanza (Kretz)
+            </h3>
+            
             <div class="form-group" style="margin-top: 1rem;">
                 <label asp-for="JDataGateFolderPath" class="control-label"></label>
                 <input asp-for="JDataGateFolderPath" class="form-control" />
                 <span asp-validation-for="JDataGateFolderPath" class="text-danger"></span>
             </div>
-
-            <div style="margin-top: 1rem;">
-                <a asp-controller="Scale" asp-action="Index" class="btn-secondary" style="display: inline-block;">
-                    <i class="fa-solid fa-file-export"></i> Ir al Módulo de Envío a Balanza
+            
+            <div style="margin-top: 1rem; text-align: right;">
+                <a asp-controller="Scale" asp-action="Index" class="btn-secondary" style="padding: 0.5rem 1rem; display: inline-flex; align-items: center; gap: 0.5rem;">
+                    <i class="fa-solid fa-file-export"></i> Ir al Módulo Balanza
                 </a>
             </div>
 
-            <h3
-                style="margin-top: 2rem; color: #3b82f6; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">
-                <i class="fa-solid fa-image"></i> Logotipo Empresa</h3>
-            <p style="color: var(--text-muted); font-size: 0.9rem;">Sube un archivo de imagen transparente (.png) para
-                reemplazar el diseño de menú lateral y pantalla de login.</p>
-
-            <div class="form-group" style="margin-top: 1rem;">
-                <label asp-for="LogoFile" class="control-label"></label>
-                <input asp-for="LogoFile" type="file" accept="image/png, image/jpeg" class="form-control"
-                    style="background: rgba(0,0,0,0.2); padding: 0.5rem;" />
-                <span asp-validation-for="LogoFile" class="text-danger"></span>
-            </div>
-
-            <h3 style="margin-top: 2rem; color: #a855f7; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">
-                <i class="fa-solid fa-palette"></i> Apariencia y Tema</h3>
-            <p style="color: var(--text-muted); font-size: 0.9rem;">Elige la paleta de colores para la interfaz.</p>
+            <h3 style="margin-top: 2rem; color: #ef4444; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">
+                <i class="fa-solid fa-download"></i> Respaldo de Base de Datos
+            </h3>
             
-            <div class="form-group" style="margin-top: 1rem;">
-                <label asp-for="UITheme" class="control-label"></label>
-                <select asp-for="UITheme" class="form-control" style="background: rgba(0,0,0,0.2);">
-                    <option value="violet">Premium Violeta-Índigo (Por defecto)</option>
-                    <option value="emerald">Verde Esmeralda / Cyberpunk</option>
-                    <option value="sapphire">Azul Zafiro Clásico</option>
-                    <option value="ruby">Rojo Rubí / Carmesí</option>
-                    <option value="amber">Naranja Ámbar / Dorado</option>
-                </select>
-                <span asp-validation-for="UITheme" class="text-danger"></span>
-            </div>
-            
-            <div class="form-group" style="margin-top: 1rem; display: flex; justify-content: flex-end;">
-                <button type="submit" asp-action="UpdateUITheme" class="btn-primary" style="padding: 0.6rem 1.2rem;">
-                    <i class="fa-solid fa-save"></i> Aplicar Tema
-                </button>
-            </div>
-
-            <h3
-                style="margin-top: 2rem; color: #ef4444; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">
-                <i class="fa-solid fa-database"></i> Respaldo de Base de Datos</h3>
-            <p style="color: var(--text-muted); font-size: 0.9rem;">Genera y descarga un archivo (.bak) con toda la información actual del sistema.</p>
-
-            <div class="form-group" style="margin-top: 1rem;">
+            <div class="form-group" style="margin-top: 1rem; text-align: right;">
                 <a asp-action="BackupDatabase" asp-controller="Configuration" class="btn-secondary" 
                    style="display: inline-flex; align-items: center; gap: 0.5rem; background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #fca5a5;"
                    onclick="return confirm('Se generará un respaldo de la base de datos actual. El proceso puede demorar unos segundos. ¿Deseas continuar?');">
-                    <i class="fa-solid fa-download"></i> Generar y Descargar Backup (.bak)
+                    <i class="fa-solid fa-database"></i> Descargar Backup (.bak)
                 </a>
             </div>
 
-            <div class="form-group" style="margin-top: 2.5rem;">
-                <button type="submit" class="btn-primary" style="width: 100%; font-size: 1.1rem; padding: 0.8rem;"
+            <div class="form-group" style="margin-top: 2.5rem; text-align: right; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1.5rem;">
+                <button type="submit" class="btn-primary" style="padding: 0.8rem 1.5rem; font-size: 1.1rem;"
                     onclick="return confirm('Al aplicar cambios de base de datos el sistema intentará reiniciar momentáneamente. ¿Deseas aplicar los ajustes?')">
-                    Guardar y Aplicar Todo</button>
+                    <i class="fa-solid fa-save"></i> Guardar Todo y Aplicar
+                </button>
+            </div>
+        </div>
+
+    </div>
+</form>
+
+<!-- PANELES DE CONEXIONES EXTERNAS -->
+<h2 style="margin-top: 3rem; margin-bottom: 1.5rem; color: #cbd5e1; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">
+    Conexiones Externas
+</h2>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 2rem; align-items: start; margin-bottom: 4rem;">
+    
+    <!-- Configuración Nube -->
+    <div class="glass-panel" style="padding: 1.5rem;">
+        <form asp-action="UpdateCloudSettings" method="post">
+            <h3 style="margin-top:0; color: #60a5fa; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">
+                <i class="fa-solid fa-cloud"></i> Dashboard Web (Nube)
+            </h3>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">Configura hacia dónde enviará el servidor local las estadísticas.</p>
+            
+            <div class="form-group" style="margin-top: 1rem;">
+                <label class="control-label">URL del Dashboard</label>
+                <input asp-for="VpsSyncUrl" class="form-control" placeholder="ej: https://galopsrl.com.ar/" />
+            </div>
+            
+            <div class="form-group" style="margin-top: 1rem;">
+                <label class="control-label">API Key (Contraseña)</label>
+                <input asp-for="DashboardApiKey" class="form-control" type="password" placeholder="tu-super-secreta-api-key" />
+            </div>
+            
+            <div style="margin-top: 1.5rem; text-align: right;">
+                <button type="submit" class="btn-primary" style="padding: 0.6rem 1.2rem;" onclick="return confirm('Al cambiar esto y guardar, deberás reiniciar el servidor local de GestionQ manualmente para que comience a sincronizar con la nueva nube. ¿Continuar?')">
+                    <i class="fa-solid fa-cloud-arrow-up"></i> Guardar Conexión
+                </button>
             </div>
         </form>
-
-        <!-- 5. Configuración Ngrok -->
-        <div class="card bg-gray-800 border-gray-700 mt-4">
-            <div class="card-header border-b border-gray-700 bg-gray-800">
-                <h4 class="m-0 text-white"><i class="fa-solid fa-mobile-screen text-indigo-400"></i> Escáner Móvil (Ngrok)</h4>
-            </div>
-            <form asp-action="UpdateNgrokSettings" method="post">
-                <div class="card-body">
-                    <div class="alert alert-info bg-indigo-900 border-indigo-700 text-indigo-100">
-                        <i class="fa-solid fa-circle-info"></i> Configure el túnel de internet seguro para conectar los celulares al escáner. Requiere una cuenta en <b>ngrok.com</b>.
-                    </div>
-                    <div class="row">
-                        <div class="col-md-12 mb-3">
-                            <label class="form-label text-gray-300">Dominio Estático (Domain)</label>
-                            <input asp-for="NgrokDomain" class="form-control bg-gray-700 border-gray-600 text-white" placeholder="ej: tu-negocio.ngrok-free.app" />
-                        </div>
-                        <div class="col-md-12 mb-3">
-                            <label class="form-label text-gray-300">Token de Autenticación (Authtoken)</label>
-                            <input asp-for="NgrokAuthToken" class="form-control bg-gray-700 border-gray-600 text-white" type="password" placeholder="ej: 3GzWWk..." />
-                        </div>
-                    </div>
-                </div>
-                <div class="card-footer bg-gray-800 border-t border-gray-700 text-end">
-                    <button type="submit" class="btn btn-indigo"><i class="fa-solid fa-save"></i> Guardar Túnel</button>
-                </div>
-            </form>
-        </div>
     </div>
 
+    <!-- Configuración Ngrok -->
+    <div class="glass-panel" style="padding: 1.5rem;">
+        <form asp-action="UpdateNgrokSettings" method="post">
+            <h3 style="margin-top:0; color: #818cf8; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">
+                <i class="fa-solid fa-mobile-screen"></i> Escáner Móvil (Ngrok)
+            </h3>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">Configure el túnel seguro para conectar celulares. Requiere cuenta en ngrok.com.</p>
+            
+            <div class="form-group" style="margin-top: 1rem;">
+                <label class="control-label">Dominio Estático (Domain)</label>
+                <input asp-for="NgrokDomain" class="form-control" placeholder="ej: tu-negocio.ngrok-free.app" />
+            </div>
+            
+            <div class="form-group" style="margin-top: 1rem;">
+                <label class="control-label">Token de Autenticación</label>
+                <input asp-for="NgrokAuthToken" class="form-control" type="password" placeholder="ej: 3GzWWk..." />
+            </div>
+            
+            <div style="margin-top: 1.5rem; text-align: right;">
+                <button type="submit" class="btn-primary" style="padding: 0.6rem 1.2rem; background-color: #6366f1; border-color: #6366f1;">
+                    <i class="fa-solid fa-satellite-dish"></i> Guardar Túnel
+                </button>
+            </div>
+        </form>
+    </div>
 </div>
 
 @section Scripts {

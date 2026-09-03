@@ -23,6 +23,7 @@ builder.Services.AddHttpClient<IElectronicInvoicingService, ArcaElectronicInvoic
 builder.Services.AddScoped<IScaleService, KretzJDataGateService>();
 builder.Services.AddHttpClient<IMercadoPagoService, MercadoPagoService>();
 builder.Services.AddHostedService<GestionQ.Web.Services.NgrokTunnelService>();
+builder.Services.AddHostedService<GestionQ.Web.Services.StatsSyncService>();
 
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, AuthorizationPolicyProvider>();
 builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();

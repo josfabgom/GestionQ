@@ -68,6 +68,30 @@
                 </tr>
             }
         </tbody>
+        <tfoot style="border-top: 2px solid rgba(255, 255, 255, 0.1);">
+            <tr>
+                <td colspan="3" style="text-align: right; color: var(--text-muted); font-weight: 600;">Subtotal:</td>
+                <td style="font-weight: 600;">$@Model.SubTotal.ToString("N2")</td>
+            </tr>
+            @if (Model.DiscountAmount > 0)
+            {
+                <tr>
+                    <td colspan="3" style="text-align: right; color: #38bdf8; font-weight: 600;">Descuento Promociones:</td>
+                    <td style="font-weight: 600; color: #38bdf8;">-$@Model.DiscountAmount.ToString("N2")</td>
+                </tr>
+            }
+            @if (Model.PaymentDiscountAmount > 0)
+            {
+                <tr>
+                    <td colspan="3" style="text-align: right; color: #38bdf8; font-weight: 600;">Descuento Medio de Pago:</td>
+                    <td style="font-weight: 600; color: #38bdf8;">-$@Model.PaymentDiscountAmount.ToString("N2")</td>
+                </tr>
+            }
+            <tr>
+                <td colspan="3" style="text-align: right; font-size: 1.25rem; font-weight: bold; color: var(--text-color);">TOTAL:</td>
+                <td style="font-size: 1.25rem; font-weight: bold; color: @(Model.IsCancelled ? "var(--text-muted); text-decoration: line-through;" : "#10b981");">$@Model.TotalAmount.ToString("N2")</td>
+            </tr>
+        </tfoot>
     </table>
 </div>
 

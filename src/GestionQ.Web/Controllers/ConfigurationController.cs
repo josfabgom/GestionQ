@@ -57,7 +57,9 @@ namespace GestionQ.Web.Controllers
                 JDataGateFolderPath = _config["Scale:JDataGateFolderPath"] ?? @"C:\JDataGate\IN\",
                 UITheme = _config["UI:Theme"] ?? "violet",
                 NgrokAuthToken = _config["Ngrok:AuthToken"] ?? "",
-                NgrokDomain = _config["Ngrok:Domain"] ?? ""
+                NgrokDomain = _config["Ngrok:Domain"] ?? "",
+                VpsSyncUrl = _config["VpsSyncUrl"] ?? "https://tudominio.com/api/sync",
+                DashboardApiKey = _config["ApiKey"] ?? ""
             };
 
             var setting = _context.SystemSettings.FirstOrDefault(s => s.Key == "NextInternalSupplierNumber");
@@ -103,7 +105,12 @@ namespace GestionQ.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> SystemSettings(ConfigurationViewModel model)
         {
-            if (!ModelState.IsValid) return View(model);
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList();
+                TempData["ErrorMessage"] = "Faltan datos requeridos o son inválidos: " + string.Join(", ", errors);
+                return View(model);
+            }
 
             try
             {
@@ -202,9 +209,16 @@ namespace GestionQ.Web.Controllers
             ModelState.Remove("Database");
             ModelState.Remove("User");
             ModelState.Remove("Password");
+            ModelState.Remove("NextInternalSupplierNumber");
+            ModelState.Remove("JDataGateFolderPath");
+            ModelState.Remove("UITheme");
+            ModelState.Remove("NgrokAuthToken");
+            ModelState.Remove("NgrokDomain");
 
             if (!ModelState.IsValid)
             {
+                var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList();
+                TempData["ErrorMessage"] = "Faltan datos requeridos o son inválidos: " + string.Join(", ", errors);
                 var connString = _config.GetConnectionString("DefaultConnection");
                 var builder = new SqlConnectionStringBuilder(connString);
                 model.Server = builder.DataSource;
@@ -287,6 +301,34 @@ namespace GestionQ.Web.Controllers
             catch (Exception ex)
             {
                 TempData["ErrorMessage"] = "Ocurrió un error al guardar el tema: " + ex.Message;
+                return RedirectToAction(nameof(SystemSettings));
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateCloudSettings(ConfigurationViewModel model)
+        {
+            try
+            {
+                var appSettingsPath = Path.Combine(_env.ContentRootPath, "appsettings.json");
+                var json = await System.IO.File.ReadAllTextAsync(appSettingsPath);
+                var node = JsonNode.Parse(json);
+                if (node != null)
+                {
+                    node["VpsSyncUrl"] = model.VpsSyncUrl ?? "";
+                    node["ApiKey"] = model.DashboardApiKey ?? "";
+
+                    var options = new JsonSerializerOptions { WriteIndented = true };
+                    await System.IO.File.WriteAllTextAsync(appSettingsPath, node.ToJsonString(options));
+                }
+
+                TempData["SuccessMessage"] = "La configuración de conexión en la Nube se actualizó correctamente. Reinicia el servidor local para aplicar los cambios.";
+                return RedirectToAction(nameof(SystemSettings));
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = "Ocurrió un error al guardar la configuración de la Nube: " + ex.Message;
                 return RedirectToAction(nameof(SystemSettings));
             }
         }

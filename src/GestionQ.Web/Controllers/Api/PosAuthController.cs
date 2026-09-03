@@ -263,11 +263,12 @@ namespace GestionQ.Web.Controllers.Api
                     CashRegisterId = openRegister.Id,
                     UserId = openRegister.UserId,
                     UserName = openRegister.User?.UserName,
-                    FullName = fullNameClaim?.Value
+                    FullName = fullNameClaim?.Value,
+                    PosNumber = pos.PosNumber
                 });
             }
 
-            return Ok(new PosStatusResponseDto { HasOpenRegister = false });
+            return Ok(new PosStatusResponseDto { HasOpenRegister = false, PosNumber = pos.PosNumber });
         }
     }
 }

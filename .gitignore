@@ -22,3 +22,6 @@ scratch/
 Balanza/
 *.zip
 *.exe
+
+node_modules/
+

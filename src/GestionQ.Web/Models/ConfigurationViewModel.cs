@@ -62,5 +62,11 @@ namespace GestionQ.Web.Models
 
         [Display(Name = "Ngrok Domain")]
         public string NgrokDomain { get; set; } = string.Empty;
+
+        [Display(Name = "URL del Dashboard (Nube)")]
+        public string VpsSyncUrl { get; set; } = string.Empty;
+
+        [Display(Name = "API Key")]
+        public string DashboardApiKey { get; set; } = string.Empty;
     }
 }

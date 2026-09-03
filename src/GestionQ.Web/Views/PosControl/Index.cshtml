@@ -1,4 +1,4 @@
-@model IEnumerable<GestionQ.Domain.Entities.PointOfSale>
+﻿@model IEnumerable<GestionQ.Domain.Entities.PointOfSale>
 @{
     ViewData["Title"] = "Tablero de Control de Cajas POS";
 }
@@ -41,6 +41,77 @@
     </div>
 </div>
 
+@{
+    decimal globalTotalVentas = 0;
+    decimal globalEfectivo = 0;
+    int globalCajasAbiertas = 0;
+    var globalPaymentBreakdown = new Dictionary<string, decimal>();
+
+    foreach (var pos in Model)
+    {
+        var activeRegister = pos.CashRegisters.FirstOrDefault();
+        if (activeRegister != null)
+        {
+            globalCajasAbiertas++;
+            globalTotalVentas += activeRegister.Sales.Where(s => !s.IsCancelled).Sum(s => s.TotalAmount);
+            var ingresos = Math.Abs(activeRegister.Movements.Where(m => m.Type == "Ingreso").Sum(m => m.Amount));
+            var egresos = Math.Abs(activeRegister.Movements.Where(m => m.Type == "Egreso").Sum(m => m.Amount));
+            var efe = activeRegister.Sales.Where(s => !s.IsCancelled).SelectMany(s => s.Payments).Where(p => p.PaymentMethod?.Name == "Efectivo").Sum(p => p.Amount);
+            globalEfectivo += activeRegister.InitialBalance + efe + ingresos - egresos;
+
+            var payments = activeRegister.Sales.Where(s => !s.IsCancelled).SelectMany(s => s.Payments);
+            foreach (var p in payments)
+            {
+                var method = p.PaymentMethod != null ? p.PaymentMethod.Name : "Otro";
+                if (!globalPaymentBreakdown.ContainsKey(method))
+                {
+                    globalPaymentBreakdown[method] = 0;
+                }
+                globalPaymentBreakdown[method] += p.Amount;
+            }
+        }
+    }
+}
+
+<div class="glass-card" style="margin-bottom: 2rem; border-left: 5px solid #10b981; display: flex; flex-wrap: wrap; gap: 2rem; align-items: stretch; justify-content: space-between;">
+    <div style="flex: 1.5; min-width: 250px;">
+        <h3 style="margin: 0 0 1rem 0; color: #f8f9fa;"><i class="fa-solid fa-chart-line"></i> Resumen Global (Cajas Abiertas: @globalCajasAbiertas)</h3>
+        
+        <div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
+            <div style="background: rgba(59, 130, 246, 0.1); border-radius: 8px; padding: 1rem; border: 1px solid rgba(59, 130, 246, 0.2); flex: 1; min-width: 150px;">
+                <p style="margin: 0; font-size: 0.85rem; color: #93c5fd; font-weight: bold;">TOTAL VENTAS GLOBAL</p>
+                <h2 style="margin: 0.5rem 0 0 0; color: #60a5fa; font-size: 1.8rem; font-weight: bold;">$@globalTotalVentas.ToString("N2")</h2>
+            </div>
+            
+            <div style="background: rgba(16, 185, 129, 0.1); border-radius: 8px; padding: 1rem; border: 1px solid rgba(16, 185, 129, 0.2); flex: 1; min-width: 150px;">
+                <p style="margin: 0; font-size: 0.85rem; color: #6ee7b7; font-weight: bold;">EFECTIVO GLOBAL ESPERADO</p>
+                <h2 style="margin: 0.5rem 0 0 0; color: #10b981; font-size: 1.8rem; font-weight: bold;">$@globalEfectivo.ToString("N2")</h2>
+            </div>
+        </div>
+    </div>
+    
+    <div style="flex: 2; min-width: 300px; background: rgba(255, 255, 255, 0.03); border-radius: 8px; padding: 1rem; border: 1px solid rgba(255, 255, 255, 0.05);">
+        <h4 style="margin: 0 0 0.8rem 0; font-size: 0.9rem; color: #d1d5db; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 0.5rem;">Desglose Global por Medios de Pago</h4>
+        
+        @if (globalPaymentBreakdown.Any())
+        {
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.8rem;">
+                @foreach (var pb in globalPaymentBreakdown.OrderByDescending(x => x.Value))
+                {
+                    <div style="display: flex; justify-content: space-between; font-size: 0.9rem; color: #bfdbfe; background: rgba(0,0,0,0.2); padding: 0.5rem 0.8rem; border-radius: 6px;">
+                        <span>@pb.Key</span>
+                        <strong>$@pb.Value.ToString("N2")</strong>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div style="font-size: 0.9rem; color: #9ca3af; font-style: italic; padding: 1rem 0; text-align: center;">Sin pagos registrados en cajas abiertas</div>
+        }
+    </div>
+</div>
+
 <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem;">
     @foreach (var pos in Model)
     {
@@ -53,15 +124,17 @@
         decimal saldoEsperado = 0;
         decimal totalVentas = 0;
         int cantVentas = 0;
+        var validSales = new List<GestionQ.Domain.Entities.Sale>();
 
         if (isOpen)
         {
-            totalEfectivo = activeRegister.Sales.SelectMany(s => s.Payments).Where(p => p.PaymentMethod?.Name == "Efectivo").Sum(p => p.Amount);
-            ingresos = activeRegister.Movements.Where(m => m.Type == "Ingreso").Sum(m => m.Amount);
-            egresos = activeRegister.Movements.Where(m => m.Type == "Egreso").Sum(m => m.Amount);
+            validSales = activeRegister.Sales.Where(s => !s.IsCancelled).ToList();
+            totalEfectivo = validSales.SelectMany(s => s.Payments).Where(p => p.PaymentMethod?.Name == "Efectivo").Sum(p => p.Amount);
+            ingresos = Math.Abs(activeRegister.Movements.Where(m => m.Type == "Ingreso").Sum(m => m.Amount));
+            egresos = Math.Abs(activeRegister.Movements.Where(m => m.Type == "Egreso").Sum(m => m.Amount));
             saldoEsperado = activeRegister.InitialBalance + totalEfectivo + ingresos - egresos;
-            totalVentas = activeRegister.Sales.Sum(s => s.TotalAmount);
-            cantVentas = activeRegister.Sales.Count;
+            totalVentas = validSales.Sum(s => s.TotalAmount);
+            cantVentas = validSales.Count;
         }
 
         <div class="glass-panel" style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; position: relative;">
@@ -117,12 +190,74 @@
                     <p style="margin: 0.2rem 0; color: var(--text-muted);"><i class="fa-solid fa-user"></i> Cajero: <strong style="color: white;">@activeRegister.User?.UserName</strong></p>
                     <p style="margin: 0.2rem 0; color: var(--text-muted);"><i class="fa-solid fa-clock"></i> Apertura: <strong style="color: white;">@activeRegister.OpeningDate.ToString("dd/MM/yy HH:mm")</strong></p>
 
-                    <div style="background: rgba(59, 130, 246, 0.1); border-radius: 8px; padding: 1rem; margin-top: 1rem;">
-                        <p style="margin: 0; font-size: 0.85rem; color: #93c5fd;">Ventas en Sesión (@cantVentas)</p>
-                        <h2 style="margin: 0; color: #60a5fa; font-size: 1.5rem;">$@totalVentas.ToString("N2")</h2>
+                                        <div style="background: rgba(16, 185, 129, 0.1); border-radius: 8px; padding: 1rem; margin-top: 1rem;">
+                        <p style="margin: 0; font-size: 0.85rem; color: #6ee7b7;">Total Efectivo en Caja</p>
+                        <h3 style="margin: 0; color: #10b981; font-size: 1.5rem;">$@saldoEsperado.ToString("N2")</h3>
+                        <p style="margin: 0.2rem 0 0 0; font-size: 0.75rem; color: #a7f3d0;">
+                            (Efectivo Inicial: $@activeRegister.InitialBalance.ToString("N2"))
+                        </p>
+                        @if (ingresos > 0 || egresos > 0)
+                        {
+                            <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed rgba(16, 185, 129, 0.3); font-size: 0.8rem; color: #a7f3d0;">
+                                @if (ingresos > 0) {
+                                    <div style="display: flex; justify-content: space-between;">
+                                        <span>Entradas / Ingresos:</span>
+                                        <strong>+$@ingresos.ToString("N2")</strong>
+                                    </div>
+                                }
+                                @if (egresos > 0) {
+                                    <div style="display: flex; justify-content: space-between; color: #fca5a5;">
+                                        <span>Retiros / Egresos:</span>
+                                        <strong>-$@egresos.ToString("N2")</strong>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+
+                    <div style="background: rgba(59, 130, 246, 0.1); border-radius: 8px; padding: 1rem; margin-top: 0.5rem;">
+                        <p style="margin: 0; font-size: 0.85rem; color: #93c5fd; font-weight: bold;">Desglose de Ventas (@cantVentas):</p>
                         
-                        <p style="margin: 0.5rem 0 0 0; font-size: 0.85rem; color: #6ee7b7;">Efectivo en Caja</p>
-                        <h3 style="margin: 0; color: #10b981; font-size: 1.25rem;">$@saldoEsperado.ToString("N2")</h3>
+                        <div style="margin: 0.5rem 0; padding: 0.5rem 0; border-top: 1px dashed rgba(96, 165, 250, 0.3); border-bottom: 1px dashed rgba(96, 165, 250, 0.3);">
+                            @{
+                                var paymentBreakdown = validSales
+                                    .SelectMany(s => s.Payments)
+                                    .GroupBy(p => p.PaymentMethod != null ? p.PaymentMethod.Name : "Otro")
+                                    .Select(g => new { Method = g.Key, Amount = g.Sum(x => x.Amount) })
+                                    .ToList();
+
+                                if (paymentBreakdown.Any())
+                                {
+                                    foreach(var pb in paymentBreakdown)
+                                    {
+                                        <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: #bfdbfe; margin-bottom: 0.2rem;">
+                                            <span>@pb.Method</span>
+                                            <strong>$@pb.Amount.ToString("N2")</strong>
+                                        </div>
+                                    }
+                                }
+                                else
+                                {
+                                    <div style="font-size: 0.85rem; color: #bfdbfe; font-style: italic;">Sin pagos registrados</div>
+                                }
+                            }
+                        </div>
+                        
+                        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 0.5rem;">
+                            <span style="font-size: 0.9rem; color: #93c5fd; font-weight: bold;">TOTAL VENTAS:</span>
+                            <h2 style="margin: 0; color: #60a5fa; font-size: 1.3rem; font-weight: bold;">$@totalVentas.ToString("N2")</h2>
+                        </div>
+                        @{
+                            var cancelledSales = activeRegister.Sales.Where(s => s.IsCancelled).ToList();
+                            if (cancelledSales.Any())
+                            {
+                                var totalAnuladas = cancelledSales.Sum(s => s.TotalAmount);
+                                <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 0.5rem; color: #f87171; border-top: 1px dashed rgba(248, 113, 113, 0.3); padding-top: 0.5rem;">
+                                    <span style="font-size: 0.8rem; font-weight: bold;">ANULADAS (@cancelledSales.Count):</span>
+                                    <span style="font-size: 0.9rem; font-weight: bold;">$@totalAnuladas.ToString("N2")</span>
+                                </div>
+                            }
+                        }
                     </div>
                 }
                 else
@@ -142,3 +277,10 @@
         </div>
     }
 </div>
+
+
+
+
+
+
+

@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 echo ==========================================
 echo DETENIENDO SERVICIOS Y APLICACIONES
 echo ==========================================
@@ -13,6 +13,8 @@ echo ==========================================
 cd /d "%~dp0"
 echo Construyendo Servidor Central...
 dotnet publish "src\GestionQ.Web\GestionQ.Web.csproj" -c Release -o "C:\GestionQ\app"
+echo Copiando a bin\Debug para que el servicio levante el codigo nuevo...
+dotnet build "src\GestionQ.Web\GestionQ.Web.csproj"
 
 echo Construyendo Caja POS...
 dotnet publish "src\GestionQ.CajaPOS\GestionQ.CajaPOS.csproj" -c Release -o "C:\GestionQ\app_cajapos"
@@ -25,3 +27,4 @@ net start GestionQ_Web_Service
 echo.
 echo Listo! Ya puedes abrir el Desktop de GestionQ.
 pause
+

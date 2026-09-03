@@ -65,26 +65,44 @@ namespace GestionQ.CajaPOS
             var unsyncedSales = await db.Sales.Include(s => s.Items).Include(s => s.Payments).Where(s => !s.IsSynced).ToListAsync();
             var unsyncedMovements = await db.Movements.Where(m => !m.IsSynced).ToListAsync();
             var unsyncedCustomers = await db.Customers.Where(c => EF.Property<bool>(c, "IsSynced") == false).ToListAsync();
+            var unsyncedRegisters = await db.OfflineCashRegisters.Where(r => !r.IsSynced).ToListAsync();
+            var allOfflineRegisters = await db.OfflineCashRegisters.ToListAsync();
 
-            if (unsyncedSales.Any() || unsyncedMovements.Any() || unsyncedCustomers.Any())
+            if (unsyncedSales.Any() || unsyncedMovements.Any() || unsyncedCustomers.Any() || unsyncedRegisters.Any())
             {
                 var pushRequest = new SyncPushRequest
                 {
                     PosIdentifier = this.PosIdentifier,
+                    OfflineCashRegisters = unsyncedRegisters.Select(r => new OfflineCashRegisterSyncDto { GlobalId = r.GlobalId, UserId = r.UserId, OpeningDate = r.OpeningDate, ClosingDate = r.ClosingDate, InitialBalance = r.InitialBalance, FinalCashBalance = r.FinalCashBalance }).ToList(),
                     NewCustomers = unsyncedCustomers.Select(c => new CustomerSyncDto { Dni = c.Dni, Name = c.Name, Email = c.Email, Phone = c.Phone, Cuit = c.Cuit }).ToList(),
                     Sales = unsyncedSales.Select(s => {
                         var customer = s.CustomerId.HasValue ? db.Customers.Find(s.CustomerId.Value) : null;
-                        return new SaleSyncDto { GlobalId = s.GlobalId, Date = s.Date, TotalAmount = s.TotalAmount, SubTotal = s.SubTotal, DiscountAmount = s.DiscountAmount, PaymentDiscountAmount = s.PaymentDiscountAmount, UserId = s.UserId, CashRegisterId = s.CashRegisterId, CustomerDni = customer?.Dni, RequestElectronicInvoice = s.RequestElectronicInvoice, Items = s.Items.Select(i => new SaleItemSyncDto { ProductId = i.ProductId, Quantity = i.Quantity, UnitPrice = i.UnitPrice, DiscountAmount = i.DiscountAmount }).ToList(), Payments = s.Payments.Select(p => new SalePaymentSyncDto { PaymentMethodId = p.PaymentMethodId, Amount = p.Amount, TransactionReference = p.TransactionReference }).ToList() };
+                        var offlineReg = allOfflineRegisters.FirstOrDefault(r => r.Id == s.CashRegisterId);
+                        return new SaleSyncDto { GlobalId = s.GlobalId, Date = s.Date, TotalAmount = s.TotalAmount, SubTotal = s.SubTotal, DiscountAmount = s.DiscountAmount, PaymentDiscountAmount = s.PaymentDiscountAmount, UserId = s.UserId, CashRegisterId = offlineReg == null ? s.CashRegisterId : offlineReg.ServerCashRegisterId, OfflineCashRegisterGlobalId = offlineReg?.GlobalId, CustomerDni = customer?.Dni, RequestElectronicInvoice = s.RequestElectronicInvoice, IsCancelled = s.IsCancelled, CancellationDate = s.CancellationDate, Items = s.Items.Select(i => new SaleItemSyncDto { ProductId = i.ProductId, Quantity = i.Quantity, UnitPrice = i.UnitPrice, DiscountAmount = i.DiscountAmount }).ToList(), Payments = s.Payments.Select(p => new SalePaymentSyncDto { PaymentMethodId = p.PaymentMethodId, Amount = p.Amount, TransactionReference = p.TransactionReference }).ToList() };
                     }).ToList(),
-                    Movements = unsyncedMovements.Select(m => new MovementSyncDto { GlobalId = m.GlobalId, Amount = m.Amount, Type = m.Type, Description = m.Description, Date = m.Date, CashRegisterId = m.CashRegisterId }).ToList()
+                    Movements = unsyncedMovements.Select(m => {
+                        var offlineReg = allOfflineRegisters.FirstOrDefault(r => r.Id == m.CashRegisterId);
+                        return new MovementSyncDto { GlobalId = m.GlobalId, Amount = m.Amount, Type = m.Type, Description = m.Description, Date = m.Date, CashRegisterId = offlineReg == null ? m.CashRegisterId : offlineReg.ServerCashRegisterId, OfflineCashRegisterGlobalId = offlineReg?.GlobalId };
+                    }).ToList()
                 };
 
                 var pushResponse = await _httpClient.PostAsJsonAsync($"{_serverUrl}/api/sync/push", pushRequest);
 
                 if (pushResponse.IsSuccessStatusCode)
                 {
+                    try {
+                        var responseData = await pushResponse.Content.ReadFromJsonAsync<SyncPushResponse>();
+                        if (responseData?.RegisterIdMap != null) {
+                            foreach(var r in unsyncedRegisters) {
+                                if (responseData.RegisterIdMap.TryGetValue(r.GlobalId, out int serverId)) {
+                                    r.ServerCashRegisterId = serverId;
+                                }
+                            }
+                        }
+                    } catch { }
                     foreach (var s in unsyncedSales) s.IsSynced = true;
                     foreach (var m in unsyncedMovements) m.IsSynced = true;
+                    foreach (var r in unsyncedRegisters) r.IsSynced = true;
                     foreach (var c in unsyncedCustomers) db.Entry(c).Property("IsSynced").CurrentValue = true;
                     await db.SaveChangesAsync();
                 }
@@ -119,6 +137,20 @@ namespace GestionQ.CajaPOS
                         if (!string.IsNullOrEmpty(result.CompanyInfo.LogoUrl))
                         {
                             await DownloadImageAsync(result.CompanyInfo.LogoUrl);
+                        }
+                    }
+
+                    if (result.Users != null && result.Users.Any())
+                    {
+                        var usersSetting = await db.SystemSettings.FirstOrDefaultAsync(s => s.Key == "PosUsers");
+                        string usersText = System.Text.Json.JsonSerializer.Serialize(result.Users);
+                        if (usersSetting == null)
+                        {
+                            db.SystemSettings.Add(new SystemSetting { Key = "PosUsers", Value = usersText });
+                        }
+                        else
+                        {
+                            usersSetting.Value = usersText;
                         }
                     }
 

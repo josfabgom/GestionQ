@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXTAUTH_URL=https://galopsrl.com.ar
+      - NEXTAUTH_SECRET=tu_secreto_seguro_aqui_para_produccion
+      - DATABASE_URL=file:./dev.db
+    volumes:
+      - ./prisma/dev.db:/app/prisma/dev.db
+    restart: always

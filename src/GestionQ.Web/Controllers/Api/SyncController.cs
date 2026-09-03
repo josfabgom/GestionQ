@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Linq;
@@ -16,11 +16,13 @@ namespace GestionQ.Web.Controllers.Api
     {
         private readonly ApplicationDbContext _context;
         private readonly Microsoft.Extensions.Configuration.IConfiguration _config;
+        private readonly Microsoft.AspNetCore.Identity.UserManager<Microsoft.AspNetCore.Identity.IdentityUser> _userManager;
 
-        public SyncController(ApplicationDbContext context, Microsoft.Extensions.Configuration.IConfiguration config)
+        public SyncController(ApplicationDbContext context, Microsoft.Extensions.Configuration.IConfiguration config, Microsoft.AspNetCore.Identity.UserManager<Microsoft.AspNetCore.Identity.IdentityUser> userManager)
         {
             _context = context;
             _config = config;
+            _userManager = userManager;
         }
 
         private async Task<PointOfSale> GetOrCreatePosAsync(string identifier)
@@ -153,13 +155,37 @@ namespace GestionQ.Web.Controllers.Api
                 ProductIds = p.Products.Select(pr => pr.ProductId).ToList()
             }).ToList();
 
+            var posUsers = new List<PosUserSyncDto>();
+            var allUsers = await _userManager.Users.ToListAsync();
+            foreach (var user in allUsers)
+            {
+                var roles = await _userManager.GetRolesAsync(user);
+                if (roles.Contains("Cajero") || roles.Contains("Vendedor") || roles.Contains("Admin"))
+                {
+                    var claims = await _userManager.GetClaimsAsync(user);
+                    var pinClaim = claims.FirstOrDefault(c => c.Type == "UserPin");
+                    var fullNameClaim = claims.FirstOrDefault(c => c.Type == "FullName");
+                    if (pinClaim != null)
+                    {
+                        posUsers.Add(new PosUserSyncDto
+                        {
+                            Id = user.Id,
+                            UserName = user.UserName ?? string.Empty,
+                            FullName = fullNameClaim?.Value ?? user.UserName ?? string.Empty,
+                            Pin = pinClaim.Value
+                        });
+                    }
+                }
+            }
+
             return Ok(new SyncPullResponse { 
                 Products = products,
                 Customers = customers,
                 Departments = departments,
                 PaymentMethods = paymentMethods,
                 CompanyInfo = companyInfo,
-                ActivePromotions = activePromosResult
+                ActivePromotions = activePromosResult,
+                Users = posUsers
             });
         }
 
@@ -193,8 +219,40 @@ namespace GestionQ.Web.Controllers.Api
             // Process Sales
             foreach (var saleDto in request.Sales)
             {
-                var exists = await _context.Sales.AnyAsync(s => s.GlobalId == saleDto.GlobalId);
-                if (exists) continue;
+                var existingSale = await _context.Sales.Include(s => s.Items).FirstOrDefaultAsync(s => s.GlobalId == saleDto.GlobalId);
+                if (existingSale != null)
+                {
+                    if (saleDto.IsCancelled && !existingSale.IsCancelled)
+                    {
+                        existingSale.IsCancelled = true;
+                        existingSale.CancellationDate = saleDto.CancellationDate ?? DateTime.Now;
+                        _context.Sales.Update(existingSale);
+
+                        // Reverse stock
+                        foreach (var item in existingSale.Items)
+                        {
+                            var product = await _context.Products.FindAsync(item.ProductId);
+                            if (product != null && !product.IsDepartment)
+                            {
+                                decimal previousStock = product.Stock;
+                                product.Stock += item.Quantity;
+                                _context.Products.Update(product);
+
+                                _context.StockMovements.Add(new StockMovement
+                                {
+                                    Date = DateTime.Now,
+                                    ProductId = product.Id,
+                                    Quantity = item.Quantity,
+                                    Type = MovementType.Return,
+                                    Concept = $"Anulación de Venta (Sincronización POS) de {item.Quantity} un.",
+                                    PreviousStock = previousStock,
+                                    NewStock = product.Stock
+                                });
+                            }
+                        }
+                    }
+                    continue;
+                }
 
                 int? customerId = null;
                 if (!string.IsNullOrEmpty(saleDto.CustomerDni))
@@ -210,12 +268,16 @@ namespace GestionQ.Web.Controllers.Api
                     TotalAmount = saleDto.TotalAmount,
                     SubTotal = saleDto.SubTotal,
                     DiscountAmount = saleDto.DiscountAmount,
+                    PaymentDiscountAmount = saleDto.PaymentDiscountAmount,
                     UserId = saleDto.UserId,
                     CashRegisterId = saleDto.CashRegisterId,
                     CustomerId = customerId,
                     PointOfSaleId = pos.Id,
                     IsSynced = true,
                     SyncedAt = DateTime.Now,
+                    RequestElectronicInvoice = saleDto.RequestElectronicInvoice,
+                    IsCancelled = saleDto.IsCancelled,
+                    CancellationDate = saleDto.CancellationDate,
                     Items = saleDto.Items.Select(i => new SaleItem
                     {
                         ProductId = i.ProductId,
@@ -233,25 +295,28 @@ namespace GestionQ.Web.Controllers.Api
 
                 _context.Sales.Add(sale);
 
-                foreach (var item in saleDto.Items)
+                if (!saleDto.IsCancelled)
                 {
-                    var product = await _context.Products.FindAsync(item.ProductId);
-                    if (product != null && !product.IsDepartment)
+                    foreach (var item in saleDto.Items)
                     {
-                        decimal previousStock = product.Stock;
-                        product.Stock -= item.Quantity;
-                        _context.Products.Update(product);
-
-                        _context.StockMovements.Add(new StockMovement
+                        var product = await _context.Products.FindAsync(item.ProductId);
+                        if (product != null && !product.IsDepartment)
                         {
-                            Date = DateTime.Now,
-                            ProductId = product.Id,
-                            Quantity = -item.Quantity,
-                            Type = MovementType.Sale,
-                            Concept = $"Venta offline (Caja POS) de {item.Quantity} un.",
-                            PreviousStock = previousStock,
-                            NewStock = product.Stock
-                        });
+                            decimal previousStock = product.Stock;
+                            product.Stock -= item.Quantity;
+                            _context.Products.Update(product);
+
+                            _context.StockMovements.Add(new StockMovement
+                            {
+                                Date = DateTime.Now,
+                                ProductId = product.Id,
+                                Quantity = -item.Quantity,
+                                Type = MovementType.Sale,
+                                Concept = $"Venta offline (Caja POS) de {item.Quantity} un.",
+                                PreviousStock = previousStock,
+                                NewStock = product.Stock
+                            });
+                        }
                     }
                 }
             }
@@ -282,3 +347,4 @@ namespace GestionQ.Web.Controllers.Api
         }
     }
 }
+
