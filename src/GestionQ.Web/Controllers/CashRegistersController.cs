@@ -45,6 +45,20 @@ namespace GestionQ.Web.Controllers
                 .FirstOrDefaultAsync(c => c.UserId == user.Id && c.ClosingDate == null);
             ViewBag.HasOpenRegister = openRegister != null;
             if (openRegister != null) ViewBag.OpenRegisterId = openRegister.Id;
+            
+            bool canClose = false;
+            if (openRegister != null)
+            {
+                var terminalPosIdStr = Request.Cookies["TerminalPOSId"];
+                if (!string.IsNullOrEmpty(terminalPosIdStr) && int.TryParse(terminalPosIdStr, out int posId))
+                {
+                    if (openRegister.PointOfSaleId == posId)
+                    {
+                        canClose = true;
+                    }
+                }
+            }
+            ViewBag.CanCloseRegister = canClose;
 
             return View(list);
         }
@@ -138,6 +152,13 @@ namespace GestionQ.Web.Controllers
 
             if (register == null) return NotFound();
             
+            var terminalPosIdStr = Request.Cookies["TerminalPOSId"];
+            if (string.IsNullOrEmpty(terminalPosIdStr) || !int.TryParse(terminalPosIdStr, out int posId) || register.PointOfSaleId != posId)
+            {
+                TempData["Message"] = "No puedes cerrar esta caja desde esta terminal central. Debe cerrarse desde el Punto de Venta donde se abrió.";
+                return RedirectToAction(nameof(Index));
+            }
+            
             // Seguridad: solo el dueño o admin pueden cerrar
             if (register.UserId != user.Id && !User.IsInRole("Admin")) return Forbid();
             
@@ -210,6 +231,13 @@ namespace GestionQ.Web.Controllers
                     .FirstOrDefaultAsync(c => c.Id == id);
 
                 if (register == null) return NotFound();
+            
+            var terminalPosIdStr = Request.Cookies["TerminalPOSId"];
+            if (string.IsNullOrEmpty(terminalPosIdStr) || !int.TryParse(terminalPosIdStr, out int posId) || register.PointOfSaleId != posId)
+            {
+                TempData["Message"] = "No puedes cerrar esta caja desde esta terminal central. Debe cerrarse desde el Punto de Venta donde se abrió.";
+                return RedirectToAction(nameof(Index));
+            }
                 if (register.UserId != user.Id && !User.IsInRole("Admin")) return Forbid();
                 if (register.ClosingDate != null) return RedirectToAction(nameof(Details), new { id = register.Id });
 
@@ -257,6 +285,20 @@ namespace GestionQ.Web.Controllers
                 .FirstOrDefaultAsync(c => c.Id == id);
 
             if (register == null) return NotFound();
+
+            bool canCloseDetails = false;
+            if (register.IsOpen)
+            {
+                var terminalPosIdStr = Request.Cookies["TerminalPOSId"];
+                if (!string.IsNullOrEmpty(terminalPosIdStr) && int.TryParse(terminalPosIdStr, out int posId))
+                {
+                    if (register.PointOfSaleId == posId)
+                    {
+                        canCloseDetails = true;
+                    }
+                }
+            }
+            ViewBag.CanCloseRegister = canCloseDetails;
 
             if (register.IsOpen)
             {
@@ -393,6 +435,20 @@ namespace GestionQ.Web.Controllers
                 .FirstOrDefaultAsync(c => c.Id == id);
 
             if (register == null) return NotFound();
+
+            bool canCloseDetails = false;
+            if (register.IsOpen)
+            {
+                var terminalPosIdStr = Request.Cookies["TerminalPOSId"];
+                if (!string.IsNullOrEmpty(terminalPosIdStr) && int.TryParse(terminalPosIdStr, out int posId))
+                {
+                    if (register.PointOfSaleId == posId)
+                    {
+                        canCloseDetails = true;
+                    }
+                }
+            }
+            ViewBag.CanCloseRegister = canCloseDetails;
 
             if (register.IsOpen)
             {

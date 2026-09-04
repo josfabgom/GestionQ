@@ -6,11 +6,11 @@
 
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
     <h1 class="page-title">Cajas / Turnos</h1>
-    @if (ViewBag.HasOpenRegister)
+    @if (ViewBag.CanCloseRegister)
     {
         <a asp-action="Close" asp-route-id="@ViewBag.OpenRegisterId" class="btn-danger" style="background: #ef4444;">🛒 Cerrar Caja Actual</a>
     }
-    else
+    else if (!ViewBag.HasOpenRegister)
     {
         <a asp-action="Open" class="btn-primary" style="background: #10b981;">💵 Abrir Nueva Caja</a>
     }
