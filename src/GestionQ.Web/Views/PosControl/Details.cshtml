@@ -13,7 +13,10 @@
         <h1 class="page-title" style="margin: 0;"><i class="fa-solid fa-cash-register"></i> @Model.Name</h1>
     </div>
     
-    @if (activeRegister != null)
+    @{
+        var isCentralPos = Context.Request.Cookies["TerminalPOSId"] == Model.Id.ToString();
+    }
+    @if (activeRegister != null && isCentralPos)
     {
         <form asp-action="ForceClose" method="post" onsubmit="return confirm('¿Estás seguro de que deseas forzar el cierre de esta caja de manera remota?');">
             <input type="hidden" name="id" value="@activeRegister.Id" />
