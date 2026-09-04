@@ -17,7 +17,7 @@ namespace GestionQ.CajaPOS
         {
             _serverUrl = serverUrl.TrimEnd('/');
             _httpClient = new HttpClient();
-            _httpClient.Timeout = TimeSpan.FromSeconds(5);
+            _httpClient.Timeout = TimeSpan.FromSeconds(1.5);
         }
 
         public async Task<PosLoginResponseDto> LoginAsync(string pin, string posIdentifier)

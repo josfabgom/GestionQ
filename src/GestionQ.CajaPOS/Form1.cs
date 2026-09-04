@@ -151,7 +151,7 @@ public class Form1 : Form
 		{
 			Invoke((MethodInvoker)delegate
 			{
-				btnSync.Text = "⚠\ufe0f Error Sync";
+				btnSync.Text = "⚠ OFFLINE (Local)";
 				btnSync.ForeColor = Color.Red;
 			});
 		};
@@ -427,9 +427,9 @@ public class Form1 : Form
 			}
 			catch (Exception ex2)
 			{
-				btnSync.Text = "⚠\ufe0f Error Sync";
+				btnSync.Text = "⚠ OFFLINE (Local)";
 				btnSync.ForeColor = Color.Red;
-				MessageBox.Show("No se pudo conectar con la central en " + AppConfig.ServerUrl + ".\nError técnico: " + ex2.Message, "Error de conexión", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+				/* MessageBox.Show bloqueante removido para UX Offline */
 			}
 		};
 		btnCloseRegister = new Button
@@ -1720,7 +1720,7 @@ public class Form1 : Form
 					{
 						Invoke((MethodInvoker)delegate
 						{
-							btnSync.Text = "⚠\ufe0f Error Sync";
+							btnSync.Text = "⚠ OFFLINE (Local)";
 							btnSync.ForeColor = Color.Red;
 						});
 					}
