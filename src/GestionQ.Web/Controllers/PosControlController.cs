@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -151,12 +151,7 @@ namespace GestionQ.Web.Controllers
 
             if (register == null) return NotFound();
             
-            var terminalPosIdStr = Request.Cookies["TerminalPOSId"];
-            if (string.IsNullOrEmpty(terminalPosIdStr) || !int.TryParse(terminalPosIdStr, out int posId) || register.PointOfSaleId != posId)
-            {
-                TempData["Message"] = "No puedes forzar el cierre de esta caja. Debe cerrarse desde el Punto de Venta donde se abrió.";
-                return RedirectToAction(nameof(Details), new { id = register.PointOfSaleId });
-            }
+
             if (register.ClosingDate != null)
             {
                 TempData["Message"] = "Esta caja ya se encuentra cerrada.";

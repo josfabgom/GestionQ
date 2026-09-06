@@ -1,4 +1,4 @@
-﻿@model GestionQ.Domain.Entities.PointOfSale
+@model GestionQ.Domain.Entities.PointOfSale
 @{
     ViewData["Title"] = $"Control POS: {Model.Name}";
     var activeRegister = ViewBag.ActiveRegister as GestionQ.Domain.Entities.CashRegister;
@@ -16,7 +16,7 @@
     @{
         var isCentralPos = Context.Request.Cookies["TerminalPOSId"] == Model.Id.ToString();
     }
-    @if (activeRegister != null && isCentralPos)
+    @if (activeRegister != null)
     {
         <form asp-action="ForceClose" method="post" onsubmit="return confirm('¿Estás seguro de que deseas forzar el cierre de esta caja de manera remota?');">
             <input type="hidden" name="id" value="@activeRegister.Id" />

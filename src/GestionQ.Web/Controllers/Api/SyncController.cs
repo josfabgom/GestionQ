@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Linq;
@@ -195,6 +195,33 @@ namespace GestionQ.Web.Controllers.Api
             var pos = await GetOrCreatePosAsync(request.PosIdentifier);
             await TrackSyncAsync(pos);
 
+            var registerIdMap = new Dictionary<Guid, int>();
+
+            foreach (var regDto in request.OfflineCashRegisters)
+            {
+                var existingRegister = await _context.CashRegisters
+                    .FirstOrDefaultAsync(c => c.UserId == regDto.UserId 
+                                         && c.PointOfSaleId == pos.Id 
+                                         && Math.Abs(EF.Functions.DateDiffSecond(c.OpeningDate, regDto.OpeningDate)) < 5);
+
+                if (existingRegister == null)
+                {
+                    existingRegister = new CashRegister
+                    {
+                        UserId = regDto.UserId,
+                        PointOfSaleId = pos.Id,
+                        OpeningDate = regDto.OpeningDate,
+                        ClosingDate = regDto.ClosingDate,
+                        InitialBalance = regDto.InitialBalance,
+                        FinalCashBalance = regDto.FinalCashBalance
+                    };
+                    _context.CashRegisters.Add(existingRegister);
+                    await _context.SaveChangesAsync();
+                }
+                
+                registerIdMap[regDto.GlobalId] = existingRegister.Id;
+            }
+
             // Process New Customers
             foreach (var custDto in request.NewCustomers)
             {
@@ -217,6 +244,7 @@ namespace GestionQ.Web.Controllers.Api
             await _context.SaveChangesAsync(); // Save so we can get IDs for sales
 
             // Process Sales
+            _context.IgnoreStockChangesForLogging = true;
             foreach (var saleDto in request.Sales)
             {
                 var existingSale = await _context.Sales.Include(s => s.Items).FirstOrDefaultAsync(s => s.GlobalId == saleDto.GlobalId);
@@ -270,7 +298,7 @@ namespace GestionQ.Web.Controllers.Api
                     DiscountAmount = saleDto.DiscountAmount,
                     PaymentDiscountAmount = saleDto.PaymentDiscountAmount,
                     UserId = saleDto.UserId,
-                    CashRegisterId = saleDto.CashRegisterId,
+                    CashRegisterId = saleDto.CashRegisterId ?? (saleDto.OfflineCashRegisterGlobalId.HasValue && registerIdMap.ContainsKey(saleDto.OfflineCashRegisterGlobalId.Value) ? registerIdMap[saleDto.OfflineCashRegisterGlobalId.Value] : null),
                     CustomerId = customerId,
                     PointOfSaleId = pos.Id,
                     IsSynced = true,
@@ -334,7 +362,7 @@ namespace GestionQ.Web.Controllers.Api
                     Type = movDto.Type,
                     Description = movDto.Description,
                     Date = movDto.Date,
-                    CashRegisterId = movDto.CashRegisterId ?? 1,
+                    CashRegisterId = movDto.CashRegisterId ?? (movDto.OfflineCashRegisterGlobalId.HasValue && registerIdMap.ContainsKey(movDto.OfflineCashRegisterGlobalId.Value) ? registerIdMap[movDto.OfflineCashRegisterGlobalId.Value] : 1),
                     IsSynced = true,
                     SyncedAt = DateTime.Now
                 };
@@ -343,7 +371,44 @@ namespace GestionQ.Web.Controllers.Api
             }
 
             await _context.SaveChangesAsync();
-            return Ok();
+
+            foreach (var regDto in request.OfflineCashRegisters.Where(r => r.ClosingDate != null))
+            {
+                if (registerIdMap.TryGetValue(regDto.GlobalId, out int serverRegId))
+                {
+                    var register = await _context.CashRegisters
+                        .Include(c => c.Movements)
+                        .Include(c => c.Sales).ThenInclude(s => s.Payments).ThenInclude(p => p.PaymentMethod)
+                        .FirstOrDefaultAsync(c => c.Id == serverRegId);
+
+                    if (register != null)
+                    {
+                        register.ClosingDate = regDto.ClosingDate;
+                        register.FinalCashBalance = regDto.FinalCashBalance;
+
+                        decimal totalEfectivoVentas = register.Sales.Where(s => !s.IsCancelled)
+                            .SelectMany(s => s.Payments)
+                            .Where(p => p.PaymentMethod != null && p.PaymentMethod.Name == "Efectivo")
+                            .Sum(p => p.Amount);
+
+                        decimal totalIngresos = register.Movements
+                            .Where(m => m.Type == "Ingreso")
+                            .Sum(m => m.Amount);
+
+                        decimal totalEgresos = register.Movements
+                            .Where(m => m.Type == "Egreso")
+                            .Sum(m => m.Amount);
+
+                        register.ExpectedCashBalance = register.InitialBalance + totalEfectivoVentas + totalIngresos - totalEgresos;
+                        register.Difference = regDto.FinalCashBalance - register.ExpectedCashBalance;
+
+                        _context.CashRegisters.Update(register);
+                    }
+                }
+            }
+            await _context.SaveChangesAsync();
+
+            return Ok(new SyncPushResponse { Success = true, RegisterIdMap = registerIdMap });
         }
     }
 }
