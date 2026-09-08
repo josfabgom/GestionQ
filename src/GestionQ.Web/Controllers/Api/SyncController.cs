@@ -199,10 +199,21 @@ namespace GestionQ.Web.Controllers.Api
 
             foreach (var regDto in request.OfflineCashRegisters)
             {
-                var existingRegister = await _context.CashRegisters
+                // Fetch recent registers for this user/POS to do in-memory matching (avoids EF DateDiff/Timezone translation issues)
+                var recentRegisters = await _context.CashRegisters
                     .Where(c => c.UserId == regDto.UserId && c.PointOfSaleId == pos.Id)
                     .OrderByDescending(c => c.OpeningDate)
-                    .FirstOrDefaultAsync();
+                    .Take(10)
+                    .ToListAsync();
+
+                // Match if OpeningDate is within 5 minutes (ignoring timezones by checking modulo hours), 
+                // OR if both are open, OR if we are closing the open one.
+                var existingRegister = recentRegisters.FirstOrDefault(c => 
+                    Math.Abs((c.OpeningDate - regDto.OpeningDate).TotalMinutes) < 5 ||
+                    (c.OpeningDate.Minute == regDto.OpeningDate.Minute && Math.Abs((c.OpeningDate - regDto.OpeningDate).TotalHours) <= 12) ||
+                    (c.ClosingDate == null && regDto.ClosingDate == null) ||
+                    (c.ClosingDate == null && regDto.ClosingDate != null && c.OpeningDate <= regDto.ClosingDate)
+                );
 
                 if (existingRegister == null)
                 {
@@ -216,8 +227,16 @@ namespace GestionQ.Web.Controllers.Api
                         FinalCashBalance = regDto.FinalCashBalance
                     };
                     _context.CashRegisters.Add(existingRegister);
-                    await _context.SaveChangesAsync();
                 }
+                else
+                {
+                    // Update properties if it already exists (e.g. it is being closed)
+                    existingRegister.ClosingDate = regDto.ClosingDate;
+                    if (regDto.FinalCashBalance > 0 || regDto.ClosingDate != null)
+                        existingRegister.FinalCashBalance = regDto.FinalCashBalance;
+                }
+                
+                await _context.SaveChangesAsync();
                 
                 registerIdMap[regDto.GlobalId] = existingRegister.Id;
             }
@@ -298,7 +317,7 @@ namespace GestionQ.Web.Controllers.Api
                     DiscountAmount = saleDto.DiscountAmount,
                     PaymentDiscountAmount = saleDto.PaymentDiscountAmount,
                     UserId = saleDto.UserId,
-                    CashRegisterId = saleDto.CashRegisterId ?? (saleDto.OfflineCashRegisterGlobalId.HasValue && registerIdMap.ContainsKey(saleDto.OfflineCashRegisterGlobalId.Value) ? registerIdMap[saleDto.OfflineCashRegisterGlobalId.Value] : null),
+                    CashRegisterId = (saleDto.CashRegisterId.HasValue && saleDto.CashRegisterId.Value > 0) ? saleDto.CashRegisterId.Value : (saleDto.OfflineCashRegisterGlobalId.HasValue && registerIdMap.ContainsKey(saleDto.OfflineCashRegisterGlobalId.Value) ? registerIdMap[saleDto.OfflineCashRegisterGlobalId.Value] : null),
                     CustomerId = customerId,
                     PointOfSaleId = pos.Id,
                     IsSynced = true,
@@ -362,7 +381,7 @@ namespace GestionQ.Web.Controllers.Api
                     Type = movDto.Type,
                     Description = movDto.Description,
                     Date = movDto.Date,
-                    CashRegisterId = movDto.CashRegisterId ?? (movDto.OfflineCashRegisterGlobalId.HasValue && registerIdMap.ContainsKey(movDto.OfflineCashRegisterGlobalId.Value) ? registerIdMap[movDto.OfflineCashRegisterGlobalId.Value] : 1),
+                    CashRegisterId = (movDto.CashRegisterId.HasValue && movDto.CashRegisterId.Value > 0) ? movDto.CashRegisterId.Value : (movDto.OfflineCashRegisterGlobalId.HasValue && registerIdMap.ContainsKey(movDto.OfflineCashRegisterGlobalId.Value) ? registerIdMap[movDto.OfflineCashRegisterGlobalId.Value] : 1),
                     IsSynced = true,
                     SyncedAt = DateTime.Now
                 };
