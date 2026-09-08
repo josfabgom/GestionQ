@@ -200,9 +200,9 @@ namespace GestionQ.Web.Controllers.Api
             foreach (var regDto in request.OfflineCashRegisters)
             {
                 var existingRegister = await _context.CashRegisters
-                    .FirstOrDefaultAsync(c => c.UserId == regDto.UserId 
-                                         && c.PointOfSaleId == pos.Id 
-                                         && Math.Abs(EF.Functions.DateDiffSecond(c.OpeningDate, regDto.OpeningDate)) < 5);
+                    .Where(c => c.UserId == regDto.UserId && c.PointOfSaleId == pos.Id)
+                    .OrderByDescending(c => c.OpeningDate)
+                    .FirstOrDefaultAsync();
 
                 if (existingRegister == null)
                 {

@@ -19,6 +19,8 @@ namespace GestionQ.CajaPOS
         private Label lblEfectivoEsperado;
         private DataGridView gridMethods;
         private DataGridView gridProducts;
+        private Label lblTotalPagos;
+        private Label lblTotalArticulos;
         private Button btnPrint;
         private Button btnClose;
 
@@ -63,7 +65,7 @@ namespace GestionQ.CajaPOS
             summaryPanel.Controls.Add(lblMethods);
 
             gridMethods = new DataGridView { 
-                Location = new Point(10, 185), Size = new Size(330, 220), 
+                Location = new Point(10, 185), Size = new Size(330, 190), 
                 AllowUserToAddRows = false, ReadOnly = true, 
                 RowHeadersVisible = false, AllowUserToResizeColumns = false, 
                 AllowUserToResizeRows = false, BackgroundColor = Color.White,
@@ -71,6 +73,9 @@ namespace GestionQ.CajaPOS
                 SelectionMode = DataGridViewSelectionMode.FullRowSelect
             };
             summaryPanel.Controls.Add(gridMethods);
+
+            lblTotalPagos = new Label { Font = new Font("Segoe UI", 12, FontStyle.Bold), Location = new Point(10, 385), AutoSize = true, ForeColor = Color.FromArgb(0, 123, 255) };
+            summaryPanel.Controls.Add(lblTotalPagos);
             this.Controls.Add(summaryPanel);
 
             var productsPanel = new Panel { Location = new Point(390, 80), Size = new Size(370, 420), BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
@@ -78,13 +83,16 @@ namespace GestionQ.CajaPOS
             productsPanel.Controls.Add(lblProdTitle);
 
             gridProducts = new DataGridView { 
-                Location = new Point(10, 45), Size = new Size(350, 360), 
+                Location = new Point(10, 45), Size = new Size(350, 330), 
                 AllowUserToAddRows = false, ReadOnly = true, 
                 RowHeadersVisible = false, AllowUserToResizeColumns = false, 
                 AllowUserToResizeRows = false, BackgroundColor = Color.White,
                 SelectionMode = DataGridViewSelectionMode.FullRowSelect
             };
             productsPanel.Controls.Add(gridProducts);
+
+            lblTotalArticulos = new Label { Font = new Font("Segoe UI", 12, FontStyle.Bold), Location = new Point(10, 385), AutoSize = true, ForeColor = Color.FromArgb(0, 123, 255) };
+            productsPanel.Controls.Add(lblTotalArticulos);
             this.Controls.Add(productsPanel);
 
             btnPrint = new Button { Text = "🖨️ Imprimir Ticket", Font = new Font("Segoe UI", 12, FontStyle.Bold), Location = new Point(390, 510), Size = new Size(180, 40), BackColor = Color.FromArgb(0, 123, 255), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
@@ -101,7 +109,7 @@ namespace GestionQ.CajaPOS
             try
             {
                 var ventas = _db.Sales
-                    .Where(s => s.CashRegisterId == _cashRegisterId && s.Date >= _openingDate)
+                    .Where(s => s.CashRegisterId == _cashRegisterId && s.Date >= _openingDate && !s.IsCancelled)
                     .ToList();
 
                 var ventaIds = ventas.Select(v => v.Id).ToList();
@@ -141,13 +149,18 @@ namespace GestionQ.CajaPOS
                 {
                     gridMethods.Columns["Total"].DefaultCellStyle.Format = "C2";
                 }
+                
+                decimal sumPagos = groupedPayments.Sum(g => g.Total);
+                lblTotalPagos.Text = $"TOTAL RECAUDADO: {sumPagos:C2}";
 
                 var groupedItems = items.GroupBy(i => productsDict.ContainsKey(i.ProductId) ? productsDict[i.ProductId] : "Producto " + i.ProductId)
-                                        .Select(g => new { Producto = g.Key, Cant = g.Sum(i => i.Quantity), Total = g.Sum(i => i.UnitPrice * i.Quantity) })
+                                        .Select(g => new { Producto = g.Key, Cant = g.Sum(i => i.Quantity), Total = g.Sum(i => i.UnitPrice * i.Quantity - i.DiscountAmount) })
                                         .OrderByDescending(g => g.Cant)
                                         .ToList();
                 
                 gridProducts.DataSource = groupedItems;
+                decimal sumArticulos = groupedItems.Sum(g => g.Total);
+                lblTotalArticulos.Text = $"TOTAL VENDIDO: {totalVentas:C2}";
                 if(gridProducts.Columns.Count > 0)
                 {
                     gridProducts.Columns["Producto"].Width = 180;

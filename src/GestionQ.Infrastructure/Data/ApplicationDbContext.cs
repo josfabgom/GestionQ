@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using GestionQ.Domain.Entities;
@@ -75,6 +75,8 @@ namespace GestionQ.Infrastructure.Data
             return base.SaveChangesAsync(cancellationToken);
         }
 
+
+
         private void ProcessProductChanges()
         {
             var entries = ChangeTracker.Entries<Product>()
@@ -85,7 +87,15 @@ namespace GestionQ.Infrastructure.Data
             {
                 if (entry.State == EntityState.Modified)
                 {
-                    entry.Entity.LastModified = System.DateTime.Now;
+                    var hasRelevantChanges = entry.Properties.Any(p => p.IsModified && 
+                        p.Metadata.Name != "LastModified" && 
+                        p.Metadata.Name != "CreationDate" && 
+                        p.Metadata.Name != "NeedsLabelPrint");
+
+                    if (hasRelevantChanges)
+                    {
+                        entry.Entity.LastModified = System.DateTime.Now;
+                    }
                 }
 
                 string changes = "";
@@ -99,7 +109,7 @@ namespace GestionQ.Infrastructure.Data
                     foreach(var prop in entry.Properties.Where(p => p.IsModified))
                     {
                         var propName = prop.Metadata.Name;
-                        if (propName == "LastModified" || propName == "CreationDate") continue;
+                        if (propName == "LastModified" || propName == "CreationDate" || propName == "NeedsLabelPrint") continue;
                         
                         string original = prop.OriginalValue?.ToString() ?? "N/A";
                         string current = prop.CurrentValue?.ToString() ?? "N/A";

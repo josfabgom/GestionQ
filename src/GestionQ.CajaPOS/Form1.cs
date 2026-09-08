@@ -530,7 +530,16 @@ public class Form1 : Form
 		btnSalesHistory.FlatAppearance.BorderSize = 0;
 		btnSalesHistory.Click += delegate
 		{
-			new SalesHistoryForm(_cashRegisterId, _posNumber).ShowDialog(this);
+			DateTime openingDate = DateTime.Today;
+			using (LocalDbContext localDbContext = new LocalDbContext())
+			{
+				OfflineCashRegister offlineCashRegister = localDbContext.OfflineCashRegisters.FirstOrDefault((OfflineCashRegister r) => r.Id == _cashRegisterId || r.ServerCashRegisterId == (int?)_cashRegisterId);
+				if (offlineCashRegister != null)
+				{
+					openingDate = offlineCashRegister.OpeningDate;
+				}
+			}
+			new SalesHistoryForm(_cashRegisterId, _posNumber, openingDate).ShowDialog(this);
 		};
 		flowLayoutPanel.Controls.Add(btnSync);
 		flowLayoutPanel.Controls.Add(btnSettings);
@@ -1398,7 +1407,10 @@ public class Form1 : Form
 			if (num > 1m)
 			{
 				dataGridViewRow.Cells["Quantity"].Value = num - 1m;
-				dataGridViewRow.Cells["SubTotal"].Value = CalculateSubTotal((int)dataGridViewRow.Cells["Id"].Value, price, num - 1m);
+				decimal newSubTotal = CalculateSubTotal((int)dataGridViewRow.Cells["Id"].Value, price, num - 1m);
+				decimal newDiscount = (price * (num - 1m)) - newSubTotal;
+				dataGridViewRow.Cells["Discount"].Value = newDiscount > 0m ? (object)newDiscount : null;
+				dataGridViewRow.Cells["SubTotal"].Value = newSubTotal;
 			}
 			else
 			{
@@ -1409,7 +1421,10 @@ public class Form1 : Form
 		else if (e.ColumnIndex == gridItems.Columns["btnPlus"].Index)
 		{
 			dataGridViewRow.Cells["Quantity"].Value = num + 1m;
-			dataGridViewRow.Cells["SubTotal"].Value = CalculateSubTotal((int)dataGridViewRow.Cells["Id"].Value, price, num + 1m);
+			decimal newSubTotal = CalculateSubTotal((int)dataGridViewRow.Cells["Id"].Value, price, num + 1m);
+			decimal newDiscount = (price * (num + 1m)) - newSubTotal;
+			dataGridViewRow.Cells["Discount"].Value = newDiscount > 0m ? (object)newDiscount : null;
+			dataGridViewRow.Cells["SubTotal"].Value = newSubTotal;
 			UpdateTotals();
 		}
 	}
@@ -1454,7 +1469,10 @@ public class Form1 : Form
 			{
 				decimal num = Convert.ToDecimal(item.Cells["Quantity"].Value);
 				item.Cells["Quantity"].Value = num + qty;
-				item.Cells["SubTotal"].Value = CalculateSubTotal((int)item.Cells["Id"].Value, price, num + qty);
+				decimal newSubTotal = CalculateSubTotal((int)item.Cells["Id"].Value, price, num + qty);
+				decimal newDiscount = (price * (num + qty)) - newSubTotal;
+				item.Cells["Discount"].Value = newDiscount > 0m ? (object)newDiscount : null;
+				item.Cells["SubTotal"].Value = newSubTotal;
 				flag = true;
 				break;
 			}
@@ -1462,7 +1480,9 @@ public class Form1 : Form
 		if (!flag)
 		{
 			string text = $"{name} ({stock:0.##})";
-			gridItems.Rows.Add(id, text, text, price, "-", qty, "+", CalculateSubTotal(id, price, qty));
+			decimal subTotal = CalculateSubTotal(id, price, qty);
+			decimal discount = (price * qty) - subTotal;
+			gridItems.Rows.Add(id, text, text, price, "-", qty, "+", discount > 0m ? (object)discount : null, subTotal);
 		}
 		UpdateTotals();
 	}
@@ -1470,13 +1490,18 @@ public class Form1 : Form
 	private void UpdateTotals()
 	{
 		decimal value = default(decimal);
+		decimal grossTotal = default(decimal);
 		int num = 0;
 		foreach (DataGridViewRow item in (IEnumerable)gridItems.Rows)
 		{
 			value += Convert.ToDecimal(item.Cells["SubTotal"].Value);
+			decimal qty = Convert.ToDecimal(item.Cells["Quantity"].Value);
+			decimal price = Convert.ToDecimal(item.Cells["Price"].Value);
+			grossTotal += (qty * price);
 			num++;
 		}
 		lblTotal.Text = $"${value:N2}";
+		lblSubTotalValue.Text = $"${grossTotal:N2}";
 		lblItemsCount.Text = $"Cantidad de Artículos: {num}";
 		lblVuelto.Text = $"Resta: -${value:N2}";
 		if (lblTotal.Parent != null)

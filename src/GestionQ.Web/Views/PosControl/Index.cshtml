@@ -1,4 +1,4 @@
-﻿@model IEnumerable<GestionQ.Domain.Entities.PointOfSale>
+@model IEnumerable<GestionQ.Domain.Entities.PointOfSale>
 @{
     ViewData["Title"] = "Tablero de Control de Cajas POS";
 }
@@ -49,7 +49,7 @@
 
     foreach (var pos in Model)
     {
-        var activeRegister = pos.CashRegisters.FirstOrDefault();
+        var activeRegister = pos.CashRegisters.OrderByDescending(cr => cr.OpeningDate).FirstOrDefault();
         if (activeRegister != null)
         {
             globalCajasAbiertas++;
@@ -115,7 +115,7 @@
 <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem;">
     @foreach (var pos in Model)
     {
-        var activeRegister = pos.CashRegisters.FirstOrDefault(); // There should be at most 1 open register due to the query filter
+        var activeRegister = pos.CashRegisters.OrderByDescending(cr => cr.OpeningDate).FirstOrDefault(); // Fetch most recent open register
         bool isOpen = activeRegister != null;
         
         decimal totalEfectivo = 0;

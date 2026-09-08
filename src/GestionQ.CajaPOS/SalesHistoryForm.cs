@@ -11,13 +11,16 @@ namespace GestionQ.CajaPOS
         private DataGridView gridSales;
         private Button btnCancelSale;
         private Button btnClose;
+        private Label lblTotalVentas;
         private int _cashRegisterId;
         private int _posNumber;
+        private DateTime _openingDate;
 
-        public SalesHistoryForm(int cashRegisterId, int posNumber)
+        public SalesHistoryForm(int cashRegisterId, int posNumber, DateTime openingDate)
         {
             _cashRegisterId = cashRegisterId;
             _posNumber = posNumber;
+            _openingDate = openingDate;
             InitializeUI();
             LoadSales();
         }
@@ -80,17 +83,28 @@ namespace GestionQ.CajaPOS
             };
             btnClose.Click += (s, e) => this.Close();
 
+            lblTotalVentas = new Label
+            {
+                Text = "TOTAL VENTAS: $0.00",
+                Location = new Point(350, 420),
+                AutoSize = true,
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                ForeColor = Color.FromArgb(0, 123, 255)
+            };
+
             this.Controls.Add(gridSales);
             this.Controls.Add(btnCancelSale);
             this.Controls.Add(btnClose);
+            this.Controls.Add(lblTotalVentas);
         }
 
         private void LoadSales()
         {
             gridSales.Rows.Clear();
             using var db = new LocalDbContext();
-            var sales = db.Sales.Where(s => s.CashRegisterId == _cashRegisterId).OrderByDescending(s => s.Id).ToList();
+            var sales = db.Sales.Where(s => s.CashRegisterId == _cashRegisterId && s.Date >= _openingDate).OrderByDescending(s => s.Id).ToList();
             
+            decimal sumTotal = 0;
             foreach (var sale in sales)
             {
                 string ticketNo = $"{_posNumber:D5}-{sale.Id:D8}";
@@ -102,7 +116,12 @@ namespace GestionQ.CajaPOS
                     gridSales.Rows[rowIndex].DefaultCellStyle.ForeColor = Color.Red;
                     gridSales.Rows[rowIndex].DefaultCellStyle.Font = new Font("Segoe UI", 9, FontStyle.Strikeout);
                 }
+                else
+                {
+                    sumTotal += sale.TotalAmount;
+                }
             }
+            lblTotalVentas.Text = $"TOTAL: {sumTotal:C2}";
         }
 
         private void BtnCancelSale_Click(object sender, EventArgs e)
