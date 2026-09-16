@@ -9,6 +9,8 @@ namespace GestionQ.Domain.Entities
     {
         public int Id { get; set; }
 
+        public Guid GlobalId { get; set; } = Guid.NewGuid();
+
         [Required]
         public string UserId { get; set; } = string.Empty;
         public IdentityUser? User { get; set; }

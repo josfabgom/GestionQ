@@ -173,6 +173,7 @@
                 </button>
             </div>
 
+
             <h3 style="margin-top: 2rem; color: #10b981; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">
                 <i class="fa-solid fa-truck"></i> Configuración de Compras
             </h3>
@@ -223,7 +224,36 @@
     </div>
 </form>
 
-<!-- PANELES DE CONEXIONES EXTERNAS -->
+<!-- PANELES DE CONFIGURACIONES ADICIONALES -->
+<h2 style="margin-top: 3rem; margin-bottom: 1.5rem; color: #cbd5e1; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">
+    Configuraciones Adicionales
+</h2>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 2rem; align-items: start; margin-bottom: 2rem;">
+
+    <!-- Configuración Caja POS -->
+    <div class="glass-panel" style="padding: 1.5rem;">
+        <form asp-action="UpdatePOSSettings" method="post">
+            <h3 style="margin-top:0; color: #3b82f6; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">
+                <i class="fa-solid fa-cash-register"></i> Configuración de Caja POS
+            </h3>
+            
+            <div class="form-group" style="margin-top: 1rem;">
+                <label asp-for="DefaultPaymentMethodId" class="control-label"></label>
+                <select asp-for="DefaultPaymentMethodId" class="form-control" asp-items="ViewBag.PaymentMethods">
+                    <option value="">(Seleccionar el primer medio de pago disponible)</option>
+                </select>
+                <span asp-validation-for="DefaultPaymentMethodId" class="text-danger"></span>
+            </div>
+
+            <div style="margin-top: 1.5rem; text-align: right;">
+                <button type="submit" class="btn-primary" style="padding: 0.5rem 1.5rem;">
+                    <i class="fa-solid fa-save"></i> Guardar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <h2 style="margin-top: 3rem; margin-bottom: 1.5rem; color: #cbd5e1; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">
     Conexiones Externas
 </h2>

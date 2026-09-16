@@ -90,16 +90,7 @@ namespace GestionQ.CajaPOS
 
                 if (pushResponse.IsSuccessStatusCode)
                 {
-                    try {
-                        var responseData = await pushResponse.Content.ReadFromJsonAsync<SyncPushResponse>();
-                        if (responseData?.RegisterIdMap != null) {
-                            foreach(var r in unsyncedRegisters) {
-                                if (responseData.RegisterIdMap.TryGetValue(r.GlobalId, out int serverId)) {
-                                    r.ServerCashRegisterId = serverId;
-                                }
-                            }
-                        }
-                    } catch { }
+                    // No longer need to map IDs. The server uses GlobalId deterministically.
                     foreach (var s in unsyncedSales) s.IsSynced = true;
                     foreach (var m in unsyncedMovements) m.IsSynced = true;
                     foreach (var r in unsyncedRegisters) r.IsSynced = true;

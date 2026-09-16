@@ -14,7 +14,7 @@ set SERVICE_NAME=GestionQ_Web_Service
 set DISPLAY_NAME=GestionQ Web Server
 set DESCRIPTION=Servidor backend central para el sistema de GestionQ.
 
-set "EXE_PATH=%~dp0src\GestionQ.Web\bin\Debug\net9.0\GestionQ.Web.exe"
+set "EXE_PATH=%~dp0src\GestionQ.Web\bin\Debug\net10.0\GestionQ.Web.exe"
 if not exist "%EXE_PATH%" (
     set "EXE_PATH=%~dp0GestionQ.Web.exe"
 )

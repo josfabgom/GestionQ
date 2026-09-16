@@ -195,30 +195,29 @@ namespace GestionQ.Web.Controllers.Api
             var pos = await GetOrCreatePosAsync(request.PosIdentifier);
             await TrackSyncAsync(pos);
 
-            var registerIdMap = new Dictionary<Guid, int>();
-
             foreach (var regDto in request.OfflineCashRegisters)
             {
-                // Fetch recent registers for this user/POS to do in-memory matching (avoids EF DateDiff/Timezone translation issues)
-                var recentRegisters = await _context.CashRegisters
-                    .Where(c => c.UserId == regDto.UserId && c.PointOfSaleId == pos.Id)
-                    .OrderByDescending(c => c.OpeningDate)
-                    .Take(10)
-                    .ToListAsync();
-
-                // Match if OpeningDate is within 5 minutes (ignoring timezones by checking modulo hours), 
-                // OR if both are open, OR if we are closing the open one.
-                var existingRegister = recentRegisters.FirstOrDefault(c => 
-                    Math.Abs((c.OpeningDate - regDto.OpeningDate).TotalMinutes) < 5 ||
-                    (c.OpeningDate.Minute == regDto.OpeningDate.Minute && Math.Abs((c.OpeningDate - regDto.OpeningDate).TotalHours) <= 12) ||
-                    (c.ClosingDate == null && regDto.ClosingDate == null) ||
-                    (c.ClosingDate == null && regDto.ClosingDate != null && c.OpeningDate <= regDto.ClosingDate)
-                );
+                var existingRegister = await _context.CashRegisters.FirstOrDefaultAsync(c => c.GlobalId == regDto.GlobalId);
 
                 if (existingRegister == null)
                 {
+                    // If opening a new register, ensure no zombies exist for this POS!
+                    if (regDto.ClosingDate == null)
+                    {
+                        var zombies = await _context.CashRegisters
+                            .Where(c => c.PointOfSaleId == pos.Id && c.ClosingDate == null)
+                            .ToListAsync();
+                        
+                        foreach (var zombie in zombies)
+                        {
+                            zombie.ClosingDate = DateTime.Now;
+                            zombie.ExpectedCashBalance = zombie.InitialBalance; // Simplification for force close
+                        }
+                    }
+
                     existingRegister = new CashRegister
                     {
+                        GlobalId = regDto.GlobalId,
                         UserId = regDto.UserId,
                         PointOfSaleId = pos.Id,
                         OpeningDate = regDto.OpeningDate,
@@ -230,15 +229,12 @@ namespace GestionQ.Web.Controllers.Api
                 }
                 else
                 {
-                    // Update properties if it already exists (e.g. it is being closed)
                     existingRegister.ClosingDate = regDto.ClosingDate;
                     if (regDto.FinalCashBalance > 0 || regDto.ClosingDate != null)
                         existingRegister.FinalCashBalance = regDto.FinalCashBalance;
                 }
                 
                 await _context.SaveChangesAsync();
-                
-                registerIdMap[regDto.GlobalId] = existingRegister.Id;
             }
 
             // Process New Customers
@@ -317,7 +313,7 @@ namespace GestionQ.Web.Controllers.Api
                     DiscountAmount = saleDto.DiscountAmount,
                     PaymentDiscountAmount = saleDto.PaymentDiscountAmount,
                     UserId = saleDto.UserId,
-                    CashRegisterId = (saleDto.CashRegisterId.HasValue && saleDto.CashRegisterId.Value > 0) ? saleDto.CashRegisterId.Value : (saleDto.OfflineCashRegisterGlobalId.HasValue && registerIdMap.ContainsKey(saleDto.OfflineCashRegisterGlobalId.Value) ? registerIdMap[saleDto.OfflineCashRegisterGlobalId.Value] : null),
+                    CashRegisterId = null, // We will assign it below based on GlobalId
                     CustomerId = customerId,
                     PointOfSaleId = pos.Id,
                     IsSynced = true,
@@ -339,6 +335,19 @@ namespace GestionQ.Web.Controllers.Api
                         TransactionReference = p.TransactionReference
                     }).ToList()
                 };
+
+                if (saleDto.OfflineCashRegisterGlobalId.HasValue)
+                {
+                    var targetRegister = await _context.CashRegisters.FirstOrDefaultAsync(c => c.GlobalId == saleDto.OfflineCashRegisterGlobalId.Value);
+                    if (targetRegister != null)
+                    {
+                        sale.CashRegisterId = targetRegister.Id;
+                    }
+                }
+                else if (saleDto.CashRegisterId.HasValue && saleDto.CashRegisterId.Value > 0)
+                {
+                    sale.CashRegisterId = saleDto.CashRegisterId.Value;
+                }
 
                 _context.Sales.Add(sale);
 
@@ -373,7 +382,6 @@ namespace GestionQ.Web.Controllers.Api
                 var exists = await _context.CashRegisterMovements.AnyAsync(m => m.GlobalId == movDto.GlobalId);
                 if (exists) continue;
 
-
                 var movement = new CashRegisterMovement
                 {
                     GlobalId = movDto.GlobalId,
@@ -381,10 +389,23 @@ namespace GestionQ.Web.Controllers.Api
                     Type = movDto.Type,
                     Description = movDto.Description,
                     Date = movDto.Date,
-                    CashRegisterId = (movDto.CashRegisterId.HasValue && movDto.CashRegisterId.Value > 0) ? movDto.CashRegisterId.Value : (movDto.OfflineCashRegisterGlobalId.HasValue && registerIdMap.ContainsKey(movDto.OfflineCashRegisterGlobalId.Value) ? registerIdMap[movDto.OfflineCashRegisterGlobalId.Value] : 1),
+                    CashRegisterId = 1, // Fallback, we assign below
                     IsSynced = true,
                     SyncedAt = DateTime.Now
                 };
+
+                if (movDto.OfflineCashRegisterGlobalId.HasValue)
+                {
+                    var targetRegister = await _context.CashRegisters.FirstOrDefaultAsync(c => c.GlobalId == movDto.OfflineCashRegisterGlobalId.Value);
+                    if (targetRegister != null)
+                    {
+                        movement.CashRegisterId = targetRegister.Id;
+                    }
+                }
+                else if (movDto.CashRegisterId.HasValue && movDto.CashRegisterId.Value > 0)
+                {
+                    movement.CashRegisterId = movDto.CashRegisterId.Value;
+                }
                 
                 _context.CashRegisterMovements.Add(movement);
             }
@@ -393,41 +414,38 @@ namespace GestionQ.Web.Controllers.Api
 
             foreach (var regDto in request.OfflineCashRegisters.Where(r => r.ClosingDate != null))
             {
-                if (registerIdMap.TryGetValue(regDto.GlobalId, out int serverRegId))
+                var register = await _context.CashRegisters
+                    .Include(c => c.Movements)
+                    .Include(c => c.Sales).ThenInclude(s => s.Payments).ThenInclude(p => p.PaymentMethod)
+                    .FirstOrDefaultAsync(c => c.GlobalId == regDto.GlobalId);
+
+                if (register != null)
                 {
-                    var register = await _context.CashRegisters
-                        .Include(c => c.Movements)
-                        .Include(c => c.Sales).ThenInclude(s => s.Payments).ThenInclude(p => p.PaymentMethod)
-                        .FirstOrDefaultAsync(c => c.Id == serverRegId);
+                    register.ClosingDate = regDto.ClosingDate;
+                    register.FinalCashBalance = regDto.FinalCashBalance;
 
-                    if (register != null)
-                    {
-                        register.ClosingDate = regDto.ClosingDate;
-                        register.FinalCashBalance = regDto.FinalCashBalance;
+                    decimal totalEfectivoVentas = register.Sales.Where(s => !s.IsCancelled)
+                        .SelectMany(s => s.Payments)
+                        .Where(p => p.PaymentMethod != null && p.PaymentMethod.Name == "Efectivo")
+                        .Sum(p => p.Amount);
 
-                        decimal totalEfectivoVentas = register.Sales.Where(s => !s.IsCancelled)
-                            .SelectMany(s => s.Payments)
-                            .Where(p => p.PaymentMethod != null && p.PaymentMethod.Name == "Efectivo")
-                            .Sum(p => p.Amount);
+                    decimal totalIngresos = register.Movements
+                        .Where(m => m.Type == "Ingreso")
+                        .Sum(m => m.Amount);
 
-                        decimal totalIngresos = register.Movements
-                            .Where(m => m.Type == "Ingreso")
-                            .Sum(m => m.Amount);
+                    decimal totalEgresos = register.Movements
+                        .Where(m => m.Type == "Egreso")
+                        .Sum(m => m.Amount);
 
-                        decimal totalEgresos = register.Movements
-                            .Where(m => m.Type == "Egreso")
-                            .Sum(m => m.Amount);
+                    register.ExpectedCashBalance = register.InitialBalance + totalEfectivoVentas + totalIngresos - totalEgresos;
+                    register.Difference = regDto.FinalCashBalance - register.ExpectedCashBalance;
 
-                        register.ExpectedCashBalance = register.InitialBalance + totalEfectivoVentas + totalIngresos - totalEgresos;
-                        register.Difference = regDto.FinalCashBalance - register.ExpectedCashBalance;
-
-                        _context.CashRegisters.Update(register);
-                    }
+                    _context.CashRegisters.Update(register);
                 }
             }
             await _context.SaveChangesAsync();
 
-            return Ok(new SyncPushResponse { Success = true, RegisterIdMap = registerIdMap });
+            return Ok(new SyncPushResponse { Success = true });
         }
     }
 }

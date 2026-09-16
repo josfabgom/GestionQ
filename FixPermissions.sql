@@ -1,4 +1,5 @@
-USE [GestionQ]
+SET QUOTED_IDENTIFIER ON;
+USE [GestionQN]
 GO
 
 DECLARE @RoleId NVARCHAR(450);
@@ -72,3 +73,4 @@ END
 
 PRINT 'Permisos actualizados correctamente para el rol Admin.';
 GO
+

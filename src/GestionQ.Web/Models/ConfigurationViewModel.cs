@@ -68,5 +68,8 @@ namespace GestionQ.Web.Models
 
         [Display(Name = "API Key")]
         public string DashboardApiKey { get; set; } = string.Empty;
+
+        [Display(Name = "Medio de Pago por Defecto en POS")]
+        public int? DefaultPaymentMethodId { get; set; }
     }
 }

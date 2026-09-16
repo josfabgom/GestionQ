@@ -131,8 +131,8 @@ namespace GestionQ.CajaPOS
                 var productsDict = _db.Products.ToDictionary(p => p.Id, p => p.Name);
 
                 decimal totalVentas = ventas.Sum(v => v.TotalAmount);
-                decimal ingresosExtra = movimientos.Where(m => m.Type == "IN").Sum(m => m.Amount);
-                decimal retiros = movimientos.Where(m => m.Type == "OUT").Sum(m => m.Amount);
+                decimal ingresosExtra = movimientos.Where(m => m.Type == "Ingreso").Sum(m => m.Amount);
+                decimal retiros = movimientos.Where(m => m.Type == "Egreso").Sum(m => m.Amount);
                 
                 decimal ventasEfectivo = pagos.Where(p => (methodsDict.ContainsKey(p.PaymentMethodId) ? methodsDict[p.PaymentMethodId] : "Efectivo") == "Efectivo").Sum(p => p.Amount);
                 
@@ -187,8 +187,8 @@ namespace GestionQ.CajaPOS
                 var methodsDict = _db.PaymentMethods.ToDictionary(m => m.Id, m => m.Name);
 
                 decimal totalVentas = ventas.Sum(v => v.TotalAmount);
-                decimal ingresosExtra = movimientos.Where(m => m.Type == "IN").Sum(m => m.Amount);
-                decimal retiros = movimientos.Where(m => m.Type == "OUT").Sum(m => m.Amount);
+                decimal ingresosExtra = movimientos.Where(m => m.Type == "Ingreso").Sum(m => m.Amount);
+                decimal retiros = movimientos.Where(m => m.Type == "Egreso").Sum(m => m.Amount);
                 decimal ventasEfectivo = pagos.Where(p => (methodsDict.ContainsKey(p.PaymentMethodId) ? methodsDict[p.PaymentMethodId] : "Efectivo") == "Efectivo").Sum(p => p.Amount);
                 decimal efectivoEsperado = _initialBalance + ventasEfectivo + ingresosExtra - retiros;
 

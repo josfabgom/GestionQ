@@ -110,7 +110,6 @@ namespace GestionQ.Domain.DTOs
     public class SyncPushResponse
     {
         public bool Success { get; set; }
-        public Dictionary<Guid, int> RegisterIdMap { get; set; } = new();
     }
 
     public class SaleSyncDto

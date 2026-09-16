@@ -49,7 +49,7 @@
 
     foreach (var pos in Model)
     {
-        var activeRegister = pos.CashRegisters.OrderByDescending(cr => cr.OpeningDate).FirstOrDefault();
+        var activeRegister = pos.CashRegisters.OrderByDescending(cr => cr.OpeningDate).FirstOrDefault(cr => cr.ClosingDate == null);
         if (activeRegister != null)
         {
             globalCajasAbiertas++;
@@ -115,7 +115,7 @@
 <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem;">
     @foreach (var pos in Model)
     {
-        var activeRegister = pos.CashRegisters.OrderByDescending(cr => cr.OpeningDate).FirstOrDefault(); // Fetch most recent open register
+        var activeRegister = pos.CashRegisters.OrderByDescending(cr => cr.OpeningDate).FirstOrDefault(cr => cr.ClosingDate == null); // Fetch most recent open register
         bool isOpen = activeRegister != null;
         
         decimal totalEfectivo = 0;

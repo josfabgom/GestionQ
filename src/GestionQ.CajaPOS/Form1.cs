@@ -673,7 +673,10 @@ public class Form1 : Form
 		};
 		totalBox.Paint += delegate(object? s, PaintEventArgs e)
 		{
-			ControlPaint.DrawBorder(e.Graphics, totalBox.ClientRectangle, greenColor, 1, ButtonBorderStyle.Solid, greenColor, 1, ButtonBorderStyle.Solid, greenColor, 1, ButtonBorderStyle.Solid, greenColor, 1, ButtonBorderStyle.Solid);
+			using (Pen pen = new Pen(greenColor, 1f))
+			{
+				e.Graphics.DrawRectangle(pen, 0, 0, totalBox.Width - 1, totalBox.Height - 1);
+			}
 		};
 		lblSubTotalText = new Label
 		{
@@ -754,6 +757,16 @@ public class Form1 : Form
 				e.Graphics.DrawString("LOGO EMPRESA", new Font("Segoe UI", 20f, FontStyle.Bold), Brushes.LightGray, new PointF(10f, 30f));
 			};
 		}
+		string appVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0.0";
+		Label lblVersion = new Label
+		{
+			Text = "v" + appVersion,
+			ForeColor = Color.Gray,
+			Font = new Font("Segoe UI", 8f),
+			AutoSize = true,
+			Margin = new Padding(10, 0, 0, 0)
+		};
+		controlsPanel.Controls.Add(lblVersion);
 		controlsPanel.Controls.Add(picLogo);
 		GroupBox gbCliente = CreateGroupBox("Cliente (F5 para crear)", 80);
 		cmbCustomer = new ComboBox
@@ -1637,6 +1650,23 @@ public class Form1 : Form
 			localCmbPaymentMethod.DataSource = list;
 			localCmbPaymentMethod.DisplayMember = "Name";
 			localCmbPaymentMethod.ValueMember = "Id";
+			
+			var defaultPaymentSetting = await db.SystemSettings.FirstOrDefaultAsync(s => s.Key == "DefaultPaymentMethodId");
+			if (defaultPaymentSetting != null && int.TryParse(defaultPaymentSetting.Value, out int defaultMethodId))
+			{
+				localCmbPaymentMethod.SelectedValue = defaultMethodId;
+			}
+			else
+			{
+				// Fallback to Efectivo if exists
+				var efectivo = list.FirstOrDefault(p => p.Name.ToLower() == "efectivo");
+				if (efectivo != null)
+				{
+					localCmbPaymentMethod.SelectedValue = efectivo.Id;
+				}
+			}
+
+
 			Label label = new Label
 			{
 				Text = "Paga con ($)",
@@ -1699,9 +1729,18 @@ public class Form1 : Form
 			};
 			if (localCmbPaymentMethod.Items.Count > 0)
 			{
-				int selectedIndex = localCmbPaymentMethod.SelectedIndex;
+				int targetIndex = 0;
+				SystemSetting defaultPmSetting = await db.SystemSettings.FirstOrDefaultAsync((SystemSetting s) => s.Key == "DefaultPaymentMethodId");
+				if (defaultPmSetting != null && int.TryParse(defaultPmSetting.Value, out int defaultPmId))
+				{
+					var item = list.FirstOrDefault(p => p.Id == defaultPmId);
+					if (item != null)
+					{
+						targetIndex = list.IndexOf(item);
+					}
+				}
 				localCmbPaymentMethod.SelectedIndex = -1;
-				localCmbPaymentMethod.SelectedIndex = ((selectedIndex >= 0) ? selectedIndex : 0);
+				localCmbPaymentMethod.SelectedIndex = targetIndex;
 			}
 			txtPagaCon.TextChanged += delegate
 			{

@@ -10,6 +10,7 @@ using System.Text.Json.Nodes;
 using System.Text.Json;
 using System.IO;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 using GestionQ.Domain.Constants;
 
@@ -71,6 +72,14 @@ namespace GestionQ.Web.Controllers
             {
                 model.NextInternalSupplierNumber = 1;
             }
+
+            var defaultPmSetting = _context.SystemSettings.FirstOrDefault(s => s.Key == "DefaultPaymentMethodId");
+            if (defaultPmSetting != null && int.TryParse(defaultPmSetting.Value, out var defaultPmId))
+            {
+                model.DefaultPaymentMethodId = defaultPmId;
+            }
+
+            ViewBag.PaymentMethods = new SelectList(_context.PaymentMethods.Where(p => p.IsActive).OrderBy(p => p.Name), "Id", "Name");
 
             return View(model);
         }
@@ -190,6 +199,7 @@ namespace GestionQ.Web.Controllers
                     _context.SystemSettings.Add(setting);
                 }
                 setting.Value = model.NextInternalSupplierNumber.ToString();
+
                 await _context.SaveChangesAsync();
 
                 TempData["SuccessMessage"] = "Configuración guardada correctamente.";
@@ -201,6 +211,40 @@ namespace GestionQ.Web.Controllers
                 return View(model);
             }
         }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdatePOSSettings(ConfigurationViewModel model)
+        {
+            try
+            {
+                var pmSetting = await _context.SystemSettings.FirstOrDefaultAsync(s => s.Key == "DefaultPaymentMethodId");
+                if (model.DefaultPaymentMethodId.HasValue)
+                {
+                    if (pmSetting == null)
+                    {
+                        pmSetting = new SystemSetting { Key = "DefaultPaymentMethodId", Description = "ID del Medio de Pago por defecto en Caja POS" };
+                        _context.SystemSettings.Add(pmSetting);
+                    }
+                    pmSetting.Value = model.DefaultPaymentMethodId.Value.ToString();
+                }
+                else if (pmSetting != null)
+                {
+                    _context.SystemSettings.Remove(pmSetting);
+                }
+
+                await _context.SaveChangesAsync();
+
+                TempData["SuccessMessage"] = "La configuración de Caja POS se guardó correctamente.";
+                return RedirectToAction(nameof(SystemSettings));
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = "Ocurrió un error al guardar la configuración de Caja POS: " + ex.Message;
+                return RedirectToAction(nameof(SystemSettings));
+            }
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> UpdateCompanyIdentity(ConfigurationViewModel model)

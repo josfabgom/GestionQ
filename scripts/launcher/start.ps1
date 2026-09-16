@@ -30,7 +30,7 @@ $ProdDesktopExe = Join-Path $AppPath "GestionQ.Desktop.exe"
 if (Test-Path $ProdDesktopExe) {
     $DesktopExe = $ProdDesktopExe
 } else {
-    $DesktopExe = "d:\Antigravity Proyectos\GestionQ\src\GestionQ.Desktop\bin\Debug\net9.0-windows\GestionQ.Desktop.exe"
+    $DesktopExe = "c:\AntiGravity Proyectos\GestionQ\src\GestionQ.Desktop\bin\Debug\net9.0-windows\GestionQ.Desktop.exe"
 }
 
 # Abrir la interfaz web (Aplicación de Escritorio)
