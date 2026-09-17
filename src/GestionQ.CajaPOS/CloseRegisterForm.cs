@@ -64,29 +64,29 @@ namespace GestionQ.CajaPOS
 
             try
             {
-                bool result = await _authClient.CloseRegisterAsync(_cashRegisterId, finalBalance);
-                if (result)
+                using (var db = new LocalDbContext())
                 {
-                    CloseSuccess = true;
-                    try 
+                    var register = db.OfflineCashRegisters.Find(_cashRegisterId);
+                    if (register != null)
                     {
-                        TicketText = await _authClient.GetRegisterTicketAsync(_cashRegisterId);
+                        register.ClosingDate = DateTime.Now;
+                        register.FinalCashBalance = finalBalance;
+                        register.IsSynced = false;
+                        db.SaveChanges();
                     }
-                    catch 
-                    {
-                        // Ignore error, maybe print later
-                    }
-                    this.DialogResult = DialogResult.OK;
-                    this.Close();
                 }
-                else
-                {
-                    lblError.Text = "Error al cerrar la caja en el servidor.";
-                }
+                CloseSuccess = true;
+                
+                // Let's not try to get the Ticket from the server synchronously here anymore.
+                // It can be generated locally or skipped for now.
+                TicketText = "Caja cerrada offline. Sincronizando con el servidor...";
+
+                this.DialogResult = DialogResult.OK;
+                this.Close();
             }
             catch (Exception ex)
             {
-                lblError.Text = "Error de conexión con el servidor central.";
+                lblError.Text = "Error al cerrar la caja localmente: " + ex.Message;
             }
             finally
             {

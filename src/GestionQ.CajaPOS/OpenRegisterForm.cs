@@ -65,21 +65,32 @@ namespace GestionQ.CajaPOS
 
             try
             {
-                var result = await _authClient.OpenRegisterAsync(_userId, _posIdentifier, initialBalance);
-                if (result.Success)
+                using (var db = new LocalDbContext())
                 {
-                    OpenResult = result;
+                    var register = new OfflineCashRegister
+                    {
+                        GlobalId = Guid.NewGuid(),
+                        UserId = _userId,
+                        OpeningDate = DateTime.Now,
+                        InitialBalance = initialBalance,
+                        IsSynced = false
+                    };
+                    db.OfflineCashRegisters.Add(register);
+                    db.SaveChanges();
+
+                    OpenResult = new PosOpenRegisterResponseDto
+                    {
+                        Success = true,
+                        CashRegisterId = register.Id
+                    };
+                    
                     this.DialogResult = DialogResult.OK;
                     this.Close();
-                }
-                else
-                {
-                    lblError.Text = result.ErrorMessage ?? "Error desconocido.";
                 }
             }
             catch (Exception ex)
             {
-                lblError.Text = "Error de conexión con el servidor central.";
+                lblError.Text = "Error al abrir caja localmente: " + ex.Message;
             }
             finally
             {

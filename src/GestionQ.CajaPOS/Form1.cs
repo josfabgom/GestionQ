@@ -170,44 +170,40 @@ public class Form1 : Form
 		_userId = loginForm.LoginResult.UserId;
 		try
 		{
-			PosStatusResponseDto posStatusResponseDto = await _authClient.GetStatusAsync(_posIdentifier);
-			_posNumber = posStatusResponseDto.PosNumber.GetValueOrDefault(1);
 			using (LocalDbContext localDbContext = new LocalDbContext())
 			{
 				SystemSetting systemSetting = localDbContext.SystemSettings.FirstOrDefault((SystemSetting s) => s.Key == "PosNumber");
-				if (systemSetting == null)
+				if (systemSetting != null && int.TryParse(systemSetting.Value, out int posNum))
 				{
-					localDbContext.SystemSettings.Add(new SystemSetting
-					{
-						Key = "PosNumber",
-						Value = _posNumber.ToString()
-					});
+					_posNumber = posNum;
 				}
 				else
 				{
-					systemSetting.Value = _posNumber.ToString();
+				    _posNumber = 1;
 				}
-				localDbContext.SaveChanges();
-			}
-			if (posStatusResponseDto.HasOpenRegister)
-			{
-				if (posStatusResponseDto.UserId != _userId)
+				
+				var openRegister = localDbContext.OfflineCashRegisters.FirstOrDefault(c => c.ClosingDate == null);
+				
+				if (openRegister != null)
 				{
-					MessageBox.Show("La caja actual fue abierta por " + posStatusResponseDto.UserName + ". Para operar, inicie sesión con su usuario, o cierre la caja.", "Caja Ocupada", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
-					Application.Exit();
-					return;
+					if (openRegister.UserId != _userId)
+					{
+						MessageBox.Show("La caja actual fue abierta por otro usuario. Para operar, inicie sesión con su usuario, o cierre la caja.", "Caja Ocupada", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+						Application.Exit();
+						return;
+					}
+					_cashRegisterId = openRegister.Id;
 				}
-				_cashRegisterId = posStatusResponseDto.CashRegisterId.Value;
-			}
-			else
-			{
-				OpenRegisterForm openRegisterForm = new OpenRegisterForm(_authClient, _userId, _posIdentifier);
-				if (openRegisterForm.ShowDialog(this) != DialogResult.OK)
+				else
 				{
-					Application.Exit();
-					return;
+					OpenRegisterForm openRegisterForm = new OpenRegisterForm(_authClient, _userId, _posIdentifier);
+					if (openRegisterForm.ShowDialog(this) != DialogResult.OK)
+					{
+						Application.Exit();
+						return;
+					}
+					_cashRegisterId = openRegisterForm.OpenResult.CashRegisterId.Value;
 				}
-				_cashRegisterId = openRegisterForm.OpenResult.CashRegisterId.Value;
 			}
 		}
 		catch (Exception ex)
@@ -671,11 +667,14 @@ public class Form1 : Form
 			BackColor = Color.FromArgb(10, 10, 15),
 			Margin = new Padding(0, 0, 0, 10)
 		};
+		totalBox.Resize += (s, e) => totalBox.Invalidate();
 		totalBox.Paint += delegate(object? s, PaintEventArgs e)
 		{
-			using (Pen pen = new Pen(greenColor, 1f))
+			int thickness = 2;
+			using (Pen pen = new Pen(greenColor, thickness))
 			{
-				e.Graphics.DrawRectangle(pen, 0, 0, totalBox.Width - 1, totalBox.Height - 1);
+				int half = thickness / 2;
+				e.Graphics.DrawRectangle(pen, half, half, totalBox.Width - thickness, totalBox.Height - thickness);
 			}
 		};
 		lblSubTotalText = new Label
@@ -684,7 +683,7 @@ public class Form1 : Form
 			ForeColor = Color.LightGray,
 			Font = new Font("Segoe UI", 10f, FontStyle.Bold),
 			AutoSize = true,
-			Location = new Point(totalBox.Width - 150, 15),
+			Location = new Point(totalBox.Width - 150, 10),
 			Anchor = (AnchorStyles.Top | AnchorStyles.Right)
 		};
 		lblSubTotalValue = new Label
@@ -693,8 +692,28 @@ public class Form1 : Form
 			ForeColor = Color.LightGray,
 			Font = new Font("Segoe UI", 12f, FontStyle.Bold),
 			AutoSize = true,
-			Location = new Point(totalBox.Width - 70, 15),
+			Location = new Point(totalBox.Width - 70, 10),
 			Anchor = (AnchorStyles.Top | AnchorStyles.Right)
+		};
+		lblPromoDiscountText = new Label
+		{
+			Text = "Descuento:",
+			ForeColor = Color.Orange,
+			Font = new Font("Segoe UI", 10f, FontStyle.Bold),
+			AutoSize = true,
+			Location = new Point(totalBox.Width - 150, 35),
+			Anchor = (AnchorStyles.Top | AnchorStyles.Right),
+			Visible = false
+		};
+		lblPromoDiscountValue = new Label
+		{
+			Text = "-$0.00",
+			ForeColor = Color.Orange,
+			Font = new Font("Segoe UI", 10f, FontStyle.Bold),
+			AutoSize = true,
+			Location = new Point(totalBox.Width - 70, 35),
+			Anchor = (AnchorStyles.Top | AnchorStyles.Right),
+			Visible = false
 		};
 		lblTotalText = new Label
 		{
@@ -702,7 +721,7 @@ public class Form1 : Form
 			ForeColor = greenColor,
 			Font = new Font("Segoe UI", 10f, FontStyle.Bold),
 			AutoSize = true,
-			Location = new Point(totalBox.Width - 250, 60),
+			Location = new Point(totalBox.Width - 250, 70),
 			Anchor = (AnchorStyles.Top | AnchorStyles.Right)
 		};
 		lblTotal = new Label
@@ -711,7 +730,7 @@ public class Form1 : Form
 			ForeColor = greenColor,
 			Font = new Font("Segoe UI", 36f, FontStyle.Bold),
 			AutoSize = true,
-			Location = new Point(totalBox.Width - 160, 45),
+			Location = new Point(totalBox.Width - 160, 55),
 			Anchor = (AnchorStyles.Top | AnchorStyles.Right)
 		};
 		lblItemsCount = new Label
@@ -1513,6 +1532,21 @@ public class Form1 : Form
 			grossTotal += (qty * price);
 			num++;
 		}
+		
+		decimal discount = grossTotal - value;
+		if (discount > 0)
+		{
+		    lblPromoDiscountValue.Text = $"-${discount:N2}";
+		    lblPromoDiscountText.Visible = true;
+		    lblPromoDiscountValue.Visible = true;
+		}
+		else
+		{
+		    lblPromoDiscountValue.Text = "$0.00";
+		    lblPromoDiscountText.Visible = false;
+		    lblPromoDiscountValue.Visible = false;
+		}
+		
 		lblTotal.Text = $"${value:N2}";
 		lblSubTotalValue.Text = $"${grossTotal:N2}";
 		lblItemsCount.Text = $"Cantidad de Artículos: {num}";
@@ -1521,8 +1555,15 @@ public class Form1 : Form
 		{
 			lblTotal.Left = lblTotal.Parent.Width - lblTotal.Width - 10;
 			lblTotalText.Left = lblTotal.Left - lblTotalText.Width - 10;
+			
 			lblSubTotalValue.Left = lblTotal.Parent.Width - lblSubTotalValue.Width - 10;
-			lblSubTotalText.Left = lblSubTotalValue.Left - lblSubTotalText.Width - 10;
+			lblPromoDiscountValue.Left = lblTotal.Parent.Width - lblPromoDiscountValue.Width - 10;
+			
+			int maxValWidth = Math.Max(lblSubTotalValue.Width, lblPromoDiscountText.Visible ? lblPromoDiscountValue.Width : 0);
+			int textRightEdge = lblTotal.Parent.Width - maxValWidth - 20; // 10 margin + 10 gap
+			
+			lblSubTotalText.Left = textRightEdge - lblSubTotalText.Width;
+			lblPromoDiscountText.Left = textRightEdge - lblPromoDiscountText.Width;
 		}
 		if (lblVuelto.Parent != null)
 		{
