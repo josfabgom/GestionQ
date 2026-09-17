@@ -637,7 +637,8 @@ public class Form1 : Form
 		gridItems.Columns["Quantity"].DefaultCellStyle = new DataGridViewCellStyle
 		{
 			Alignment = DataGridViewContentAlignment.MiddleCenter,
-			Font = new Font("Segoe UI", 14f, FontStyle.Bold)
+			Font = new Font("Segoe UI", 14f, FontStyle.Bold),
+			Format = "0.##"
 		};
 		gridItems.CellContentClick += GridItems_CellContentClick;
 		Panel panel3 = new Panel
@@ -1552,14 +1553,14 @@ public class Form1 : Form
 	{
 		decimal value = default(decimal);
 		decimal grossTotal = default(decimal);
-		int num = 0;
+		decimal num = 0m;
 		foreach (DataGridViewRow item in (IEnumerable)gridItems.Rows)
 		{
 			value += Convert.ToDecimal(item.Cells["SubTotal"].Value);
 			decimal qty = Convert.ToDecimal(item.Cells["Quantity"].Value);
 			decimal price = Convert.ToDecimal(item.Cells["Price"].Value);
 			grossTotal += (qty * price);
-			num++;
+			num += qty;
 		}
 		
 		decimal discount = grossTotal - value;
@@ -1578,7 +1579,7 @@ public class Form1 : Form
 		
 		lblTotal.Text = $"${value:N2}";
 		lblSubTotalValue.Text = $"${grossTotal:N2}";
-		lblItemsCount.Text = $"Cantidad de Artículos: {num}";
+		lblItemsCount.Text = $"Cantidad de Artículos: {num.ToString("0.##")}";
 		lblVuelto.Text = $"Resta: -${value:N2}";
 		if (lblTotal.Parent != null)
 		{
