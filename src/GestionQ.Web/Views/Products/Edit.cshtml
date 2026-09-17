@@ -34,6 +34,10 @@
                             </button>
                         </div>
                         <span asp-validation-for="Barcode" class="text-danger"></span>
+                        
+                        <button type="button" class="btn-secondary" style="margin-top: 1rem; width: 100%; display: flex; justify-content: center; align-items: center; gap: 0.5rem;" onclick="openPresentacionesModal()">
+                            <i class="fas fa-box-open"></i> Presentaciones / Bultos
+                        </button>
                     </div>
                 </div>
 
@@ -182,42 +186,51 @@
             </div>
         </div>
 
-        <div class="card" style="margin-top: 2rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                <h3 style="margin: 0; font-size: 1.1rem; color: var(--primary);">Presentaciones / Bultos</h3>
-                <button type="button" class="btn-secondary" onclick="addPresentation()">+ Agregar Presentaci&oacute;n</button>
-            </div>
-            <div class="table-container">
-                <table class="data-table" id="presentationsTable">
-                    <thead>
-                        <tr>
-                            <th>Nombre (Ej: Fardo x 6)</th>
-                            <th>C&oacute;digo de Barras</th>
-                            <th style="width: 100px;">Cant. Unidades</th>
-                            <th style="width: 120px;">Precio Fijo ($)</th>
-                            <th style="width: 80px; text-align: center;">Imp. Etiqueta</th>
-                            <th style="width: 60px;"></th>
-                        </tr>
-                    </thead>
-                    <tbody id="presentationsBody">
-                        @for (int i = 0; i < Model.Presentations.Count; i++)
-                        {
+        <div id="presentationsModal" class="modal-overlay" style="display: none;">
+            <div class="glass-panel modal-content" style="max-width: 900px; width: 95%;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h2 class="page-title" style="margin: 0;"><i class="fas fa-box-open"></i> Presentaciones / Bultos</h2>
+                    <button type="button" style="background: transparent; border: none; font-size: 1.5rem; color: var(--text-muted); cursor: pointer;" onclick="closePresentacionesModal()">&times;</button>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <p style="opacity: 0.7; margin: 0;">Configura las presentaciones para venta por bulto.</p>
+                    <button type="button" class="btn-secondary" onclick="addPresentation()">+ Agregar Presentaci&oacute;n</button>
+                </div>
+                <div class="table-container" style="overflow-x: auto; max-height: 60vh; overflow-y: auto;">
+                    <table class="data-table" id="presentationsTable">
+                        <thead>
                             <tr>
-                                <td>
-                                    <input type="hidden" name="Presentations[@i].Id" value="@Model.Presentations[i].Id" />
-                                    <input type="hidden" name="Presentations[@i].ProductId" value="@Model.Presentations[i].ProductId" />
-                                    <input type="hidden" name="Presentations[@i].IsActive" value="true" />
-                                    <input type="text" name="Presentations[@i].Name" class="form-control" value="@Model.Presentations[i].Name" required />
-                                </td>
-                                <td><input type="text" name="Presentations[@i].Barcode" class="form-control" value="@Model.Presentations[i].Barcode" required /></td>
-                                <td><input type="number" name="Presentations[@i].Quantity" class="form-control" value="@Model.Presentations[i].Quantity.ToString(System.Globalization.CultureInfo.InvariantCulture)" step="0.01" required /></td>
-                                <td><input type="number" name="Presentations[@i].Price" class="form-control" value="@Model.Presentations[i].Price?.ToString(System.Globalization.CultureInfo.InvariantCulture)" step="0.01" /></td>
-                                <td style="text-align: center;"><input type="checkbox" name="Presentations[@i].NeedsLabelPrint" value="true" @(Model.Presentations[i].NeedsLabelPrint ? "checked" : "") /></td>
-                                <td><button type="button" class="btn-danger" style="padding: 4px 8px;" onclick="removePresentation(this)">X</button></td>
+                                <th>Nombre (Ej: Fardo x 6)</th>
+                                <th>C&oacute;digo de Barras</th>
+                                <th style="width: 100px;">Cant. Unidades</th>
+                                <th style="width: 120px;">Precio Fijo ($)</th>
+                                <th style="width: 80px; text-align: center;">Imp. Etiqueta</th>
+                                <th style="width: 60px;"></th>
                             </tr>
-                        }
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody id="presentationsBody">
+                            @for (int i = 0; i < Model.Presentations.Count; i++)
+                            {
+                                <tr>
+                                    <td>
+                                        <input type="hidden" name="Presentations[@i].Id" value="@Model.Presentations[i].Id" />
+                                        <input type="hidden" name="Presentations[@i].ProductId" value="@Model.Presentations[i].ProductId" />
+                                        <input type="hidden" name="Presentations[@i].IsActive" value="true" />
+                                        <input type="text" name="Presentations[@i].Name" class="form-control" value="@Model.Presentations[i].Name" required />
+                                    </td>
+                                    <td><input type="text" name="Presentations[@i].Barcode" class="form-control" value="@Model.Presentations[i].Barcode" required /></td>
+                                    <td><input type="number" name="Presentations[@i].Quantity" class="form-control" value="@Model.Presentations[i].Quantity.ToString(System.Globalization.CultureInfo.InvariantCulture)" step="0.01" required /></td>
+                                    <td><input type="number" name="Presentations[@i].Price" class="form-control" value="@Model.Presentations[i].Price?.ToString(System.Globalization.CultureInfo.InvariantCulture)" step="0.01" /></td>
+                                    <td style="text-align: center;"><input type="checkbox" name="Presentations[@i].NeedsLabelPrint" value="true" @(Model.Presentations[i].NeedsLabelPrint ? "checked" : "") /></td>
+                                    <td><button type="button" class="btn-danger" style="padding: 4px 8px;" onclick="removePresentation(this)">X</button></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <div style="display: flex; justify-content: flex-end; margin-top: 1.5rem;">
+                    <button type="button" class="btn-primary" onclick="closePresentacionesModal()">Aceptar</button>
+                </div>
             </div>
         </div>
 
@@ -340,6 +353,14 @@
 
         function closePriceWizard() {
             document.getElementById('priceWizard').style.display = 'none';
+        }
+
+        function openPresentacionesModal() {
+            document.getElementById('presentationsModal').style.display = 'flex';
+        }
+
+        function closePresentacionesModal() {
+            document.getElementById('presentationsModal').style.display = 'none';
         }
 
         function calculateWizard() {
