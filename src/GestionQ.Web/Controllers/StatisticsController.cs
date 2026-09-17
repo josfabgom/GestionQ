@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -8,6 +9,7 @@ using GestionQ.Infrastructure.Data;
 using GestionQ.Web.Models;
 using Microsoft.AspNetCore.Authorization;
 using GestionQ.Domain.Constants;
+using ClosedXML.Excel;
 
 namespace GestionQ.Web.Controllers
 {
@@ -274,7 +276,7 @@ namespace GestionQ.Web.Controllers
             return View(viewModel);
         }
 
-        public async Task<IActionResult> ExportProfitabilityCsv(DateTime? startDate, DateTime? endDate)
+        public async Task<IActionResult> ExportProfitabilityExcel(DateTime? startDate, DateTime? endDate)
         {
             var start = startDate ?? DateTime.Today;
             var end = endDate ?? DateTime.Today;
@@ -309,20 +311,43 @@ namespace GestionQ.Web.Controllers
                 .OrderByDescending(p => p.TotalRecaudado)
                 .ToList();
 
-            var sb = new StringBuilder();
-            sb.AppendLine("Codigo,Producto,Categoria,Cantidad Vendida,Costo Unitario,Costo Total,Total Recaudado,Ganancia Neta");
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.Worksheets.Add("Rentabilidad");
+            var currentRow = 1;
+
+            worksheet.Cell(currentRow, 1).Value = "Código";
+            worksheet.Cell(currentRow, 2).Value = "Producto";
+            worksheet.Cell(currentRow, 3).Value = "Categoría";
+            worksheet.Cell(currentRow, 4).Value = "Cantidad Vendida";
+            worksheet.Cell(currentRow, 5).Value = "Costo Unitario";
+            worksheet.Cell(currentRow, 6).Value = "Costo Total";
+            worksheet.Cell(currentRow, 7).Value = "Total Recaudado";
+            worksheet.Cell(currentRow, 8).Value = "Ganancia Neta";
+            worksheet.Range(1, 1, 1, 8).Style.Font.Bold = true;
+
             foreach (var item in stats)
             {
-                // Escape quotes and commas
-                var nombre = $"\"{item.Producto.Replace("\"", "\"\"")}\"";
-                var cat = $"\"{item.Categoria.Replace("\"", "\"\"")}\"";
-                sb.AppendLine($"{item.Codigo},{nombre},{cat},{item.CantidadVendida:F2},{item.CostoUnitario:F2},{item.CostoTotal:F2},{item.TotalRecaudado:F2},{item.GananciaNeta:F2}");
+                currentRow++;
+                worksheet.Cell(currentRow, 1).Value = item.Codigo;
+                worksheet.Cell(currentRow, 2).Value = item.Producto;
+                worksheet.Cell(currentRow, 3).Value = item.Categoria;
+                worksheet.Cell(currentRow, 4).Value = item.CantidadVendida;
+                worksheet.Cell(currentRow, 5).Value = item.CostoUnitario;
+                worksheet.Cell(currentRow, 6).Value = item.CostoTotal;
+                worksheet.Cell(currentRow, 7).Value = item.TotalRecaudado;
+                worksheet.Cell(currentRow, 8).Value = item.GananciaNeta;
             }
 
-            return File(Encoding.UTF8.GetBytes(sb.ToString()), "text/csv", $"Rentabilidad_{start:yyyyMMdd}_{end:yyyyMMdd}.csv");
+            worksheet.Columns().AdjustToContents();
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            var content = stream.ToArray();
+
+            return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"Rentabilidad_{start:yyyyMMdd}_{end:yyyyMMdd}.xlsx");
         }
 
-        public async Task<IActionResult> ExportLowStockCsv()
+        public async Task<IActionResult> ExportLowStockExcel()
         {
             var products = await _context.Products
                 .Include(p => p.PriceHistory).Include(p => p.SubCategory).ThenInclude(sc => sc.Category)
@@ -331,20 +356,37 @@ namespace GestionQ.Web.Controllers
                 .ThenBy(p => p.Name)
                 .ToListAsync();
 
-            var sb = new StringBuilder();
-            sb.AppendLine("Codigo,Producto,Categoria,Stock Actual,Stock Minimo,Proveedor");
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.Worksheets.Add("Alerta Stock");
+            var currentRow = 1;
+
+            worksheet.Cell(currentRow, 1).Value = "Código";
+            worksheet.Cell(currentRow, 2).Value = "Producto";
+            worksheet.Cell(currentRow, 3).Value = "Categoría";
+            worksheet.Cell(currentRow, 4).Value = "Stock Actual";
+            worksheet.Cell(currentRow, 5).Value = "Stock Mínimo";
+            worksheet.Range(1, 1, 1, 5).Style.Font.Bold = true;
+
             foreach (var item in products)
             {
-                var nombre = $"\"{item.Name.Replace("\"", "\"\"")}\"";
-                var cat = $"\"{(item.SubCategory?.Category?.Name ?? "").Replace("\"", "\"\"")}\"";
-                var prov = ""; // Removed supplier reference
-                sb.AppendLine($"{item.Barcode},{nombre},{cat},{item.Stock:F2},{item.MinimumStock:F2},");
+                currentRow++;
+                worksheet.Cell(currentRow, 1).Value = item.Barcode;
+                worksheet.Cell(currentRow, 2).Value = item.Name;
+                worksheet.Cell(currentRow, 3).Value = item.SubCategory?.Category?.Name ?? "";
+                worksheet.Cell(currentRow, 4).Value = item.Stock;
+                worksheet.Cell(currentRow, 5).Value = item.MinimumStock;
             }
 
-            return File(Encoding.UTF8.GetBytes(sb.ToString()), "text/csv", $"AlertaStock_{DateTime.Now:yyyyMMdd}.csv");
+            worksheet.Columns().AdjustToContents();
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            var content = stream.ToArray();
+
+            return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"AlertaStock_{DateTime.Now:yyyyMMdd}.xlsx");
         }
 
-        public async Task<IActionResult> ExportStagnantCsv(int days = 30)
+        public async Task<IActionResult> ExportStagnantExcel(int days = 30)
         {
             var cutoffDate = DateTime.Now.AddDays(-days);
 
@@ -363,20 +405,40 @@ namespace GestionQ.Web.Controllers
 
             var stagnant = activeProducts
                 .Where(p => !recentSalesProductIds.Contains(p.Id))
-                .OrderByDescending(p => p.Stock * p.PriceHistory?.OrderByDescending(ph => ph.UpdateDate).FirstOrDefault()?.BaseCost ?? 0m)
+                .OrderByDescending(p => p.Stock * (p.PriceHistory?.OrderByDescending(ph => ph.UpdateDate).FirstOrDefault()?.BaseCost ?? 0m))
                 .ToList();
 
-            var sb = new StringBuilder();
-            sb.AppendLine("Codigo,Producto,Categoria,Stock Estancado,Costo Unitario,Capital Inmovilizado");
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.Worksheets.Add("Baja Rotación");
+            var currentRow = 1;
+
+            worksheet.Cell(currentRow, 1).Value = "Código";
+            worksheet.Cell(currentRow, 2).Value = "Producto";
+            worksheet.Cell(currentRow, 3).Value = "Categoría";
+            worksheet.Cell(currentRow, 4).Value = "Stock Estancado";
+            worksheet.Cell(currentRow, 5).Value = "Costo Unitario";
+            worksheet.Cell(currentRow, 6).Value = "Capital Inmovilizado";
+            worksheet.Range(1, 1, 1, 6).Style.Font.Bold = true;
+
             foreach (var item in stagnant)
             {
-                var nombre = $"\"{item.Name.Replace("\"", "\"\"")}\"";
-                var cat = $"\"{(item.SubCategory?.Category?.Name ?? "").Replace("\"", "\"\"")}\"";
-                var capital = item.Stock * (item.PriceHistory?.OrderByDescending(ph => ph.UpdateDate).FirstOrDefault()?.BaseCost ?? 0m);
-                sb.AppendLine($"{item.Barcode},{nombre},{cat},{item.Stock:F2},{(item.PriceHistory?.OrderByDescending(ph => ph.UpdateDate).FirstOrDefault()?.BaseCost ?? 0m):F2},{capital:F2}");
+                var cost = item.PriceHistory?.OrderByDescending(ph => ph.UpdateDate).FirstOrDefault()?.BaseCost ?? 0m;
+                currentRow++;
+                worksheet.Cell(currentRow, 1).Value = item.Barcode;
+                worksheet.Cell(currentRow, 2).Value = item.Name;
+                worksheet.Cell(currentRow, 3).Value = item.SubCategory?.Category?.Name ?? "";
+                worksheet.Cell(currentRow, 4).Value = item.Stock;
+                worksheet.Cell(currentRow, 5).Value = cost;
+                worksheet.Cell(currentRow, 6).Value = item.Stock * cost;
             }
 
-            return File(Encoding.UTF8.GetBytes(sb.ToString()), "text/csv", $"BajaRotacion_{days}dias_{DateTime.Now:yyyyMMdd}.csv");
+            worksheet.Columns().AdjustToContents();
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            var content = stream.ToArray();
+
+            return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"BajaRotacion_{days}dias_{DateTime.Now:yyyyMMdd}.xlsx");
         }
     }
 }
