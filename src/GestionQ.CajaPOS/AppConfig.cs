@@ -6,7 +6,8 @@ namespace GestionQ.CajaPOS
 {
     public static class AppConfig
     {
-        private static string ConfigFile = Path.Combine(Application.StartupPath, "server.txt");
+        private static string ConfigDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "GestionQ");
+        private static string ConfigFile = Path.Combine(ConfigDir, "server.txt");
 
         public static string ServerUrl
         {
@@ -23,6 +24,7 @@ namespace GestionQ.CajaPOS
             }
             set
             {
+                if (!Directory.Exists(ConfigDir)) Directory.CreateDirectory(ConfigDir);
                 File.WriteAllText(ConfigFile, value);
             }
         }

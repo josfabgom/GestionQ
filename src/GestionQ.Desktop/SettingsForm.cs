@@ -9,7 +9,18 @@ public class SettingsForm : Form
     private TextBox txtUrl;
     private Button btnSave;
 
-    public string ServerUrl => txtUrl.Text.Trim();
+    public string ServerUrl 
+    {
+        get
+        {
+            var url = txtUrl.Text.Trim();
+            if (string.IsNullOrEmpty(url)) return "http://127.0.0.1:5144";
+            if (url.EndsWith("/")) url = url.TrimEnd('/');
+            if (!url.StartsWith("http")) url = "http://" + url;
+            if (url.LastIndexOf(":") == url.IndexOf(":")) url = url + ":5144";
+            return url;
+        }
+    }
 
     public SettingsForm(string currentUrl)
     {
