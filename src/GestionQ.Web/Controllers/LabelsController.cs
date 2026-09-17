@@ -75,6 +75,10 @@ namespace GestionQ.Web.Controllers
                     .Where(p => productIds.Contains(p.Id))
                     .ToDictionaryAsync(p => p.Id);
 
+                var presentationIds = queue.Where(q => q.PresentationId.HasValue).Select(q => q.PresentationId.Value).Distinct().ToList();
+                var presentations = await _context.ProductPresentations
+                    .Where(p => presentationIds.Contains(p.Id))
+                    .ToDictionaryAsync(p => p.Id);
 
                 // Load templates
                 var templateSettings = await _context.SystemSettings
@@ -94,12 +98,27 @@ namespace GestionQ.Web.Controllers
                 {
                     if (products.TryGetValue(item.ProductId, out var p))
                     {
-                        model.Add(new LabelPrintModel
+                        if (item.PresentationId.HasValue && presentations.TryGetValue(item.PresentationId.Value, out var pres))
                         {
-                            Product = p,
-                            Quantity = item.Quantity,
-                            Format = item.Format
-                        });
+                            model.Add(new LabelPrintModel
+                            {
+                                Product = p,
+                                Quantity = item.Quantity,
+                                Format = item.Format,
+                                CustomBarcode = pres.Barcode,
+                                CustomPrice = pres.Price ?? (p.Price * pres.Quantity),
+                                PresentationName = pres.Name
+                            });
+                        }
+                        else
+                        {
+                            model.Add(new LabelPrintModel
+                            {
+                                Product = p,
+                                Quantity = item.Quantity,
+                                Format = item.Format
+                            });
+                        }
                     }
                 }
 
@@ -117,36 +136,58 @@ namespace GestionQ.Web.Controllers
             var pendingProducts = await _context.Products
                 .Where(p => p.NeedsLabelPrint && p.IsActive)
                 .Select(p => new {
-                    p.Id,
-                    p.InternalCode,
-                    p.Barcode,
-                    p.Name,
-                    p.Price
+                    id = p.Id,
+                    presentationId = (int?)null,
+                    isPresentation = false,
+                    internalCode = p.InternalCode.ToString(),
+                    barcode = p.Barcode,
+                    name = p.Name,
+                    price = p.Price
                 })
                 .ToListAsync();
             
+            var pendingPresentations = await _context.ProductPresentations
+                .Include(p => p.Product)
+                .Where(p => p.NeedsLabelPrint && p.IsActive)
+                .Select(p => new {
+                    id = p.ProductId,
+                    presentationId = (int?)p.Id,
+                    isPresentation = true,
+                    internalCode = p.Product.InternalCode.ToString(),
+                    barcode = p.Barcode,
+                    name = $"{p.Product.Name} ({p.Name})",
+                    price = p.Price ?? (p.Product.Price * p.Quantity)
+                })
+                .ToListAsync();
+
+            pendingProducts.AddRange(pendingPresentations);
             return Json(pendingProducts);
         }
 
-        [HttpPost]
-        public async Task<IActionResult> ClearPendingStatus([FromBody] List<int> productIds)
+        public class ClearPendingRequest
         {
-            if (productIds == null || !productIds.Any()) return Ok();
+            public List<int> ProductIds { get; set; } = new();
+            public List<int> PresentationIds { get; set; } = new();
+        }
 
-            var productsToClear = await _context.Products
-                .Where(p => productIds.Contains(p.Id))
-                .ToListAsync();
+        [HttpPost]
+        public async Task<IActionResult> ClearPendingStatus([FromBody] ClearPendingRequest request)
+        {
+            if (request == null) return Ok();
 
-            foreach (var p in productsToClear)
+            if (request.ProductIds.Any())
             {
-                p.NeedsLabelPrint = false;
+                var productsToClear = await _context.Products.Where(p => request.ProductIds.Contains(p.Id)).ToListAsync();
+                foreach (var p in productsToClear) p.NeedsLabelPrint = false;
             }
 
-            if (productsToClear.Any())
+            if (request.PresentationIds.Any())
             {
-                await _context.SaveChangesAsync();
+                var presToClear = await _context.ProductPresentations.Where(p => request.PresentationIds.Contains(p.Id)).ToListAsync();
+                foreach (var p in presToClear) p.NeedsLabelPrint = false;
             }
 
+            await _context.SaveChangesAsync();
             return Ok();
         }
 
@@ -227,6 +268,7 @@ namespace GestionQ.Web.Controllers
     public class PrintQueueItem
     {
         public int ProductId { get; set; }
+        public int? PresentationId { get; set; }
         public int Quantity { get; set; }
         public string Format { get; set; } // "50x35", "A4", "A4_Half"
     }
@@ -239,5 +281,6 @@ namespace GestionQ.Web.Controllers
         public string CustomBarcode { get; set; }
         public decimal? CustomPrice { get; set; }
         public string WeightOrUnitLabel { get; set; }
+        public string PresentationName { get; set; }
     }
 }

@@ -178,8 +178,22 @@ namespace GestionQ.Web.Controllers.Api
                 }
             }
 
+            var presentations = await _context.ProductPresentations.AsNoTracking()
+                .Where(p => p.IsActive)
+                .Select(p => new ProductPresentationSyncDto
+                {
+                    Id = p.Id,
+                    ProductId = p.ProductId,
+                    Name = p.Name,
+                    Barcode = p.Barcode,
+                    Quantity = p.Quantity,
+                    Price = p.Price,
+                    IsActive = p.IsActive
+                }).ToListAsync();
+
             return Ok(new SyncPullResponse { 
                 Products = products,
+                ProductPresentations = presentations,
                 Customers = customers,
                 Departments = departments,
                 PaymentMethods = paymentMethods,

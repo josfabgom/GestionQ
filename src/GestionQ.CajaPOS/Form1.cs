@@ -1113,15 +1113,44 @@ public class Form1 : Form
 		string barcode2 = barcode;
 		using LocalDbContext db = new LocalDbContext();
 		Product product = await db.Products.FirstOrDefaultAsync((Product p) => p.Barcode == barcode2 || p.InternalCode.ToString() == barcode2);
+		
 		if (product != null)
 		{
 			AddRow(product.Id, product.Name, product.Price, quantity, product.Stock);
 			UpdateArticleImage(product.ImageUrl);
+			return;
 		}
-		else
+
+		// Buscar en presentaciones (bultos)
+		var presentation = await db.ProductPresentations.FirstOrDefaultAsync(p => p.Barcode == barcode2);
+		if (presentation != null)
 		{
-			MessageBox.Show("Producto no encontrado.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+			var parentProduct = await db.Products.FirstOrDefaultAsync(p => p.Id == presentation.ProductId);
+			if (parentProduct != null)
+			{
+				string displayName = $"{parentProduct.Name} ({presentation.Name})";
+				decimal unitPrice = presentation.Price ?? parentProduct.Price;
+				
+				// Si la presentacin tiene precio fijo, lo dividimos por la cantidad que trae para mantener
+				// la coherencia en la fila (que descuenta N unidades de stock), o simplemente
+				// aadimos la fila as: el grid usa (Precio Unitario * Cantidad).
+				// Como la presentacin trae N unidades, multiplicamos la cantidad a aadir por la cantidad del bulto,
+				// PERO el "Precio Fijo" del bulto sera total. Para que en pantalla el precio sea correcto:
+				// Precio Unitario en pantalla = PrecioBulto / CantidadUnidadesBulto.
+				decimal finalUnitPrice = (presentation.Price.HasValue && presentation.Quantity > 0) 
+					? (presentation.Price.Value / presentation.Quantity) 
+					: parentProduct.Price;
+
+				// La cantidad que se aade a la venta (y descuenta de stock) es cant Bultos * unidades por Bulto
+				decimal finalQuantity = quantity * presentation.Quantity;
+
+				AddRow(parentProduct.Id, displayName, finalUnitPrice, finalQuantity, parentProduct.Stock);
+				UpdateArticleImage(parentProduct.ImageUrl);
+				return;
+			}
 		}
+
+		MessageBox.Show("Producto o bulto no encontrado.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
 	}
 
 	private async Task CreateNewCustomerDialog()

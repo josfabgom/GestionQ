@@ -14,6 +14,7 @@ namespace GestionQ.Infrastructure.Data
         public DbSet<Category> Categories { get; set; }
         public DbSet<SubCategory> SubCategories { get; set; }
         public DbSet<Product> Products { get; set; }
+        public DbSet<ProductPresentation> ProductPresentations { get; set; }
         public DbSet<Sale> Sales { get; set; }
         public DbSet<SaleItem> SaleItems { get; set; }
         public DbSet<PaymentMethod> PaymentMethods { get; set; }

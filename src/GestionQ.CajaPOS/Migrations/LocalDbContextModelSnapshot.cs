@@ -17,7 +17,7 @@ namespace GestionQ.CajaPOS.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.15");
 
-            modelBuilder.Entity("GestionQ.Domain.Entities.CashRegister", b =>
+            modelBuilder.Entity("GestionQ.CajaPOS.OfflineCashRegister", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -26,22 +26,22 @@ namespace GestionQ.CajaPOS.Migrations
                     b.Property<DateTime?>("ClosingDate")
                         .HasColumnType("TEXT");
 
-                    b.Property<decimal?>("Difference")
-                        .HasColumnType("TEXT");
-
-                    b.Property<decimal?>("ExpectedCashBalance")
-                        .HasColumnType("TEXT");
-
                     b.Property<decimal?>("FinalCashBalance")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("GlobalId")
                         .HasColumnType("TEXT");
 
                     b.Property<decimal>("InitialBalance")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("IsSynced")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime>("OpeningDate")
                         .HasColumnType("TEXT");
 
-                    b.Property<int?>("PointOfSaleId")
+                    b.Property<int?>("ServerCashRegisterId")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("UserId")
@@ -50,9 +50,7 @@ namespace GestionQ.CajaPOS.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("PointOfSaleId");
-
-                    b.ToTable("CashRegister");
+                    b.ToTable("OfflineCashRegisters");
                 });
 
             modelBuilder.Entity("GestionQ.Domain.Entities.CashRegisterMovement", b =>
@@ -91,25 +89,7 @@ namespace GestionQ.CajaPOS.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CashRegisterId");
-
                     b.ToTable("Movements");
-                });
-
-            modelBuilder.Entity("GestionQ.Domain.Entities.Category", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Category");
                 });
 
             modelBuilder.Entity("GestionQ.Domain.Entities.Customer", b =>
@@ -145,6 +125,11 @@ namespace GestionQ.CajaPOS.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("IsSynced")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(true);
+
                     b.Property<string>("Locality")
                         .HasColumnType("TEXT");
 
@@ -161,97 +146,33 @@ namespace GestionQ.CajaPOS.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("TaxConditionId");
-
-                    b.ToTable("Customer");
+                    b.ToTable("Customers");
                 });
 
-            modelBuilder.Entity("GestionQ.Domain.Entities.ElectronicInvoice", b =>
+            modelBuilder.Entity("GestionQ.Domain.Entities.Department", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("CAE")
+                    b.Property<string>("Hotkey")
+                        .HasMaxLength(10)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
                         .IsRequired()
+                        .HasMaxLength(100)
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime>("CAEExpirationDate")
-                        .HasColumnType("TEXT");
-
-                    b.Property<bool>("CanMisMonExt")
+                    b.Property<int>("VatRateId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("ConceptCode")
+                    b.Property<int>("VirtualProductId")
                         .HasColumnType("INTEGER");
-
-                    b.Property<int>("CondicionIVAReceptorId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("CustomerName")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("CustomerTaxCondition")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("DocNumber")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("DocTypeCode")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("ErrorMessage")
-                        .HasColumnType("TEXT");
-
-                    b.Property<decimal>("ExemptAmount")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("InvoiceNumber")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("InvoiceTypeCode")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("InvoiceTypeDesc")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("IssueDate")
-                        .HasColumnType("TEXT");
-
-                    b.Property<decimal>("NetAmount")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("PointOfSaleId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("PointOfSaleNumber")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int?>("SaleId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<decimal>("TotalAmount")
-                        .HasColumnType("TEXT");
-
-                    b.Property<decimal>("VatAmount")
-                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("PointOfSaleId");
-
-                    b.HasIndex("SaleId")
-                        .IsUnique();
-
-                    b.ToTable("ElectronicInvoice");
+                    b.ToTable("Departments");
                 });
 
             modelBuilder.Entity("GestionQ.Domain.Entities.PaymentMethod", b =>
@@ -261,6 +182,12 @@ namespace GestionQ.CajaPOS.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<decimal>("DiscountPercentage")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("DiscountValidFrom")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("DiscountValidTo")
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("IsActive")
@@ -273,40 +200,7 @@ namespace GestionQ.CajaPOS.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("PaymentMethod");
-                });
-
-            modelBuilder.Entity("GestionQ.Domain.Entities.PointOfSale", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Description")
-                        .HasColumnType("TEXT");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("MachineName")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("PosNumber")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("PrintCopies")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("PrinterName")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("PointOfSale");
+                    b.ToTable("PaymentMethods");
                 });
 
             modelBuilder.Entity("GestionQ.Domain.Entities.Product", b =>
@@ -388,42 +282,45 @@ namespace GestionQ.CajaPOS.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("SubCategoryId");
-
-                    b.HasIndex("VatRateId");
-
                     b.ToTable("Products");
                 });
 
-            modelBuilder.Entity("GestionQ.Domain.Entities.ProductPrice", b =>
+            modelBuilder.Entity("GestionQ.Domain.Entities.ProductPresentation", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<decimal>("BaseCost")
+                    b.Property<string>("Barcode")
+                        .IsRequired()
+                        .HasMaxLength(50)
                         .HasColumnType("TEXT");
 
-                    b.Property<decimal>("FinalPrice")
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
                         .HasColumnType("TEXT");
 
-                    b.Property<decimal>("InternalTax")
+                    b.Property<bool>("NeedsLabelPrint")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal?>("Price")
                         .HasColumnType("TEXT");
 
                     b.Property<int>("ProductId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<decimal>("ProfitMargin")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("UpdateDate")
+                    b.Property<decimal>("Quantity")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
                     b.HasIndex("ProductId");
 
-                    b.ToTable("ProductPrice");
+                    b.ToTable("ProductPresentations");
                 });
 
             modelBuilder.Entity("GestionQ.Domain.Entities.Sale", b =>
@@ -462,6 +359,9 @@ namespace GestionQ.CajaPOS.Migrations
                     b.Property<int?>("PointOfSaleId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("RequestElectronicInvoice")
+                        .HasColumnType("INTEGER");
+
                     b.Property<decimal>("SubTotal")
                         .HasColumnType("TEXT");
 
@@ -475,12 +375,6 @@ namespace GestionQ.CajaPOS.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("CashRegisterId");
-
-                    b.HasIndex("CustomerId");
-
-                    b.HasIndex("PointOfSaleId");
 
                     b.ToTable("Sales");
                 });
@@ -512,8 +406,6 @@ namespace GestionQ.CajaPOS.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ProductId");
-
                     b.HasIndex("SaleId");
 
                     b.ToTable("SaleItems");
@@ -539,251 +431,74 @@ namespace GestionQ.CajaPOS.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("PaymentMethodId");
-
                     b.HasIndex("SaleId");
 
-                    b.ToTable("SalePayment");
+                    b.ToTable("SalePayments");
                 });
 
-            modelBuilder.Entity("GestionQ.Domain.Entities.SubCategory", b =>
+            modelBuilder.Entity("GestionQ.Domain.Entities.SystemSetting", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("CategoryId")
-                        .HasColumnType("INTEGER");
+                    b.Property<string>("Description")
+                        .HasColumnType("TEXT");
 
-                    b.Property<string>("Name")
+                    b.Property<string>("Key")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("TEXT");
 
-                    b.HasKey("Id");
-
-                    b.HasIndex("CategoryId");
-
-                    b.ToTable("SubCategory");
-                });
-
-            modelBuilder.Entity("GestionQ.Domain.Entities.TaxCondition", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
+                    b.Property<string>("Value")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
-                    b.ToTable("TaxCondition");
+                    b.ToTable("SystemSettings");
                 });
 
-            modelBuilder.Entity("GestionQ.Domain.Entities.VatRate", b =>
+            modelBuilder.Entity("GestionQ.Domain.Entities.ProductPresentation", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<decimal>("Rate")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("VatRate");
-                });
-
-            modelBuilder.Entity("GestionQ.Domain.Entities.CashRegister", b =>
-                {
-                    b.HasOne("GestionQ.Domain.Entities.PointOfSale", "PointOfSale")
-                        .WithMany("CashRegisters")
-                        .HasForeignKey("PointOfSaleId");
-
-                    b.Navigation("PointOfSale");
-                });
-
-            modelBuilder.Entity("GestionQ.Domain.Entities.CashRegisterMovement", b =>
-                {
-                    b.HasOne("GestionQ.Domain.Entities.CashRegister", "CashRegister")
-                        .WithMany("Movements")
-                        .HasForeignKey("CashRegisterId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("CashRegister");
-                });
-
-            modelBuilder.Entity("GestionQ.Domain.Entities.Customer", b =>
-                {
-                    b.HasOne("GestionQ.Domain.Entities.TaxCondition", "TaxCondition")
-                        .WithMany()
-                        .HasForeignKey("TaxConditionId");
-
-                    b.Navigation("TaxCondition");
-                });
-
-            modelBuilder.Entity("GestionQ.Domain.Entities.ElectronicInvoice", b =>
-                {
-                    b.HasOne("GestionQ.Domain.Entities.PointOfSale", "PointOfSale")
-                        .WithMany()
-                        .HasForeignKey("PointOfSaleId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("GestionQ.Domain.Entities.Sale", "Sale")
-                        .WithOne("ElectronicInvoice")
-                        .HasForeignKey("GestionQ.Domain.Entities.ElectronicInvoice", "SaleId");
-
-                    b.Navigation("PointOfSale");
-
-                    b.Navigation("Sale");
-                });
-
-            modelBuilder.Entity("GestionQ.Domain.Entities.Product", b =>
-                {
-                    b.HasOne("GestionQ.Domain.Entities.SubCategory", "SubCategory")
-                        .WithMany("Products")
-                        .HasForeignKey("SubCategoryId");
-
-                    b.HasOne("GestionQ.Domain.Entities.VatRate", "VatRate")
-                        .WithMany()
-                        .HasForeignKey("VatRateId");
-
-                    b.Navigation("SubCategory");
-
-                    b.Navigation("VatRate");
-                });
-
-            modelBuilder.Entity("GestionQ.Domain.Entities.ProductPrice", b =>
-                {
-                    b.HasOne("GestionQ.Domain.Entities.Product", "Product")
-                        .WithMany("PriceHistory")
+                    b.HasOne("GestionQ.Domain.Entities.Product", null)
+                        .WithMany("Presentations")
                         .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Product");
-                });
-
-            modelBuilder.Entity("GestionQ.Domain.Entities.Sale", b =>
-                {
-                    b.HasOne("GestionQ.Domain.Entities.CashRegister", "CashRegister")
-                        .WithMany("Sales")
-                        .HasForeignKey("CashRegisterId");
-
-                    b.HasOne("GestionQ.Domain.Entities.Customer", "Customer")
-                        .WithMany()
-                        .HasForeignKey("CustomerId");
-
-                    b.HasOne("GestionQ.Domain.Entities.PointOfSale", "PointOfSale")
-                        .WithMany("Sales")
-                        .HasForeignKey("PointOfSaleId");
-
-                    b.Navigation("CashRegister");
-
-                    b.Navigation("Customer");
-
-                    b.Navigation("PointOfSale");
                 });
 
             modelBuilder.Entity("GestionQ.Domain.Entities.SaleItem", b =>
                 {
-                    b.HasOne("GestionQ.Domain.Entities.Product", "Product")
-                        .WithMany()
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("GestionQ.Domain.Entities.Sale", "Sale")
                         .WithMany("Items")
                         .HasForeignKey("SaleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Product");
-
                     b.Navigation("Sale");
                 });
 
             modelBuilder.Entity("GestionQ.Domain.Entities.SalePayment", b =>
                 {
-                    b.HasOne("GestionQ.Domain.Entities.PaymentMethod", "PaymentMethod")
-                        .WithMany()
-                        .HasForeignKey("PaymentMethodId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("GestionQ.Domain.Entities.Sale", "Sale")
                         .WithMany("Payments")
                         .HasForeignKey("SaleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("PaymentMethod");
-
                     b.Navigation("Sale");
-                });
-
-            modelBuilder.Entity("GestionQ.Domain.Entities.SubCategory", b =>
-                {
-                    b.HasOne("GestionQ.Domain.Entities.Category", "Category")
-                        .WithMany("SubCategories")
-                        .HasForeignKey("CategoryId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Category");
-                });
-
-            modelBuilder.Entity("GestionQ.Domain.Entities.CashRegister", b =>
-                {
-                    b.Navigation("Movements");
-
-                    b.Navigation("Sales");
-                });
-
-            modelBuilder.Entity("GestionQ.Domain.Entities.Category", b =>
-                {
-                    b.Navigation("SubCategories");
-                });
-
-            modelBuilder.Entity("GestionQ.Domain.Entities.PointOfSale", b =>
-                {
-                    b.Navigation("CashRegisters");
-
-                    b.Navigation("Sales");
                 });
 
             modelBuilder.Entity("GestionQ.Domain.Entities.Product", b =>
                 {
-                    b.Navigation("PriceHistory");
+                    b.Navigation("Presentations");
                 });
 
             modelBuilder.Entity("GestionQ.Domain.Entities.Sale", b =>
                 {
-                    b.Navigation("ElectronicInvoice");
-
                     b.Navigation("Items");
 
                     b.Navigation("Payments");
-                });
-
-            modelBuilder.Entity("GestionQ.Domain.Entities.SubCategory", b =>
-                {
-                    b.Navigation("Products");
                 });
 #pragma warning restore 612, 618
         }

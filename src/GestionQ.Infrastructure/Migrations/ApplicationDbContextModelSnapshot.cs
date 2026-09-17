@@ -42,6 +42,9 @@ namespace GestionQ.Infrastructure.Migrations
                     b.Property<decimal?>("FinalCashBalance")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<Guid>("GlobalId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<decimal>("InitialBalance")
                         .HasColumnType("decimal(18,2)");
 
@@ -591,6 +594,46 @@ namespace GestionQ.Infrastructure.Migrations
                     b.HasIndex("ProductId");
 
                     b.ToTable("ProductChangeLogs");
+                });
+
+            modelBuilder.Entity("GestionQ.Domain.Entities.ProductPresentation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Barcode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("NeedsLabelPrint")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal?>("Price")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Quantity")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.ToTable("ProductPresentations");
                 });
 
             modelBuilder.Entity("GestionQ.Domain.Entities.ProductPrice", b =>
@@ -1389,6 +1432,17 @@ namespace GestionQ.Infrastructure.Migrations
                     b.Navigation("Product");
                 });
 
+            modelBuilder.Entity("GestionQ.Domain.Entities.ProductPresentation", b =>
+                {
+                    b.HasOne("GestionQ.Domain.Entities.Product", "Product")
+                        .WithMany("Presentations")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+                });
+
             modelBuilder.Entity("GestionQ.Domain.Entities.ProductPrice", b =>
                 {
                     b.HasOne("GestionQ.Domain.Entities.Product", "Product")
@@ -1617,6 +1671,8 @@ namespace GestionQ.Infrastructure.Migrations
 
             modelBuilder.Entity("GestionQ.Domain.Entities.Product", b =>
                 {
+                    b.Navigation("Presentations");
+
                     b.Navigation("PriceHistory");
                 });
 

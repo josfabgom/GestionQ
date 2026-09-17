@@ -133,12 +133,13 @@
 
             // Add all to queue
             pendingProducts.forEach(p => {
-                const existing = printQueue.find(q => q.ProductId === p.id && q.Format === '50x35');
+                const existing = printQueue.find(q => q.ProductId === p.id && q.PresentationId === p.presentationId && q.Format === '50x35');
                 if (existing) {
                     existing.Quantity += 1;
                 } else {
                     printQueue.push({
                         ProductId: p.id,
+                        PresentationId: p.presentationId,
                         ProductName: p.name,
                         Format: '50x35',
                         Quantity: 1
@@ -148,7 +149,8 @@
 
             renderQueue();
 
-            const productIds = pendingProducts.map(p => p.id);
+            const productIds = pendingProducts.filter(p => !p.isPresentation).map(p => p.id);
+            const presentationIds = pendingProducts.filter(p => p.isPresentation).map(p => p.presentationId);
 
             // Clear from DB
             fetch('/Labels/ClearPendingStatus', {
@@ -156,7 +158,7 @@
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(productIds)
+                body: JSON.stringify({ ProductIds: productIds, PresentationIds: presentationIds })
             }).then(() => {
                 document.getElementById('pendingLabelsAlert').style.display = 'none';
                 pendingProducts = [];

@@ -1,0 +1,43 @@
+﻿        private void UpdateTotals()
+        {
+            decimal total = 0; decimal grossTotal = 0; int items = 0;
+            foreach (DataGridViewRow row in gridItems.Rows)
+            {
+                grossTotal += Convert.ToDecimal(row.Cells["Price"].Value) * Convert.ToDecimal(row.Cells["Quantity"].Value);
+                total += Convert.ToDecimal(row.Cells["SubTotal"].Value); items++;
+            }
+            lblSubTotalValue.Text = "$" + grossTotal.ToString("N2");
+            lblTotal.Text = "$" + total.ToString("N2"); 
+            
+            if (lblVuelto != null) {
+                lblVuelto.Text = "Cantidad de Artículos: " + items.ToString();
+            }
+
+            decimal discount = grossTotal - total;
+            if (discount > 0) {
+                lblPromoDiscountValue.Text = "-$" + discount.ToString("N2");
+                lblPromoDiscountText.Visible = true;
+                lblPromoDiscountValue.Visible = true;
+            } else {
+                lblPromoDiscountValue.Text = "-$" + 0.ToString("N2");
+                lblPromoDiscountText.Visible = false;
+                lblPromoDiscountValue.Visible = false;
+            }
+
+            if (lblTotal.Parent != null) {
+                lblTotal.Left = lblTotal.Parent.Width - lblTotal.Width - 10;
+                var titleTotal = lblTotal.Parent.Controls.OfType<Label>().FirstOrDefault(c => c.Text == "TOTAL A COBRAR:");
+                if (titleTotal != null) titleTotal.Left = lblTotal.Left - titleTotal.Width - 10;
+                
+                lblSubTotalValue.Left = lblTotal.Parent.Width - lblSubTotalValue.Width - 10;
+                lblSubTotalText.Left = lblSubTotalValue.Left - lblSubTotalText.Width - 10;
+                
+                lblPromoDiscountValue.Left = lblTotal.Parent.Width - lblPromoDiscountValue.Width - 10;
+                lblPromoDiscountText.Left = lblPromoDiscountValue.Left - lblPromoDiscountText.Width - 10;
+            }
+            
+            if (lblItemsCount != null && lblItemsCount.Parent != null)
+            {
+                lblItemsCount.Left = lblItemsCount.Parent.Width - lblItemsCount.Width - 10;
+            }
+        }

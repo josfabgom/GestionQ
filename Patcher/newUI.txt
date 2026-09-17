@@ -1,0 +1,291 @@
+﻿        private void InitializeUI()
+        {
+            this.Text = "GestionQ - Punto de Venta (Caja) - Cajero: " + (_currentUser?.FullName ?? "Desconocido") + " - Caja: " + (_registerInfo?.Name ?? "Desconocida");
+            this.Size = new Size(1366, 768);
+            this.WindowState = FormWindowState.Maximized;
+            this.BackColor = bgColor;
+            this.ForeColor = textColor;
+            this.Font = new Font("Segoe UI", 10);
+            
+            TableLayoutPanel mainLayout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1, Padding = new Padding(20) };
+            mainLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 65F));
+            mainLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 35F));
+            
+            Panel leftPanel = new Panel { Dock = DockStyle.Fill, Margin = new Padding(0, 0, 20, 0) };
+            
+            Panel headerLeft = new Panel { Dock = DockStyle.Top, Height = 50 };
+            lblTitle.Text = "📠 Punto de Venta (Caja)";
+            lblTitle.Font = new Font("Segoe UI", 16, FontStyle.Bold);
+            lblTitle.AutoSize = true;
+            lblTitle.Location = new Point(0, 10);
+            lblTitle.ForeColor = Color.WhiteSmoke;
+            headerLeft.Controls.Add(lblTitle);
+
+            FlowLayoutPanel headerRightPanel = new FlowLayoutPanel 
+            { 
+                Dock = DockStyle.Right, 
+                FlowDirection = FlowDirection.RightToLeft, 
+                AutoSize = true, 
+                WrapContents = false,
+                Padding = new Padding(0, 10, 0, 0)
+            };
+
+            lblItemsCount = new Label { Text = "0 ítems cargados", ForeColor = accentColor, Font = new Font("Segoe UI", 10, FontStyle.Bold), AutoSize = true, Margin = new Padding(10, 5, 0, 0) };
+            
+            btnSettings = new Button { Text = "⚙️ Configurar", AutoSize = true, FlatStyle = FlatStyle.Flat, ForeColor = textColor, Margin = new Padding(10, 0, 0, 0) };
+            btnSettings.FlatAppearance.BorderSize = 0;
+            btnSettings.Click += (s, e) => {
+                string currentUrl = AppConfig.ServerUrl;
+                string newUrl = Microsoft.VisualBasic.Interaction.InputBox("Ingresa la IP o URL del Servidor Principal (ej: http://192.168.1.50:5144):", "Configuración de Servidor", currentUrl);
+                if (!string.IsNullOrWhiteSpace(newUrl) && newUrl != currentUrl)
+                {
+                    AppConfig.ServerUrl = newUrl;
+                    MessageBox.Show("Configuración guardada. La caja se reiniciará para aplicar los cambios.", "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    Application.Restart();
+                    Environment.Exit(0);
+                }
+            };
+            btnSync = new Button { Text = "🔄 Sincronizado ✔", AutoSize = true, FlatStyle = FlatStyle.Flat, ForeColor = Color.FromArgb(16, 185, 129), Margin = new Padding(10, 0, 0, 0) };
+            btnSync.FlatAppearance.BorderSize = 0;
+            btnSync.Click += async (s, e) => {
+                btnSync.Text = "⏳ Sincronizando...";
+                btnSync.ForeColor = Color.Yellow;
+                try
+                {
+                    await _syncWorker.PerformSyncAsync();
+                }
+                catch (Exception ex)
+                {
+                    btnSync.Text = "⚠️ Error Sync";
+                    btnSync.ForeColor = Color.Red;
+                    MessageBox.Show($"No se pudo conectar con la central en {AppConfig.ServerUrl}.\nError técnico: {ex.Message}", "Error de conexión", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+            };
+
+            btnCloseRegister = new Button { Text = "🔒 Cerrar Caja", AutoSize = true, FlatStyle = FlatStyle.Flat, ForeColor = Color.FromArgb(239, 68, 68), Margin = new Padding(10, 0, 0, 0) };
+            btnCloseRegister.FlatAppearance.BorderSize = 0;
+            btnCloseRegister.Click += async (s, e) => {
+                var closeForm = new CloseRegisterForm(_authClient, _cashRegisterId);
+                if (closeForm.ShowDialog(this) == DialogResult.OK)
+                {
+                    if (!string.IsNullOrEmpty(closeForm.TicketText)) 
+                    {
+                        PrintTicket(closeForm.TicketText);
+                    }
+                    MessageBox.Show("Caja cerrada exitosamente. La aplicación se reiniciará para el próximo cajero.", "Cierre", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    Application.Restart();
+                }
+            };
+            
+            var btnPartialReport = new Button { Text = "📄 Reporte Parcial", ForeColor = Color.FromArgb(245, 158, 11), AutoSize = true, FlatStyle = FlatStyle.Flat, Margin = new Padding(10, 0, 0, 0) }; 
+            btnPartialReport.FlatAppearance.BorderSize = 0;
+            btnPartialReport.Click += (s,e) => {
+                if (_registerInfo != null) new PartialReportForm(_registerInfo.Id, _registerInfo.Name, DateTime.Now, 0).ShowDialog();
+            };
+
+            var btnHistory = new Button { Text = "📝 Historia / Anular", ForeColor = Color.FromArgb(16, 185, 129), AutoSize = true, FlatStyle = FlatStyle.Flat, Margin = new Padding(10, 0, 0, 0) }; 
+            btnHistory.FlatAppearance.BorderSize = 0;
+            btnHistory.Click += (s,e) => {
+                if (_registerInfo != null) new SalesHistoryForm(_registerInfo.Id, _currentUser?.Id ?? 0).ShowDialog();
+            };
+
+            btnAddMovement = new Button { Text = "💸 Retiro Efectivo", AutoSize = true, FlatStyle = FlatStyle.Flat, ForeColor = Color.FromArgb(0, 123, 255), Margin = new Padding(10, 0, 0, 0) };
+            btnAddMovement.FlatAppearance.BorderSize = 0;
+            btnAddMovement.Click += (s, e) => {
+                var movementForm = new MovementForm(_authClient, _cashRegisterId);
+                if (movementForm.ShowDialog(this) == DialogResult.OK)
+                {
+                    string ticket = "      COMPROBANTE DE RETIRO\n";
+                    ticket += new string('-', 42) + "\n";
+                    ticket += $"Monto: $ {movementForm.Amount:N2}\n";
+                    ticket += $"Motivo: {movementForm.Description}\n";
+                    ticket += $"Fecha: {DateTime.Now:dd/MM/yyyy HH:mm}\n";
+                    ticket += new string('-', 42) + "\n\n\n\n";
+                    ticket += "Firma: ___________________________\n\n";
+                    ticket += "Aclaracion: ______________________\n\n";
+                    
+                    PrintTicket(ticket);
+                    MessageBox.Show("Retiro registrado exitosamente.", "Egreso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            };
+            
+            headerRightPanel.Controls.Add(lblItemsCount);
+            headerRightPanel.Controls.Add(btnSync);
+            headerRightPanel.Controls.Add(btnSettings);
+            headerRightPanel.Controls.Add(btnCloseRegister);
+            headerRightPanel.Controls.Add(btnPartialReport);
+            headerRightPanel.Controls.Add(btnHistory);
+            headerRightPanel.Controls.Add(btnAddMovement);
+
+            headerLeft.Controls.Add(headerRightPanel);
+            leftPanel.Controls.Add(headerLeft);
+
+            gridItems = new DataGridView { Dock = DockStyle.Fill, BackgroundColor = panelColor, BorderStyle = BorderStyle.None, AllowUserToAddRows = false, ReadOnly = true, RowHeadersVisible = false, SelectionMode = DataGridViewSelectionMode.FullRowSelect, CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal, GridColor = Color.FromArgb(55, 65, 81), RowTemplate = { Height = 50 } };
+            gridItems.ColumnHeadersDefaultCellStyle = new DataGridViewCellStyle { BackColor = Color.FromArgb(17, 24, 39), ForeColor = Color.Gray, Font = new Font("Segoe UI", 9, FontStyle.Bold), SelectionBackColor = Color.FromArgb(17, 24, 39) };
+            gridItems.EnableHeadersVisualStyles = false;
+            gridItems.DefaultCellStyle = new DataGridViewCellStyle { BackColor = panelColor, ForeColor = textColor, SelectionBackColor = Color.FromArgb(55, 65, 81), SelectionForeColor = textColor };
+            
+            gridItems.Columns.Add("Id", "ID"); 
+            gridItems.Columns.Add("OriginalName", "OriginalName"); 
+            gridItems.Columns.Add("Name", "PRODUCTO"); 
+            gridItems.Columns["OriginalName"].Visible = false; 
+            gridItems.Columns.Add("Price", "PRECIO UNIT." );
+            
+            var btnMinus = new DataGridViewButtonColumn { Name = "btnMinus", HeaderText = "", Text = "-", UseColumnTextForButtonValue = true, Width = 30, FlatStyle = FlatStyle.Flat };
+            btnMinus.DefaultCellStyle.BackColor = Color.FromArgb(59, 130, 246); btnMinus.DefaultCellStyle.ForeColor = Color.White;
+            gridItems.Columns.Add(btnMinus);
+            
+            gridItems.Columns.Add("Quantity", "CANTIDAD"); 
+            
+            var btnPlus = new DataGridViewButtonColumn { Name = "btnPlus", HeaderText = "", Text = "+", UseColumnTextForButtonValue = true, Width = 30, FlatStyle = FlatStyle.Flat };
+            btnPlus.DefaultCellStyle.BackColor = Color.FromArgb(59, 130, 246); btnPlus.DefaultCellStyle.ForeColor = Color.White;
+            gridItems.Columns.Add(btnPlus);
+            
+            gridItems.Columns.Add("Discount", "DESCUENTO");
+            gridItems.Columns.Add("SubTotal", "SUBTOTAL");
+            
+            gridItems.Columns["Id"].Visible = false; 
+            gridItems.Columns["Name"].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+            gridItems.Columns["Price"].Width = 140;
+            gridItems.Columns["Quantity"].Width = 100;
+            gridItems.Columns["Discount"].Width = 120;
+            gridItems.Columns["SubTotal"].Width = 150;
+            
+            gridItems.Columns["Price"].HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight;
+            gridItems.Columns["Quantity"].HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            gridItems.Columns["Discount"].HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight;
+            gridItems.Columns["SubTotal"].HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight;
+
+            var priceStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleRight, Format = "C2", Font = new Font("Segoe UI", 12, FontStyle.Bold), ForeColor = Color.White };
+            gridItems.Columns["Price"].DefaultCellStyle = priceStyle;
+            gridItems.Columns["Discount"].DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleRight, Format = "C2", Font = new Font("Segoe UI", 12, FontStyle.Bold), ForeColor = Color.FromArgb(248, 113, 113) };
+            gridItems.Columns["SubTotal"].DefaultCellStyle = priceStyle;
+            gridItems.Columns["Name"].DefaultCellStyle = new DataGridViewCellStyle { Font = new Font("Segoe UI", 14, FontStyle.Bold), WrapMode = DataGridViewTriState.True, Padding = new Padding(5, 10, 5, 10) }; gridItems.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
+            gridItems.Columns["Quantity"].DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter, Font = new Font("Segoe UI", 14, FontStyle.Bold) };
+            
+            gridItems.CellContentClick += GridItems_CellContentClick;
+            
+            Panel gridContainer = new Panel { Dock = DockStyle.Fill, Padding = new Padding(0, 10, 0, 10), BackColor = bgColor };
+            gridContainer.Controls.Add(gridItems);
+            leftPanel.Controls.Add(gridContainer);
+            
+            Panel totalContainer = new Panel { Dock = DockStyle.Bottom, Height = 140, Padding = new Padding(0, 10, 0, 0) };
+            Panel totalBox = new Panel { Height = 120, Dock = DockStyle.Fill, BackColor = Color.FromArgb(10, 10, 15) };
+            totalBox.Paint += (s, e) => ControlPaint.DrawBorder(e.Graphics, totalBox.ClientRectangle, greenColor, 1, ButtonBorderStyle.Solid, greenColor, 1, ButtonBorderStyle.Solid, greenColor, 1, ButtonBorderStyle.Solid, greenColor, 1, ButtonBorderStyle.Solid);
+            
+            lblVuelto = new Label { Text = "Cantidad de Artículos: 0", ForeColor = Color.Magenta, Font = new Font("Segoe UI", 10, FontStyle.Bold), AutoSize = true, Location = new Point(10, totalBox.Height - 30), Anchor = AnchorStyles.Bottom | AnchorStyles.Left };
+            
+            lblSubTotalText = new Label { Text = "SubTotal:", ForeColor = Color.LightGray, Font = new Font("Segoe UI", 10, FontStyle.Bold), AutoSize = true, Location = new Point(totalBox.Width - 150, 15), Anchor = AnchorStyles.Top | AnchorStyles.Right };
+            lblSubTotalValue = new Label { Text = "$0.00", ForeColor = Color.LightGray, Font = new Font("Segoe UI", 10, FontStyle.Bold), AutoSize = true, Location = new Point(totalBox.Width - 60, 15), Anchor = AnchorStyles.Top | AnchorStyles.Right };
+            
+            lblPromoDiscountText = new Label { Text = "Descuento Promociones:", ForeColor = Color.LightSkyBlue, Font = new Font("Segoe UI", 10, FontStyle.Bold), AutoSize = true, Location = new Point(totalBox.Width - 150, 45), Anchor = AnchorStyles.Top | AnchorStyles.Right };
+            lblPromoDiscountValue = new Label { Text = "$0.00", ForeColor = Color.LightSkyBlue, Font = new Font("Segoe UI", 10, FontStyle.Bold), AutoSize = true, Location = new Point(totalBox.Width - 60, 45), Anchor = AnchorStyles.Top | AnchorStyles.Right };
+            
+            Label lblTotalText = new Label { Text = "TOTAL A COBRAR:", ForeColor = greenColor, Font = new Font("Segoe UI", 10, FontStyle.Bold), AutoSize = true, Location = new Point(totalBox.Width - 300, 80), Anchor = AnchorStyles.Bottom | AnchorStyles.Right };
+            lblTotal = new Label { Text = "$0.00", ForeColor = greenColor, Font = new Font("Segoe UI", 32, FontStyle.Bold), AutoSize = true, Location = new Point(totalBox.Width - 180, 60), Anchor = AnchorStyles.Bottom | AnchorStyles.Right };
+            
+            totalBox.Controls.Add(lblVuelto);
+            totalBox.Controls.Add(lblSubTotalText); totalBox.Controls.Add(lblSubTotalValue);
+            totalBox.Controls.Add(lblPromoDiscountText); totalBox.Controls.Add(lblPromoDiscountValue);
+            totalBox.Controls.Add(lblTotalText); totalBox.Controls.Add(lblTotal);
+            totalContainer.Controls.Add(totalBox);
+            
+            leftPanel.Controls.Add(totalContainer);
+            mainLayout.Controls.Add(leftPanel, 0, 0);
+
+            Panel rightPanel = new Panel { Dock = DockStyle.Fill };
+            FlowLayoutPanel controlsPanel = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, Padding = new Padding(0, 10, 0, 0) };
+            
+            string logoPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "images", "logo.png");
+            PictureBox mainLogo = new PictureBox { Width = 300, Height = 60, SizeMode = PictureBoxSizeMode.Zoom, Margin = new Padding(10, 10, 0, 20) };
+            if (System.IO.File.Exists(logoPath)) mainLogo.Image = Image.FromFile(logoPath);
+            controlsPanel.Controls.Add(mainLogo);
+            
+            GroupBox gbCliente = CreateGroupBox("Cliente (F5 para crear)", 80);
+            cmbCustomer = new ComboBox { Width = gbCliente.Width - 110, Location = new Point(10, 30), DropDownStyle = ComboBoxStyle.DropDownList, BackColor = panelColor, ForeColor = textColor, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 12) };
+            var btnNewCustomer = new Button { Text = "Nuevo (F5)", Width = 90, Height = 30, Location = new Point(cmbCustomer.Right + 5, 29), BackColor = Color.FromArgb(16, 185, 129), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10, FontStyle.Bold) };
+            btnNewCustomer.FlatAppearance.BorderSize = 0;
+            btnNewCustomer.Click += async (s, e) => await CreateNewCustomerDialog();
+            gbCliente.Controls.Add(cmbCustomer); 
+            gbCliente.Controls.Add(btnNewCustomer);
+            controlsPanel.Controls.Add(gbCliente);
+            
+            GroupBox gbPromociones = CreateGroupBox("Promociones Activas", 80);
+            lblPromoStatus.Location = new Point(10, 30);
+            gbPromociones.Controls.Add(lblPromoStatus);
+            controlsPanel.Controls.Add(gbPromociones);
+            
+            TableLayoutPanel midPanel = new TableLayoutPanel { Width = rightPanel.Width - 20, Height = 140, ColumnCount = 2, RowCount = 1, Margin = new Padding(0) };
+            midPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 60F));
+            midPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 40F));
+
+            GroupBox gbScan = CreateGroupBox("Escanear o Buscar (F1)", 130);
+            gbScan.Dock = DockStyle.Fill; gbScan.Margin = new Padding(0, 0, 5, 0);
+            
+            txtBarcode = new TextBox { Width = gbScan.Width - 20, Location = new Point(10, 30), BackColor = panelColor, ForeColor = textColor, Font = new Font("Segoe UI", 16) };
+            txtBarcode.KeyDown += TxtBarcode_KeyDown;
+            
+            lblMultiplier.Text = "x1"; lblMultiplier.ForeColor = Color.LightGray; lblMultiplier.Font = new Font("Segoe UI", 12, FontStyle.Bold); lblMultiplier.AutoSize = true;
+            lblMultiplier.Location = new Point(txtBarcode.Right + 5, 35);
+            
+            lstSearch = new ListBox { Width = gbScan.Width - 20, Height = 60, Location = new Point(10, txtBarcode.Bottom + 5), BackColor = panelColor, ForeColor = textColor, Font = new Font("Segoe UI", 12), Visible = false };
+            lstSearch.DoubleClick += LstSearch_DoubleClick;
+            lstSearch.KeyDown += LstSearch_KeyDown;
+            
+            gbScan.Controls.Add(txtBarcode);
+            gbScan.Controls.Add(lblMultiplier);
+            gbScan.Controls.Add(lstSearch);
+            midPanel.Controls.Add(gbScan, 0, 0);
+
+            GroupBox gbDepts = CreateGroupBox("Venta Rápida por Departamento", 130);
+            gbDepts.Dock = DockStyle.Fill; gbDepts.Margin = new Padding(5, 0, 0, 0);
+            
+            panelDepartments = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoScroll = true, Padding = new Padding(5) };
+            gbDepts.Controls.Add(panelDepartments);
+            midPanel.Controls.Add(gbDepts, 1, 0);
+            
+            controlsPanel.Controls.Add(midPanel);
+
+            GroupBox gbImage = CreateGroupBox("Imagen del Artículo", 260);
+            var picArticle = new PictureBox { Dock = DockStyle.Fill, SizeMode = PictureBoxSizeMode.Zoom, BackColor = Color.FromArgb(10, 10, 15) };
+            if (System.IO.File.Exists(logoPath)) picArticle.Image = Image.FromFile(logoPath);
+            gbImage.Controls.Add(picArticle);
+            controlsPanel.Controls.Add(gbImage);
+
+            rightPanel.Controls.Add(controlsPanel);
+            
+            Panel bottomPanel = new Panel { Dock = DockStyle.Bottom, Height = 60, BackColor = accentColor };
+            Button btnCheckout = new Button { Text = "✔ FINALIZAR VENTA [F12]", Dock = DockStyle.Fill, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 14, FontStyle.Bold), ForeColor = Color.White };
+            btnCheckout.FlatAppearance.BorderSize = 0;
+            btnCheckout.Click += async (s, e) => await ProcessCheckoutAsync();
+            bottomPanel.Controls.Add(btnCheckout);
+            rightPanel.Controls.Add(bottomPanel);
+
+            mainLayout.Controls.Add(rightPanel, 1, 0);
+            this.Controls.Add(mainLayout);
+            
+            this.Resize += (s, e) => {
+                if (mainLogo.Parent != null) {
+                    mainLogo.Width = 300;
+                    mainLogo.Margin = new Padding((rightPanel.Width - 300)/2, 10, 0, 20);
+                }
+                gbCliente.Width = rightPanel.Width - 20;
+                cmbCustomer.Width = gbCliente.Width - 110;
+                btnNewCustomer.Location = new Point(cmbCustomer.Right + 5, 29);
+                gbPromociones.Width = rightPanel.Width - 20;
+                midPanel.Width = rightPanel.Width - 20;
+                gbImage.Width = rightPanel.Width - 20;
+                
+                if (lblTotal.Parent != null) {
+                    lblTotal.Left = lblTotal.Parent.Width - lblTotal.Width - 10;
+                    var titleTotal = lblTotal.Parent.Controls.OfType<Label>().FirstOrDefault(c => c.Text == "TOTAL A COBRAR:");
+                    if (titleTotal != null) titleTotal.Left = lblTotal.Left - titleTotal.Width - 10;
+                    
+                    lblSubTotalValue.Left = lblTotal.Parent.Width - lblSubTotalValue.Width - 10;
+                    lblSubTotalText.Left = lblSubTotalValue.Left - lblSubTotalText.Width - 10;
+                    
+                    lblPromoDiscountValue.Left = lblTotal.Parent.Width - lblPromoDiscountValue.Width - 10;
+                    lblPromoDiscountText.Left = lblPromoDiscountValue.Left - lblPromoDiscountText.Width - 10;
+                }
+            };
+        }

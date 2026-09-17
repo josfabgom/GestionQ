@@ -177,6 +177,25 @@ namespace GestionQ.CajaPOS
                         }
                     }
 
+                    if (result.ProductPresentations != null)
+                    {
+                        var currentPres = await db.ProductPresentations.ToListAsync();
+                        db.ProductPresentations.RemoveRange(currentPres);
+                        foreach (var presDto in result.ProductPresentations)
+                        {
+                            db.ProductPresentations.Add(new ProductPresentation
+                            {
+                                Id = presDto.Id,
+                                ProductId = presDto.ProductId,
+                                Name = presDto.Name,
+                                Barcode = presDto.Barcode,
+                                Quantity = presDto.Quantity,
+                                Price = presDto.Price,
+                                IsActive = presDto.IsActive
+                            });
+                        }
+                    }
+
                     if (result.Departments.Any())
                     {
                         var currentDepts = await db.Departments.ToListAsync();

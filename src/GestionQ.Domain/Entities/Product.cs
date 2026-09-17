@@ -58,6 +58,8 @@ namespace GestionQ.Domain.Entities
         public DateTime CreationDate { get; set; } = DateTime.Now;
         public DateTime LastModified { get; set; } = DateTime.Now;
         
+        public virtual ICollection<ProductPresentation> Presentations { get; set; } = new List<ProductPresentation>();
+
         [Display(Name = "Días de Vencimiento")]
         public int ExpirationDays { get; set; } = 0;
 

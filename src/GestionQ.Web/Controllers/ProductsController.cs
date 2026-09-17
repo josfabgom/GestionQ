@@ -196,6 +196,7 @@ namespace GestionQ.Web.Controllers
             var product = await _context.Products
                 .Include(p => p.SubCategory)
                 .Include(p => p.PriceHistory)
+                .Include(p => p.Presentations)
                 .FirstOrDefaultAsync(m => m.Id == id);
 
             if (product == null) return NotFound();
@@ -222,7 +223,18 @@ namespace GestionQ.Web.Controllers
                 VatRateId = product.VatRateId,
                 ImageUrl = product.ImageUrl,
                 IsActive = product.IsActive,
-                ExpirationDays = product.ExpirationDays
+                ExpirationDays = product.ExpirationDays,
+                Presentations = product.Presentations?.Select(p => new ProductPresentationViewModel
+                {
+                    Id = p.Id,
+                    ProductId = p.ProductId,
+                    Name = p.Name,
+                    Barcode = p.Barcode,
+                    Quantity = p.Quantity,
+                    Price = p.Price,
+                    NeedsLabelPrint = p.NeedsLabelPrint,
+                    IsActive = p.IsActive
+                }).ToList() ?? new List<ProductPresentationViewModel>()
             };
 
             ViewBag.Categories = await _context.Categories.ToListAsync();
@@ -252,8 +264,50 @@ namespace GestionQ.Web.Controllers
             {
                 try
                 {
-                    var product = await _context.Products.FindAsync(id);
+                    var product = await _context.Products
+                        .Include(p => p.Presentations)
+                        .FirstOrDefaultAsync(p => p.Id == id);
                     if (product == null) return NotFound();
+
+                    // Sync Presentations
+                    if (model.Presentations == null) model.Presentations = new List<ProductPresentationViewModel>();
+
+                    // Remove missing ones
+                    var toRemove = product.Presentations.Where(p => !model.Presentations.Any(m => m.Id == p.Id && m.Id != 0)).ToList();
+                    foreach (var pres in toRemove)
+                    {
+                        _context.ProductPresentations.Remove(pres);
+                    }
+
+                    // Update or Add
+                    foreach (var mPres in model.Presentations)
+                    {
+                        if (mPres.Id == 0)
+                        {
+                            product.Presentations.Add(new ProductPresentation
+                            {
+                                Name = mPres.Name,
+                                Barcode = mPres.Barcode,
+                                Quantity = mPres.Quantity,
+                                Price = mPres.Price,
+                                NeedsLabelPrint = mPres.NeedsLabelPrint,
+                                IsActive = mPres.IsActive
+                            });
+                        }
+                        else
+                        {
+                            var existing = product.Presentations.FirstOrDefault(p => p.Id == mPres.Id);
+                            if (existing != null)
+                            {
+                                existing.Name = mPres.Name;
+                                existing.Barcode = mPres.Barcode;
+                                existing.Quantity = mPres.Quantity;
+                                existing.Price = mPres.Price;
+                                existing.NeedsLabelPrint = mPres.NeedsLabelPrint;
+                                existing.IsActive = mPres.IsActive;
+                            }
+                        }
+                    }
 
                     var previousStock = product.Stock;
 

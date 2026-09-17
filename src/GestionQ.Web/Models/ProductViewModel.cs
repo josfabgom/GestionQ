@@ -69,5 +69,19 @@ namespace GestionQ.Web.Models
         public IFormFile? ImageFile { get; set; }
         
         public string? ImageUrl { get; set; }
+
+        public List<ProductPresentationViewModel> Presentations { get; set; } = new List<ProductPresentationViewModel>();
+    }
+
+    public class ProductPresentationViewModel
+    {
+        public int Id { get; set; }
+        public int ProductId { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Barcode { get; set; } = string.Empty;
+        public decimal Quantity { get; set; }
+        public decimal? Price { get; set; }
+        public bool NeedsLabelPrint { get; set; }
+        public bool IsActive { get; set; } = true;
     }
 }

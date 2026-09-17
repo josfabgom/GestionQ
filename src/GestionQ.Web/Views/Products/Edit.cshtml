@@ -182,6 +182,45 @@
             </div>
         </div>
 
+        <div class="card" style="margin-top: 2rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3 style="margin: 0; font-size: 1.1rem; color: var(--primary);">Presentaciones / Bultos</h3>
+                <button type="button" class="btn-secondary" onclick="addPresentation()">+ Agregar Presentaci&oacute;n</button>
+            </div>
+            <div class="table-container">
+                <table class="data-table" id="presentationsTable">
+                    <thead>
+                        <tr>
+                            <th>Nombre (Ej: Fardo x 6)</th>
+                            <th>C&oacute;digo de Barras</th>
+                            <th style="width: 100px;">Cant. Unidades</th>
+                            <th style="width: 120px;">Precio Fijo ($)</th>
+                            <th style="width: 80px; text-align: center;">Imp. Etiqueta</th>
+                            <th style="width: 60px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="presentationsBody">
+                        @for (int i = 0; i < Model.Presentations.Count; i++)
+                        {
+                            <tr>
+                                <td>
+                                    <input type="hidden" name="Presentations[@i].Id" value="@Model.Presentations[i].Id" />
+                                    <input type="hidden" name="Presentations[@i].ProductId" value="@Model.Presentations[i].ProductId" />
+                                    <input type="hidden" name="Presentations[@i].IsActive" value="true" />
+                                    <input type="text" name="Presentations[@i].Name" class="form-control" value="@Model.Presentations[i].Name" required />
+                                </td>
+                                <td><input type="text" name="Presentations[@i].Barcode" class="form-control" value="@Model.Presentations[i].Barcode" required /></td>
+                                <td><input type="number" name="Presentations[@i].Quantity" class="form-control" value="@Model.Presentations[i].Quantity.ToString(System.Globalization.CultureInfo.InvariantCulture)" step="0.01" required /></td>
+                                <td><input type="number" name="Presentations[@i].Price" class="form-control" value="@Model.Presentations[i].Price?.ToString(System.Globalization.CultureInfo.InvariantCulture)" step="0.01" /></td>
+                                <td style="text-align: center;"><input type="checkbox" name="Presentations[@i].NeedsLabelPrint" value="true" @(Model.Presentations[i].NeedsLabelPrint ? "checked" : "") /></td>
+                                <td><button type="button" class="btn-danger" style="padding: 4px 8px;" onclick="removePresentation(this)">X</button></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
         <div class="form-group" style="margin-top: 2rem; border-top: 1px solid var(--border); padding-top: 1.5rem; display: flex; gap: 1rem;">
             <input type="submit" value="Actualizar Producto" class="btn-primary" />
             <a asp-action="Index" class="btn-secondary">Volver</a>
@@ -436,6 +475,39 @@
             const input = document.getElementById('ShortDescriptionScale');
             input.style.boxShadow = '0 0 0 2px var(--accent)';
             setTimeout(() => input.style.boxShadow = 'none', 500);
+        }
+        function removePresentation(btn) {
+            btn.closest('tr').remove();
+            reindexPresentations();
+        }
+
+        function reindexPresentations() {
+            const rows = document.querySelectorAll('#presentationsBody tr');
+            rows.forEach((row, index) => {
+                row.querySelectorAll('input').forEach(input => {
+                    input.name = input.name.replace(/\[\d+\]/, `[${index}]`);
+                });
+            });
+        }
+
+        function addPresentation() {
+            const tbody = document.getElementById('presentationsBody');
+            const index = tbody.children.length;
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>
+                    <input type="hidden" name="Presentations[${index}].Id" value="0" />
+                    <input type="hidden" name="Presentations[${index}].ProductId" value="@Model.Id" />
+                    <input type="hidden" name="Presentations[${index}].IsActive" value="true" />
+                    <input type="text" name="Presentations[${index}].Name" class="form-control" required />
+                </td>
+                <td><input type="text" name="Presentations[${index}].Barcode" class="form-control" required /></td>
+                <td><input type="number" name="Presentations[${index}].Quantity" class="form-control" step="0.01" value="1" required /></td>
+                <td><input type="number" name="Presentations[${index}].Price" class="form-control" step="0.01" /></td>
+                <td style="text-align: center;"><input type="checkbox" name="Presentations[${index}].NeedsLabelPrint" value="true" /></td>
+                <td><button type="button" class="btn-danger" style="padding: 4px 8px;" onclick="removePresentation(this)">X</button></td>
+            `;
+            tbody.appendChild(tr);
         }
     </script>
 }

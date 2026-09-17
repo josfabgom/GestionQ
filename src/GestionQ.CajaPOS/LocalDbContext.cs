@@ -17,6 +17,7 @@ namespace GestionQ.CajaPOS
         public DbSet<SalePayment> SalePayments { get; set; }
         public DbSet<SystemSetting> SystemSettings { get; set; }
         public DbSet<OfflineCashRegister> OfflineCashRegisters { get; set; }
+        public DbSet<ProductPresentation> ProductPresentations { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
@@ -47,6 +48,7 @@ namespace GestionQ.CajaPOS
             modelBuilder.Entity<SaleItem>().Ignore(si => si.Product);
             modelBuilder.Entity<SalePayment>().Ignore(sp => sp.PaymentMethod);
             modelBuilder.Entity<Department>().Ignore(d => d.VirtualProduct);
+            modelBuilder.Entity<ProductPresentation>().Ignore(p => p.Product);
         }
     }
 }
