@@ -39,7 +39,12 @@ namespace GestionQ.Web.Controllers
             // Query sales within the date range that are not cancelled
             var salesQuery = _context.Sales
                 .Include(s => s.Items)
-                .ThenInclude(i => i.Product)
+                    .ThenInclude(i => i.Product)
+                        .ThenInclude(p => p.SubCategory)
+                            .ThenInclude(sc => sc.Category)
+                .Include(s => s.Items)
+                    .ThenInclude(i => i.Product)
+                        .ThenInclude(p => p.PriceHistory)
                 .Include(s => s.Payments)
                 .ThenInclude(p => p.PaymentMethod)
                 .Where(s => s.Date >= start && s.Date <= endAdjusted && !s.IsCancelled);
@@ -48,6 +53,14 @@ namespace GestionQ.Web.Controllers
 
             viewModel.TotalSalesAmount = sales.Sum(s => s.TotalAmount);
             viewModel.TotalItemsSold = sales.SelectMany(s => s.Items).Sum(i => i.Quantity);
+            
+            // Calculate Cost and Profit
+            viewModel.TotalCostAmount = sales.SelectMany(s => s.Items).Sum(i => (i.Product?.PriceHistory?.OrderByDescending(ph => ph.UpdateDate).FirstOrDefault()?.BaseCost ?? 0m) * i.Quantity);
+            viewModel.TotalProfitAmount = viewModel.TotalSalesAmount - viewModel.TotalCostAmount;
+            if (viewModel.TotalSalesAmount > 0)
+            {
+                viewModel.ProfitMarginPercentage = (viewModel.TotalProfitAmount / viewModel.TotalSalesAmount) * 100m;
+            }
 
             // Group by Product
             viewModel.SalesByProduct = sales
@@ -74,6 +87,29 @@ namespace GestionQ.Web.Controllers
                     TotalAmount = g.Sum(p => p.Amount)
                 })
                 .OrderByDescending(p => p.TotalAmount)
+                .ToList();
+
+            // Group by Hour
+            viewModel.SalesByHour = sales
+                .GroupBy(s => s.Date.Hour)
+                .Select(g => new HourlySaleStat
+                {
+                    Hour = g.Key,
+                    TotalAmount = g.Sum(s => s.TotalAmount)
+                })
+                .OrderBy(h => h.Hour)
+                .ToList();
+
+            // Group by Category
+            viewModel.SalesByCategory = sales
+                .SelectMany(s => s.Items)
+                .GroupBy(i => i.Product?.SubCategory?.Category?.Name ?? "Sin Categoría")
+                .Select(g => new CategorySaleStat
+                {
+                    CategoryName = g.Key,
+                    TotalAmount = g.Sum(i => i.Quantity * i.UnitPrice - i.DiscountAmount)
+                })
+                .OrderByDescending(c => c.TotalAmount)
                 .ToList();
 
             return View(viewModel);
@@ -236,6 +272,111 @@ namespace GestionQ.Web.Controllers
                 .ToList();
 
             return View(viewModel);
+        }
+
+        public async Task<IActionResult> ExportProfitabilityCsv(DateTime? startDate, DateTime? endDate)
+        {
+            var start = startDate ?? DateTime.Today;
+            var end = endDate ?? DateTime.Today;
+            var endAdjusted = end.Date.AddDays(1).AddTicks(-1);
+
+            var salesQuery = _context.Sales
+                .Include(s => s.Items)
+                    .ThenInclude(i => i.Product)
+                        .ThenInclude(p => p.SubCategory)
+                            .ThenInclude(sc => sc.Category)
+                .Include(s => s.Items)
+                    .ThenInclude(i => i.Product)
+                        .ThenInclude(p => p.PriceHistory)
+                .Where(s => s.Date >= start && s.Date <= endAdjusted && !s.IsCancelled);
+
+            var sales = await salesQuery.ToListAsync();
+
+            var stats = sales
+                .SelectMany(s => s.Items)
+                .GroupBy(i => i.ProductId)
+                .Select(g => new
+                {
+                    Codigo = g.First().Product?.Barcode ?? "",
+                    Producto = g.First().Product?.Name ?? g.First().CustomName ?? "Desconocido",
+                    Categoria = g.First().Product?.SubCategory?.Category?.Name ?? "",
+                    CantidadVendida = g.Sum(i => i.Quantity),
+                    CostoUnitario = g.First().Product?.PriceHistory?.OrderByDescending(ph => ph.UpdateDate).FirstOrDefault()?.BaseCost ?? 0m,
+                    CostoTotal = g.Sum(i => (i.Product?.PriceHistory?.OrderByDescending(ph => ph.UpdateDate).FirstOrDefault()?.BaseCost ?? 0m) * i.Quantity),
+                    TotalRecaudado = g.Sum(i => i.Quantity * i.UnitPrice - i.DiscountAmount),
+                    GananciaNeta = g.Sum(i => i.Quantity * i.UnitPrice - i.DiscountAmount) - g.Sum(i => (i.Product?.PriceHistory?.OrderByDescending(ph => ph.UpdateDate).FirstOrDefault()?.BaseCost ?? 0m) * i.Quantity)
+                })
+                .OrderByDescending(p => p.TotalRecaudado)
+                .ToList();
+
+            var sb = new StringBuilder();
+            sb.AppendLine("Codigo,Producto,Categoria,Cantidad Vendida,Costo Unitario,Costo Total,Total Recaudado,Ganancia Neta");
+            foreach (var item in stats)
+            {
+                // Escape quotes and commas
+                var nombre = $"\"{item.Producto.Replace("\"", "\"\"")}\"";
+                var cat = $"\"{item.Categoria.Replace("\"", "\"\"")}\"";
+                sb.AppendLine($"{item.Codigo},{nombre},{cat},{item.CantidadVendida:F2},{item.CostoUnitario:F2},{item.CostoTotal:F2},{item.TotalRecaudado:F2},{item.GananciaNeta:F2}");
+            }
+
+            return File(Encoding.UTF8.GetBytes(sb.ToString()), "text/csv", $"Rentabilidad_{start:yyyyMMdd}_{end:yyyyMMdd}.csv");
+        }
+
+        public async Task<IActionResult> ExportLowStockCsv()
+        {
+            var products = await _context.Products
+                .Include(p => p.PriceHistory).Include(p => p.SubCategory).ThenInclude(sc => sc.Category)
+                .Where(p => p.IsActive && p.Stock <= p.MinimumStock)
+                .OrderBy(p => p.SubCategory.Category.Name)
+                .ThenBy(p => p.Name)
+                .ToListAsync();
+
+            var sb = new StringBuilder();
+            sb.AppendLine("Codigo,Producto,Categoria,Stock Actual,Stock Minimo,Proveedor");
+            foreach (var item in products)
+            {
+                var nombre = $"\"{item.Name.Replace("\"", "\"\"")}\"";
+                var cat = $"\"{(item.SubCategory?.Category?.Name ?? "").Replace("\"", "\"\"")}\"";
+                var prov = ""; // Removed supplier reference
+                sb.AppendLine($"{item.Barcode},{nombre},{cat},{item.Stock:F2},{item.MinimumStock:F2},");
+            }
+
+            return File(Encoding.UTF8.GetBytes(sb.ToString()), "text/csv", $"AlertaStock_{DateTime.Now:yyyyMMdd}.csv");
+        }
+
+        public async Task<IActionResult> ExportStagnantCsv(int days = 30)
+        {
+            var cutoffDate = DateTime.Now.AddDays(-days);
+
+            // Get products that haven't been sold since cutoffDate
+            var activeProducts = await _context.Products
+                .Include(p => p.PriceHistory).Include(p => p.SubCategory).ThenInclude(sc => sc.Category)
+                .Where(p => p.IsActive && p.Stock > 0)
+                .ToListAsync();
+
+            var recentSalesProductIds = await _context.Sales
+                .Where(s => s.Date >= cutoffDate && !s.IsCancelled)
+                .SelectMany(s => s.Items)
+                .Select(i => i.ProductId)
+                .Distinct()
+                .ToListAsync();
+
+            var stagnant = activeProducts
+                .Where(p => !recentSalesProductIds.Contains(p.Id))
+                .OrderByDescending(p => p.Stock * p.PriceHistory?.OrderByDescending(ph => ph.UpdateDate).FirstOrDefault()?.BaseCost ?? 0m)
+                .ToList();
+
+            var sb = new StringBuilder();
+            sb.AppendLine("Codigo,Producto,Categoria,Stock Estancado,Costo Unitario,Capital Inmovilizado");
+            foreach (var item in stagnant)
+            {
+                var nombre = $"\"{item.Name.Replace("\"", "\"\"")}\"";
+                var cat = $"\"{(item.SubCategory?.Category?.Name ?? "").Replace("\"", "\"\"")}\"";
+                var capital = item.Stock * (item.PriceHistory?.OrderByDescending(ph => ph.UpdateDate).FirstOrDefault()?.BaseCost ?? 0m);
+                sb.AppendLine($"{item.Barcode},{nombre},{cat},{item.Stock:F2},{(item.PriceHistory?.OrderByDescending(ph => ph.UpdateDate).FirstOrDefault()?.BaseCost ?? 0m):F2},{capital:F2}");
+            }
+
+            return File(Encoding.UTF8.GetBytes(sb.ToString()), "text/csv", $"BajaRotacion_{days}dias_{DateTime.Now:yyyyMMdd}.csv");
         }
     }
 }

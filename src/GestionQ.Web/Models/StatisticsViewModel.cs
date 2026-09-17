@@ -9,10 +9,15 @@ namespace GestionQ.Web.Models
         public DateTime EndDate { get; set; }
 
         public decimal TotalSalesAmount { get; set; }
+        public decimal TotalCostAmount { get; set; }
+        public decimal TotalProfitAmount { get; set; }
+        public decimal ProfitMarginPercentage { get; set; }
         public decimal TotalItemsSold { get; set; }
 
         public List<ProductSaleStat> SalesByProduct { get; set; } = new();
         public List<PaymentMethodStat> SalesByPaymentMethod { get; set; } = new();
+        public List<HourlySaleStat> SalesByHour { get; set; } = new();
+        public List<CategorySaleStat> SalesByCategory { get; set; } = new();
     }
 
     public class ProductSaleStat
@@ -27,6 +32,18 @@ namespace GestionQ.Web.Models
     {
         public int PaymentMethodId { get; set; }
         public string PaymentMethodName { get; set; } = string.Empty;
+        public decimal TotalAmount { get; set; }
+    }
+
+    public class HourlySaleStat
+    {
+        public int Hour { get; set; }
+        public decimal TotalAmount { get; set; }
+    }
+
+    public class CategorySaleStat
+    {
+        public string CategoryName { get; set; } = string.Empty;
         public decimal TotalAmount { get; set; }
     }
 }

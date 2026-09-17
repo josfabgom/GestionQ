@@ -2025,6 +2025,42 @@ BEGIN
     VALUES (N'20260828230448_AddPaymentMethodDiscountDates', N'9.0.15');
 END;
 
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260917022140_AddProductPresentations'
+)
+BEGIN
+    CREATE TABLE [ProductPresentations] (
+        [Id] int NOT NULL IDENTITY,
+        [ProductId] int NOT NULL,
+        [Name] nvarchar(100) NOT NULL,
+        [Barcode] nvarchar(50) NOT NULL,
+        [Quantity] decimal(18,2) NOT NULL,
+        [Price] decimal(18,2) NULL,
+        [NeedsLabelPrint] bit NOT NULL,
+        [IsActive] bit NOT NULL,
+        CONSTRAINT [PK_ProductPresentations] PRIMARY KEY ([Id]),
+        CONSTRAINT [FK_ProductPresentations_Products_ProductId] FOREIGN KEY ([ProductId]) REFERENCES [Products] ([Id]) ON DELETE CASCADE
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260917022140_AddProductPresentations'
+)
+BEGIN
+    CREATE INDEX [IX_ProductPresentations_ProductId] ON [ProductPresentations] ([ProductId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260917022140_AddProductPresentations'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20260917022140_AddProductPresentations', N'9.0.15');
+END;
+
 COMMIT;
 GO
 

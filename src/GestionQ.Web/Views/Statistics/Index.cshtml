@@ -8,12 +8,21 @@
         <i class="fa-solid fa-chart-pie"></i>
         <h1>@ViewData["Title"]</h1>
     </div>
-    <div class="top-bar-actions" style="display: flex; gap: 0.5rem;">
+    <div class="top-bar-actions" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
         <a asp-action="DailySalesByProduct" asp-route-startDate="@Model.StartDate.ToString("yyyy-MM-dd")" asp-route-endDate="@Model.EndDate.ToString("yyyy-MM-dd")" class="btn-primary" style="background: #3b82f6;">
             <i class="fa-solid fa-file-pdf"></i> Reporte Ventas (PDF)
         </a>
         <a asp-action="ProductChanges" class="btn-primary">
-            <i class="fa-solid fa-boxes-packing"></i> Reporte de Cambios
+            <i class="fa-solid fa-boxes-packing"></i> Reporte Cambios
+        </a>
+        <a asp-action="ExportProfitabilityCsv" asp-route-startDate="@Model.StartDate.ToString("yyyy-MM-dd")" asp-route-endDate="@Model.EndDate.ToString("yyyy-MM-dd")" class="btn-primary" style="background: #10b981;">
+            <i class="fa-solid fa-file-excel"></i> Excel (Ganancias)
+        </a>
+        <a asp-action="ExportLowStockCsv" class="btn-primary" style="background: #f59e0b;">
+            <i class="fa-solid fa-file-excel"></i> Excel (Alerta Stock)
+        </a>
+        <a asp-action="ExportStagnantCsv" asp-route-days="30" class="btn-primary" style="background: #ef4444;">
+            <i class="fa-solid fa-file-excel"></i> Excel (Baja Rotación)
         </a>
     </div>
 </div>
@@ -31,17 +40,40 @@
         <button type="submit" class="btn-primary" style="padding: 0.5rem 1rem;">
             <i class="fa-solid fa-filter"></i> Filtrar
         </button>
+        <div style="margin-left: auto; display: flex; gap: 0.5rem;">
+            <a href="?startDate=@(DateTime.Today.ToString("yyyy-MM-dd"))&endDate=@(DateTime.Today.ToString("yyyy-MM-dd"))" class="btn-secondary" style="padding: 0.5rem;">Hoy</a>
+            <a href="?startDate=@(DateTime.Today.AddDays(-7).ToString("yyyy-MM-dd"))&endDate=@(DateTime.Today.ToString("yyyy-MM-dd"))" class="btn-secondary" style="padding: 0.5rem;">7 Días</a>
+            <a href="?startDate=@(new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1).ToString("yyyy-MM-dd"))&endDate=@(DateTime.Today.ToString("yyyy-MM-dd"))" class="btn-secondary" style="padding: 0.5rem;">Mes</a>
+        </div>
     </form>
 </div>
 
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
     <!-- Resumen Ventas -->
     <div class="glass-panel" style="text-align: center; display: flex; flex-direction: column; justify-content: center; padding: 2rem;">
         <div style="font-size: 3rem; color: #10b981; margin-bottom: 0.5rem;">
             <i class="fa-solid fa-money-bill-wave"></i>
         </div>
-        <h3 style="color: var(--text-secondary); margin-bottom: 0.5rem;">Total Recaudado</h3>
-        <h2 style="font-size: 2.5rem; color: #f8fafc; margin: 0;">@Model.TotalSalesAmount.ToString("C")</h2>
+        <h3 style="color: var(--text-secondary); margin-bottom: 0.5rem; font-size: 1.1rem;">Total Recaudado</h3>
+        <h2 style="font-size: 2rem; color: #f8fafc; margin: 0;">@Model.TotalSalesAmount.ToString("C")</h2>
+    </div>
+
+    <!-- Ganancia Bruta -->
+    <div class="glass-panel" style="text-align: center; display: flex; flex-direction: column; justify-content: center; padding: 2rem;">
+        <div style="font-size: 3rem; color: #34d399; margin-bottom: 0.5rem;">
+            <i class="fa-solid fa-sack-dollar"></i>
+        </div>
+        <h3 style="color: var(--text-secondary); margin-bottom: 0.5rem; font-size: 1.1rem;">Ganancia Neta (Bruta)</h3>
+        <h2 style="font-size: 2rem; color: #f8fafc; margin: 0;">@Model.TotalProfitAmount.ToString("C")</h2>
+    </div>
+
+    <!-- Margen -->
+    <div class="glass-panel" style="text-align: center; display: flex; flex-direction: column; justify-content: center; padding: 2rem;">
+        <div style="font-size: 3rem; color: #f59e0b; margin-bottom: 0.5rem;">
+            <i class="fa-solid fa-percent"></i>
+        </div>
+        <h3 style="color: var(--text-secondary); margin-bottom: 0.5rem; font-size: 1.1rem;">Margen Promedio</h3>
+        <h2 style="font-size: 2rem; color: #f8fafc; margin: 0;">@Model.ProfitMarginPercentage.ToString("N2")%</h2>
     </div>
 
     <!-- Resumen Productos -->
@@ -49,8 +81,8 @@
         <div style="font-size: 3rem; color: #60a5fa; margin-bottom: 0.5rem;">
             <i class="fa-solid fa-boxes-stacked"></i>
         </div>
-        <h3 style="color: var(--text-secondary); margin-bottom: 0.5rem;">Artículos Vendidos</h3>
-        <h2 style="font-size: 2.5rem; color: #f8fafc; margin: 0;">@Model.TotalItemsSold.ToString("N0") un.</h2>
+        <h3 style="color: var(--text-secondary); margin-bottom: 0.5rem; font-size: 1.1rem;">Artículos Vendidos</h3>
+        <h2 style="font-size: 2rem; color: #f8fafc; margin: 0;">@Model.TotalItemsSold.ToString("N0") un.</h2>
     </div>
 </div>
 
@@ -127,6 +159,81 @@
             <div class="empty-state">
                 <i class="fa-solid fa-box-open"></i>
                 <p>No hay productos vendidos en este período.</p>
+            </div>
+        }
+    </div>
+</div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
+    <!-- Ventas por Categora -->
+    <div class="glass-panel">
+        <h2 style="margin-top: 0; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fa-solid fa-layer-group"></i> Ventas por Rubro/Categora
+        </h2>
+        
+        @if (Model.SalesByCategory.Any())
+        {
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Categora</th>
+                            <th style="text-align: right;">Total Recaudado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.SalesByCategory)
+                        {
+                            <tr>
+                                <td>@item.CategoryName</td>
+                                <td style="text-align: right; font-weight: bold; color: #10b981;">@item.TotalAmount.ToString("C")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="empty-state">
+                <i class="fa-solid fa-receipt"></i>
+                <p>No hay ventas registradas.</p>
+            </div>
+        }
+    </div>
+
+    <!-- Horas Pico de Venta -->
+    <div class="glass-panel">
+        <h2 style="margin-top: 0; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fa-solid fa-clock"></i> Horas Pico de Venta
+        </h2>
+
+        @if (Model.SalesByHour.Any())
+        {
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Hora del Da</th>
+                            <th style="text-align: right;">Recaudacin</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.SalesByHour)
+                        {
+                            <tr>
+                                <td>@item.Hour:00 - @(item.Hour):59</td>
+                                <td style="text-align: right; font-weight: bold; color: #3b82f6;">@item.TotalAmount.ToString("C")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="empty-state">
+                <i class="fa-solid fa-clock"></i>
+                <p>No hay datos de horas registrados.</p>
             </div>
         }
     </div>
