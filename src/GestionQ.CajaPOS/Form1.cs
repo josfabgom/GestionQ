@@ -91,6 +91,7 @@ public class Form1 : Form
 	private Label lblPromoStatus = new Label();
 
 	private List<PromotionSyncDto> _activePromotions = new List<PromotionSyncDto>();
+	private List<ProductPresentation> _activePresentations = new List<ProductPresentation>();
 
 	private SyncWorker _syncWorker;
 
@@ -282,6 +283,16 @@ public class Form1 : Form
 		{
 			cmbPaymentMethod.SelectedValue = selectedValue2;
 		}
+
+		try
+		{
+			_activePresentations = await db.ProductPresentations.Where(p => p.IsActive).ToListAsync();
+		}
+		catch
+		{
+			_activePresentations = new List<ProductPresentation>();
+		}
+
 		SystemSetting systemSetting = await db.SystemSettings.FirstOrDefaultAsync((SystemSetting s) => s.Key == "ActivePromotions");
 		if (systemSetting != null && !string.IsNullOrEmpty(systemSetting.Value))
 		{
@@ -1493,33 +1504,54 @@ public class Form1 : Form
 
 	private decimal CalculateSubTotal(int productId, decimal price, decimal qty)
 	{
-		decimal result = price * qty;
-		if (_activePromotions == null)
+		decimal presResult = 0m;
+		decimal remainingQty = qty;
+		
+		if (_activePresentations != null && _activePresentations.Any())
 		{
-			return result;
+			var productPresentations = _activePresentations
+				.Where(p => p.ProductId == productId && p.Price.HasValue && p.Quantity > 1)
+				.OrderByDescending(p => p.Quantity)
+				.ToList();
+
+			foreach (var pres in productPresentations)
+			{
+				if (remainingQty >= pres.Quantity)
+				{
+					int bundles = (int)(remainingQty / pres.Quantity);
+					presResult += bundles * pres.Price.Value;
+					remainingQty -= bundles * pres.Quantity;
+				}
+			}
 		}
-		PromotionSyncDto promotionSyncDto = _activePromotions.FirstOrDefault((PromotionSyncDto p) => p.ProductIds != null && p.ProductIds.Contains(productId));
-		if (promotionSyncDto == null)
+		presResult += (remainingQty * price);
+
+		decimal promoResult = price * qty;
+		if (_activePromotions != null)
 		{
-			return result;
+			PromotionSyncDto promotionSyncDto = _activePromotions.FirstOrDefault((PromotionSyncDto p) => p.ProductIds != null && p.ProductIds.Contains(productId));
+			if (promotionSyncDto != null)
+			{
+				if (promotionSyncDto.Type == "XForY" && promotionSyncDto.BuyQuantity > 0 && promotionSyncDto.PayQuantity > 0)
+				{
+					int value = promotionSyncDto.BuyQuantity.Value;
+					int value2 = promotionSyncDto.PayQuantity.Value;
+					int num = (int)(qty / (decimal)value);
+					decimal num2 = qty % (decimal)value;
+					promoResult = ((decimal)(num * value2) + num2) * price;
+				}
+				else if (promotionSyncDto.Type == "Percentage" && promotionSyncDto.Value > 0m)
+				{
+					promoResult = (price * qty) * (1m - promotionSyncDto.Value / 100m);
+				}
+				else if (promotionSyncDto.Type == "FixedAmount" && promotionSyncDto.Value > 0m)
+				{
+					promoResult = qty * Math.Max(0m, price - promotionSyncDto.Value);
+				}
+			}
 		}
-		if (promotionSyncDto.Type == "XForY" && promotionSyncDto.BuyQuantity > 0 && promotionSyncDto.PayQuantity > 0)
-		{
-			int value = promotionSyncDto.BuyQuantity.Value;
-			int value2 = promotionSyncDto.PayQuantity.Value;
-			int num = (int)(qty / (decimal)value);
-			decimal num2 = qty % (decimal)value;
-			result = ((decimal)(num * value2) + num2) * price;
-		}
-		else if (promotionSyncDto.Type == "Percentage" && promotionSyncDto.Value > 0m)
-		{
-			result *= 1m - promotionSyncDto.Value / 100m;
-		}
-		else if (promotionSyncDto.Type == "FixedAmount" && promotionSyncDto.Value > 0m)
-		{
-			result = qty * Math.Max(0m, price - promotionSyncDto.Value);
-		}
-		return result;
+
+		return Math.Min(presResult, promoResult);
 	}
 
 	private void AddRow(int id, string name, decimal price, decimal qty, decimal stock = 0m)
