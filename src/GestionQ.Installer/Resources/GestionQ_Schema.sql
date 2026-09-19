@@ -2061,6 +2061,23 @@ BEGIN
     VALUES (N'20260917022140_AddProductPresentations', N'9.0.15');
 END;
 
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260918180511_AddIsBulkToPresentations'
+)
+BEGIN
+    ALTER TABLE [ProductPresentations] ADD [IsBulk] bit NOT NULL DEFAULT CAST(0 AS bit);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260918180511_AddIsBulkToPresentations'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20260918180511_AddIsBulkToPresentations', N'9.0.15');
+END;
+
 COMMIT;
 GO
 

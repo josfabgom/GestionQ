@@ -25,11 +25,13 @@ public class Form1 : Form
 		public string Text { get; set; }
 
 		public int Value { get; set; }
+		public int? PresentationId { get; set; }
 
-		public ComboBoxItem(string text, int value)
+		public ComboBoxItem(string text, int value, int? presentationId = null)
 		{
 			Text = text;
 			Value = value;
+			PresentationId = presentationId;
 		}
 
 		public override string ToString()
@@ -233,6 +235,13 @@ public class Form1 : Form
 		}
 		try
 		{
+			db.Database.ExecuteSqlRaw("ALTER TABLE ProductPresentations ADD COLUMN IsBulk INTEGER NOT NULL DEFAULT 0;");
+		}
+		catch
+		{
+		}
+		try
+		{
 			db.Database.ExecuteSqlRaw("ALTER TABLE Sales ADD COLUMN RequestElectronicInvoice INTEGER NOT NULL DEFAULT 0;");
 		}
 		catch
@@ -327,8 +336,8 @@ public class Form1 : Form
 			Button button = new Button
 			{
 				Text = (string.IsNullOrEmpty(dept.Hotkey) ? dept.Name : (dept.Name + "\n[" + dept.Hotkey + "]")),
-				Width = 100,
-				Height = 60,
+				Width = 80,
+				Height = 45,
 				FlatStyle = FlatStyle.Flat,
 				ForeColor = textColor,
 				BackColor = bgColor,
@@ -352,6 +361,8 @@ public class Form1 : Form
 			};
 			panelDepartments.Controls.Add(value);
 		}
+		
+		txtBarcode.Focus();
 	}
 
 	private void InitializeUI()
@@ -366,11 +377,13 @@ public class Form1 : Form
 		{
 			Dock = DockStyle.Fill,
 			ColumnCount = 2,
-			RowCount = 1,
-			Padding = new Padding(20)
+			RowCount = 2,
+			Padding = new Padding(20, 20, 20, 0)
 		};
 		tableLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 65f));
 		tableLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 35f));
+		tableLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
+		tableLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 60f));
 		Panel panel = new Panel
 		{
 			Dock = DockStyle.Fill,
@@ -554,8 +567,22 @@ public class Form1 : Form
 		flowLayoutPanel.Controls.Add(btnPartialReport);
 		flowLayoutPanel.Controls.Add(btnSalesHistory);
 		flowLayoutPanel.Controls.Add(btnAddMovement);
-		panel2.Controls.Add(flowLayoutPanel);
 		panel2.Controls.Add(lblTitle);
+		
+		string appVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0.0";
+		Label lblVersion = new Label
+		{
+			Text = "v" + appVersion,
+			ForeColor = Color.Gray,
+			Font = new Font("Segoe UI", 10f),
+			AutoSize = true,
+			Location = new Point(lblTitle.Right + 10, 18)
+		};
+		lblTitle.SizeChanged += (s, e) => {
+			lblVersion.Location = new Point(lblTitle.Right + 10, 18);
+		};
+		panel2.Controls.Add(lblVersion);
+		
 		gridItems = new DataGridView
 		{
 			Dock = DockStyle.Fill,
@@ -788,16 +815,6 @@ public class Form1 : Form
 				e.Graphics.DrawString("LOGO EMPRESA", new Font("Segoe UI", 20f, FontStyle.Bold), Brushes.LightGray, new PointF(10f, 30f));
 			};
 		}
-		string appVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0.0";
-		Label lblVersion = new Label
-		{
-			Text = "v" + appVersion,
-			ForeColor = Color.Gray,
-			Font = new Font("Segoe UI", 8f),
-			AutoSize = true,
-			Margin = new Padding(10, 0, 0, 0)
-		};
-		controlsPanel.Controls.Add(lblVersion);
 		controlsPanel.Controls.Add(picLogo);
 		GroupBox gbCliente = CreateGroupBox("Cliente (F5 para crear)", 80);
 		cmbCustomer = new ComboBox
@@ -840,6 +857,7 @@ public class Form1 : Form
 		};
 		groupBox.Controls.Add(lblPromoStatus);
 		controlsPanel.Controls.Add(groupBox);
+		
 		Panel splitPanel = new Panel
 		{
 			Height = 400,
@@ -887,8 +905,11 @@ public class Form1 : Form
 			ForeColor = textColor,
 			BorderStyle = BorderStyle.FixedSingle,
 			Visible = false,
-			Font = new Font("Segoe UI", 12f)
+			Font = new Font("Segoe UI", 12f),
+			DrawMode = DrawMode.OwnerDrawFixed,
+			ItemHeight = 30
 		};
+		lstSearch.DrawItem += LstSearch_DrawItem;
 		lstSearch.KeyDown += LstSearch_KeyDown;
 		lstSearch.DoubleClick += LstSearch_DoubleClick;
 		lstSearch.SelectedIndexChanged += async delegate
@@ -902,9 +923,10 @@ public class Form1 : Form
 		};
 		gbScan.Controls.Add(txtBarcode);
 		gbScan.Controls.Add(lblMultiplier);
-		gbScan.Controls.Add(lstSearch);
+		controlsPanel.Controls.Add(gbScan);
+		
 		GroupBox gbImagen = CreateGroupBox("Imagen del Artículo", 230);
-		gbImagen.Location = new Point(0, gbScan.Bottom + 10);
+		gbImagen.Location = new Point(0, 0);
 		picArticle = new PictureBox
 		{
 			Location = new Point(10, 30),
@@ -917,8 +939,8 @@ public class Form1 : Form
 			picArticle.Image = Image.FromFile(text2);
 		}
 		gbImagen.Controls.Add(picArticle);
-		leftSplit.Controls.Add(gbScan);
 		leftSplit.Controls.Add(gbImagen);
+		
 		GroupBox gbDepts = CreateGroupBox("Venta Rápida por Departamento", 390);
 		panelDepartments = new FlowLayoutPanel
 		{
@@ -946,9 +968,24 @@ public class Form1 : Form
 		button.Click += BtnFinalize_Click;
 		rightPanel.Controls.Add(controlsPanel);
 		rightPanel.Controls.Add(button);
+		rightPanel.Controls.Add(lstSearch);
+		
 		panel.Controls.Add(panel4);
 		tableLayoutPanel.Controls.Add(panel, 0, 0);
 		tableLayoutPanel.Controls.Add(rightPanel, 1, 0);
+
+		Panel bottomMenu = new Panel
+		{
+			Dock = DockStyle.Fill,
+			Margin = new Padding(0),
+			BackColor = Color.FromArgb(15, 15, 20)
+		};
+		flowLayoutPanel.Dock = DockStyle.Fill;
+		flowLayoutPanel.Padding = new Padding(0, 15, 20, 0);
+		bottomMenu.Controls.Add(flowLayoutPanel);
+		
+		tableLayoutPanel.Controls.Add(bottomMenu, 0, 1);
+		tableLayoutPanel.SetColumnSpan(bottomMenu, 2);
 		base.Controls.Add(tableLayoutPanel);
 		base.Resize += delegate
 		{
@@ -959,13 +996,11 @@ public class Form1 : Form
 			if (splitPanel != null)
 			{
 				splitPanel.Height = controlsPanel.Height - splitPanel.Top - 10;
-				leftSplit.Width = (int)((double)splitPanel.Width * 0.6);
+				leftSplit.Width = (int)((double)splitPanel.Width * 0.4);
 				rightSplit.Width = splitPanel.Width - leftSplit.Width;
-				gbScan.Width = leftSplit.Width - 10;
 				gbImagen.Width = leftSplit.Width - 10;
-				gbImagen.Height = splitPanel.Height - gbScan.Height - 10;
+				gbImagen.Height = splitPanel.Height;
 				gbDepts.Height = splitPanel.Height;
-				gbImagen.Width = leftSplit.Width - 10;
 				gbDepts.Width = rightSplit.Width - 10;
 				picArticle.Width = gbImagen.Width - 20;
 				picArticle.Height = gbImagen.Height - 40;
@@ -1030,20 +1065,102 @@ public class Form1 : Form
 		string q = text.Trim();
 		if (q.Length >= 3)
 		{
-			using LocalDbContext db = new LocalDbContext();
-			string qLower = q.ToLower();
-			List<Product> list = await db.Products.Where((Product p) => p.Name.ToLower().Contains(qLower) || p.Barcode == q || p.InternalCode.ToString() == q).Take(10).ToListAsync();
-			lstSearch.Items.Clear();
-			foreach (Product item in list)
+			try 
 			{
-				lstSearch.Items.Add(new ComboBoxItem(item.Name, item.Id));
+				using LocalDbContext db = new LocalDbContext();
+				string qLower = q.ToLower();
+				var products = await db.Products.Where(p => p.Name.ToLower().Contains(qLower) || p.Barcode == q || p.InternalCode.ToString() == q).Take(10).ToListAsync();
+				
+				var productIds = products.Select(p => p.Id).ToList();
+				
+				// Traemos las presentaciones activas y filtramos en memoria para evitar problemas de traduccion de EF Core
+				var allPresentations = await db.ProductPresentations.Where(p => p.IsActive).ToListAsync();
+				var presentations = allPresentations.Where(p => productIds.Contains(p.ProductId) || p.Barcode == q).ToList();
+					
+				var missingProductIds = presentations.Select(p => p.ProductId).Except(productIds).ToList();
+				if (missingProductIds.Any())
+				{
+					products.AddRange(await db.Products.Where(p => missingProductIds.Contains(p.Id)).ToListAsync());
+				}
+
+				lstSearch.Items.Clear();
+				foreach (Product item in products)
+				{
+					lstSearch.Items.Add(new ComboBoxItem($"{item.Name} - ${item.Price:N2}", item.Id));
+					
+					foreach (var pres in presentations.Where(p => p.ProductId == item.Id))
+					{
+						string typeStr = pres.IsBulk ? $"[BULTO x{pres.Quantity:0.##}]" : $"[UNIDAD x{pres.Quantity:0.##}]";
+						decimal price = pres.Price ?? (item.Price * pres.Quantity);
+						string presText = pres.Name.Equals(item.Name, StringComparison.OrdinalIgnoreCase) ? "" : $" ({pres.Name})";
+						lstSearch.Items.Add(new ComboBoxItem($"{typeStr} {item.Name}{presText} - ${price:N2}", item.Id, pres.Id));
+					}
+				}
+				lstSearch.Visible = lstSearch.Items.Count > 0;
+				if (lstSearch.Visible)
+				{
+					int preferredHeight = lstSearch.Items.Count * lstSearch.ItemHeight + 6;
+					lstSearch.Height = Math.Min(preferredHeight, 250);
+					
+					// Find controlsPanel in rightPanel
+					FlowLayoutPanel controlsPanel = (FlowLayoutPanel)lstSearch.Parent.Controls.OfType<FlowLayoutPanel>().FirstOrDefault();
+					if (controlsPanel != null)
+					{
+						// Find gbScan inside controlsPanel
+						GroupBox gbScan = controlsPanel.Controls.OfType<GroupBox>().FirstOrDefault(g => g.Text.Contains("Escanear"));
+						if (gbScan != null)
+						{
+							lstSearch.Location = new Point(controlsPanel.Left + gbScan.Left + 10, controlsPanel.Top + gbScan.Top + 75);
+						}
+					}
+					
+					lstSearch.BringToFront();
+				}
 			}
-			lstSearch.Visible = list.Count > 0;
+			catch (Exception ex)
+			{
+				MessageBox.Show($"Error al buscar: {ex.Message}");
+			}
 		}
 		else
 		{
 			lstSearch.Visible = false;
 		}
+	}
+
+	private void LstSearch_DrawItem(object? sender, DrawItemEventArgs e)
+	{
+		if (e.Index < 0) return;
+		e.DrawBackground();
+		
+		string text = lstSearch.Items[e.Index].ToString() ?? "";
+		bool isBulto = text.Contains("[BULTO");
+		
+		Color foreColor = isBulto ? Color.FromArgb(255, 193, 7) : lstSearch.ForeColor;
+		
+		if ((e.State & DrawItemState.Selected) == DrawItemState.Selected)
+		{
+			foreColor = Color.White;
+		}
+		
+		int splitIndex = text.LastIndexOf(" - $");
+		if (splitIndex >= 0)
+		{
+			string namePart = text.Substring(0, splitIndex);
+			string pricePart = text.Substring(splitIndex + 3); // keeps "$..."
+			
+			Rectangle rightBounds = e.Bounds;
+			rightBounds.Width -= 10;
+			
+			TextRenderer.DrawText(e.Graphics, namePart, e.Font ?? lstSearch.Font, e.Bounds, foreColor, TextFormatFlags.Left | TextFormatFlags.VerticalCenter);
+			TextRenderer.DrawText(e.Graphics, pricePart, e.Font ?? lstSearch.Font, rightBounds, foreColor, TextFormatFlags.Right | TextFormatFlags.VerticalCenter);
+		}
+		else
+		{
+			TextRenderer.DrawText(e.Graphics, text, e.Font ?? lstSearch.Font, e.Bounds, foreColor, TextFormatFlags.Left | TextFormatFlags.VerticalCenter);
+		}
+		
+		e.DrawFocusRectangle();
 	}
 
 	private void LstSearch_KeyDown(object? sender, KeyEventArgs e)
@@ -1074,7 +1191,28 @@ public class Form1 : Form
 		Product product = await db.Products.FindAsync(comboBoxItem.Value);
 		if (product != null)
 		{
-			AddRow(product.Id, product.Name, product.Price, qtyToAdd, product.Stock);
+			if (comboBoxItem.PresentationId.HasValue)
+			{
+				var pres = await db.ProductPresentations.FindAsync(comboBoxItem.PresentationId.Value);
+				if (pres != null)
+				{
+					string typeStr = pres.IsBulk ? $"[BULTO x{pres.Quantity:0.##}]" : $"[UNIDAD x{pres.Quantity:0.##}]";
+					string presText = pres.Name.Equals(product.Name, StringComparison.OrdinalIgnoreCase) ? "" : $" ({pres.Name})";
+					string displayName = $"{typeStr} {product.Name}{presText}";
+					
+					decimal finalUnitPrice = (pres.Price.HasValue && pres.Quantity > 0) 
+						? (pres.Price.Value / pres.Quantity) 
+						: product.Price;
+						
+					decimal finalQuantity = qtyToAdd * pres.Quantity;
+					
+					AddRow(product.Id, displayName, finalUnitPrice, finalQuantity, product.Stock);
+				}
+			}
+			else
+			{
+				AddRow(product.Id, product.Name, product.Price, qtyToAdd, product.Stock);
+			}
 			UpdateArticleImage(product.ImageUrl);
 		}
 		_nextQuantity = 1m;
@@ -1083,6 +1221,8 @@ public class Form1 : Form
 		lstSearch.Visible = false;
 		txtBarcode.Focus();
 	}
+
+
 
 	private async void TxtBarcode_KeyDown(object? sender, KeyEventArgs e)
 	{
@@ -1102,25 +1242,34 @@ public class Form1 : Form
 			string text = txtBarcode.Text.Trim();
 			if (!string.IsNullOrEmpty(text))
 			{
-				if (lstSearch.Visible && lstSearch.Items.Count > 0)
+				bool processed = await ProcessBarcodeAsync(text, _nextQuantity);
+				
+				if (!processed)
 				{
-					lstSearch.Focus();
-					lstSearch.SelectedIndex = 0;
-					SelectSearchItem();
-					return;
+					if (lstSearch.Visible && lstSearch.Items.Count > 0)
+					{
+						lstSearch.Focus();
+						lstSearch.SelectedIndex = 0;
+						SelectSearchItem();
+					}
+					else
+					{
+						MessageBox.Show("Producto o bulto no encontrado.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+						txtBarcode.Clear();
+					}
 				}
-				decimal nextQuantity = _nextQuantity;
-				string barcode = text;
-				_nextQuantity = 1m;
-				lblMultiplier.Visible = false;
-				txtBarcode.Clear();
-				lstSearch.Visible = false;
-				await ProcessBarcodeAsync(barcode, nextQuantity);
+				else
+				{
+					_nextQuantity = 1m;
+					lblMultiplier.Visible = false;
+					txtBarcode.Clear();
+					lstSearch.Visible = false;
+				}
 			}
 		}
 	}
 
-	private async Task ProcessBarcodeAsync(string barcode, decimal quantity)
+	private async Task<bool> ProcessBarcodeAsync(string barcode, decimal quantity)
 	{
 		string barcode2 = barcode;
 		using LocalDbContext db = new LocalDbContext();
@@ -1130,7 +1279,7 @@ public class Form1 : Form
 		{
 			AddRow(product.Id, product.Name, product.Price, quantity, product.Stock);
 			UpdateArticleImage(product.ImageUrl);
-			return;
+			return true;
 		}
 
 		// Buscar en presentaciones (bultos)
@@ -1140,7 +1289,9 @@ public class Form1 : Form
 			var parentProduct = await db.Products.FirstOrDefaultAsync(p => p.Id == presentation.ProductId);
 			if (parentProduct != null)
 			{
-				string displayName = $"{parentProduct.Name} ({presentation.Name})";
+				string typeStr = presentation.IsBulk ? $"[BULTO x{presentation.Quantity:0.##}]" : $"[UNIDAD x{presentation.Quantity:0.##}]";
+				string presText = presentation.Name.Equals(parentProduct.Name, StringComparison.OrdinalIgnoreCase) ? "" : $" ({presentation.Name})";
+				string displayName = $"{typeStr} {parentProduct.Name}{presText}";
 				decimal unitPrice = presentation.Price ?? parentProduct.Price;
 				
 				// Si la presentacin tiene precio fijo, lo dividimos por la cantidad que trae para mantener
@@ -1158,11 +1309,11 @@ public class Form1 : Form
 
 				AddRow(parentProduct.Id, displayName, finalUnitPrice, finalQuantity, parentProduct.Stock);
 				UpdateArticleImage(parentProduct.ImageUrl);
-				return;
+				return true;
 			}
 		}
 
-		MessageBox.Show("Producto o bulto no encontrado.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+		return false;
 	}
 
 	private async Task CreateNewCustomerDialog()
@@ -1323,6 +1474,7 @@ public class Form1 : Form
 			{
 				((IDisposable)modal).Dispose();
 			}
+			txtBarcode.Focus();
 		}
 	}
 
@@ -1463,6 +1615,7 @@ public class Form1 : Form
 			{
 				((IDisposable)modal).Dispose();
 			}
+			txtBarcode.Focus();
 		}
 	}
 
@@ -1576,7 +1729,11 @@ public class Form1 : Form
 			string text = $"{name} ({stock:0.##})";
 			decimal subTotal = CalculateSubTotal(id, price, qty);
 			decimal discount = (price * qty) - subTotal;
-			gridItems.Rows.Add(id, text, text, price, "-", qty, "+", discount > 0m ? (object)discount : null, subTotal);
+			int rowIndex = gridItems.Rows.Add(id, text, text, price, "-", qty, "+", discount > 0m ? (object)discount : null, subTotal);
+			if (name.Contains("[BULTO"))
+			{
+				gridItems.Rows[rowIndex].DefaultCellStyle.ForeColor = Color.FromArgb(255, 193, 7);
+			}
 		}
 		UpdateTotals();
 	}
@@ -1750,22 +1907,33 @@ public class Form1 : Form
 					Name = "Efectivo"
 				});
 			}
-			localCmbPaymentMethod.DataSource = list;
+			foreach (var pm in list)
+			{
+				localCmbPaymentMethod.Items.Add(pm);
+			}
 			localCmbPaymentMethod.DisplayMember = "Name";
 			localCmbPaymentMethod.ValueMember = "Id";
 			
 			var defaultPaymentSetting = await db.SystemSettings.FirstOrDefaultAsync(s => s.Key == "DefaultPaymentMethodId");
+			bool wasSet = false;
 			if (defaultPaymentSetting != null && int.TryParse(defaultPaymentSetting.Value, out int defaultMethodId))
 			{
-				localCmbPaymentMethod.SelectedValue = defaultMethodId;
+				var item = list.FirstOrDefault(p => p.Id == defaultMethodId);
+				if (item != null)
+				{
+					localCmbPaymentMethod.SelectedItem = item;
+					wasSet = true;
+				}
 			}
-			else
+			
+			// Si no logramos seleccionar por configuración
+			if (!wasSet)
 			{
 				// Fallback to Efectivo if exists
 				var efectivo = list.FirstOrDefault(p => p.Name.ToLower() == "efectivo");
 				if (efectivo != null)
 				{
-					localCmbPaymentMethod.SelectedValue = efectivo.Id;
+					localCmbPaymentMethod.SelectedItem = efectivo;
 				}
 			}
 
@@ -1830,21 +1998,7 @@ public class Form1 : Form
 					txtPagaCon.Text = sale.TotalAmount.ToString("0.00");
 				}
 			};
-			if (localCmbPaymentMethod.Items.Count > 0)
-			{
-				int targetIndex = 0;
-				SystemSetting defaultPmSetting = await db.SystemSettings.FirstOrDefaultAsync((SystemSetting s) => s.Key == "DefaultPaymentMethodId");
-				if (defaultPmSetting != null && int.TryParse(defaultPmSetting.Value, out int defaultPmId))
-				{
-					var item = list.FirstOrDefault(p => p.Id == defaultPmId);
-					if (item != null)
-					{
-						targetIndex = list.IndexOf(item);
-					}
-				}
-				localCmbPaymentMethod.SelectedIndex = -1;
-				localCmbPaymentMethod.SelectedIndex = targetIndex;
-			}
+			
 			txtPagaCon.TextChanged += delegate
 			{
 				if (decimal.TryParse(txtPagaCon.Text.Replace(".", ","), out var result))
@@ -1858,7 +2012,7 @@ public class Form1 : Form
 			{
 				sale.Payments.Add(new SalePayment
 				{
-					PaymentMethodId = (int)localCmbPaymentMethod.SelectedValue,
+					PaymentMethodId = ((PaymentMethod)localCmbPaymentMethod.SelectedItem).Id,
 					Amount = sale.TotalAmount
 				});
 				sale.DiscountAmount += sale.PaymentDiscountAmount;
@@ -1868,10 +2022,7 @@ public class Form1 : Form
 				string text = localCmbPaymentMethod.Text;
 				string text2 = GenerateTicketText(sale, text);
 				PrintTicket(text2);
-				if (MessageBox.Show($"Venta registrada exitosamente.\nTicket: {_posNumber:D5}-{sale.Id:D8}\n\n¿Desea imprimir una copia del ticket?", "Caja", MessageBoxButtons.YesNo, MessageBoxIcon.Asterisk) == DialogResult.Yes)
-				{
-					PrintTicket(text2);
-				}
+				ShowAutoCloseMessage($"Venta registrada exitosamente.\nTicket: {_posNumber:D5}-{sale.Id:D8}\n\nImprimiendo Ticket...", "Caja", 1500);
 				gridItems.Rows.Clear();
 				UpdateArticleImage(null);
 				UpdateTotals();
@@ -1911,6 +2062,7 @@ public class Form1 : Form
 			{
 				((IDisposable)modal).Dispose();
 			}
+			txtBarcode.Focus();
 		}
 	}
 
@@ -1983,6 +2135,41 @@ public class Form1 : Form
 		{
 			MessageBox.Show("Error al intentar imprimir el ticket: " + ex.Message, "Error de Impresión", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
 		}
+	}
+
+	private void ShowAutoCloseMessage(string message, string title, int timeoutMs)
+	{
+		Form form = new Form
+		{
+			Text = title,
+			Size = new Size(400, 150),
+			StartPosition = FormStartPosition.CenterParent,
+			FormBorderStyle = FormBorderStyle.FixedDialog,
+			MaximizeBox = false,
+			MinimizeBox = false,
+			ControlBox = false,
+			BackColor = Color.FromArgb(20, 20, 30),
+			ForeColor = Color.White
+		};
+		Label label = new Label
+		{
+			Text = message,
+			Dock = DockStyle.Fill,
+			TextAlign = ContentAlignment.MiddleCenter,
+			Font = new Font("Segoe UI", 12f)
+		};
+		form.Controls.Add(label);
+		System.Windows.Forms.Timer timer = new System.Windows.Forms.Timer
+		{
+			Interval = timeoutMs
+		};
+		timer.Tick += delegate
+		{
+			timer.Stop();
+			form.Close();
+		};
+		timer.Start();
+		form.ShowDialog(this);
 	}
 
 	private string GenerateTicketText(Sale sale, string paymentMethodName)

@@ -82,6 +82,7 @@ namespace GestionQ.Web.Models
         public decimal Quantity { get; set; }
         public decimal? Price { get; set; }
         public bool NeedsLabelPrint { get; set; }
+        public bool IsBulk { get; set; }
         public bool IsActive { get; set; } = true;
     }
 }

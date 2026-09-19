@@ -125,6 +125,11 @@ namespace GestionQ.CajaPOS
                         db.SystemSettings.Add(new SystemSetting { Key = "CompanyName", Value = result.CompanyInfo.Name });
                         db.SystemSettings.Add(new SystemSetting { Key = "CompanyLogoUrl", Value = result.CompanyInfo.LogoUrl });
                         
+                        if (result.CompanyInfo.DefaultPaymentMethodId.HasValue)
+                        {
+                            db.SystemSettings.Add(new SystemSetting { Key = "DefaultPaymentMethodId", Value = result.CompanyInfo.DefaultPaymentMethodId.Value.ToString() });
+                        }
+                        
                         if (!string.IsNullOrEmpty(result.CompanyInfo.LogoUrl))
                         {
                             await DownloadImageAsync(result.CompanyInfo.LogoUrl);
@@ -191,6 +196,7 @@ namespace GestionQ.CajaPOS
                                 Barcode = presDto.Barcode,
                                 Quantity = presDto.Quantity,
                                 Price = presDto.Price,
+                                IsBulk = presDto.IsBulk,
                                 IsActive = presDto.IsActive
                             });
                         }

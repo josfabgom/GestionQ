@@ -45,6 +45,7 @@ namespace GestionQ.Domain.DTOs
     {
         public string Name { get; set; } = string.Empty;
         public string LogoUrl { get; set; } = string.Empty;
+        public int? DefaultPaymentMethodId { get; set; }
     }
 
     public class PaymentMethodSyncDto
@@ -97,6 +98,7 @@ namespace GestionQ.Domain.DTOs
         public string Barcode { get; set; } = string.Empty;
         public decimal Quantity { get; set; }
         public decimal? Price { get; set; }
+        public bool IsBulk { get; set; }
         public bool IsActive { get; set; }
     }
 

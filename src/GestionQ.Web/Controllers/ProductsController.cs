@@ -23,6 +23,25 @@ namespace GestionQ.Web.Controllers
             _env = env;
         }
 
+        [HttpGet]
+        public async Task<IActionResult> GenerateUniqueBarcode()
+        {
+            var rand = new Random();
+            string code;
+            bool exists;
+            do
+            {
+                // Generate a random 8-10 digit number
+                code = rand.Next(10000000, 999999999).ToString();
+                
+                // Check if it exists in Products or Presentations
+                exists = await _context.Products.AnyAsync(p => p.Barcode == code || p.InternalCode.ToString() == code) ||
+                         await _context.ProductPresentations.AnyAsync(p => p.Barcode == code);
+            } while (exists);
+
+            return Json(new { code = code });
+        }
+
         public async Task<IActionResult> Index(string q)
         {
             var query = _context.Products
@@ -233,6 +252,7 @@ namespace GestionQ.Web.Controllers
                     Quantity = p.Quantity,
                     Price = p.Price,
                     NeedsLabelPrint = p.NeedsLabelPrint,
+                    IsBulk = p.IsBulk,
                     IsActive = p.IsActive
                 }).ToList() ?? new List<ProductPresentationViewModel>()
             };
@@ -291,6 +311,7 @@ namespace GestionQ.Web.Controllers
                                 Quantity = mPres.Quantity,
                                 Price = mPres.Price,
                                 NeedsLabelPrint = mPres.NeedsLabelPrint,
+                                IsBulk = mPres.IsBulk,
                                 IsActive = mPres.IsActive
                             });
                         }
@@ -304,6 +325,7 @@ namespace GestionQ.Web.Controllers
                                 existing.Quantity = mPres.Quantity;
                                 existing.Price = mPres.Price;
                                 existing.NeedsLabelPrint = mPres.NeedsLabelPrint;
+                                existing.IsBulk = mPres.IsBulk;
                                 existing.IsActive = mPres.IsActive;
                             }
                         }

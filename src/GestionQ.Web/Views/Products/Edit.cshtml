@@ -201,6 +201,7 @@
                         <thead>
                             <tr>
                                 <th>Nombre (Ej: Fardo x 6)</th>
+                                <th>Tipo</th>
                                 <th>C&oacute;digo de Barras</th>
                                 <th style="width: 100px;">Cant. Unidades</th>
                                 <th style="width: 120px;">Precio Fijo ($)</th>
@@ -218,9 +219,28 @@
                                         <input type="hidden" name="Presentations[@i].IsActive" value="true" />
                                         <input type="text" name="Presentations[@i].Name" class="form-control" value="@Model.Presentations[i].Name" required />
                                     </td>
-                                    <td><input type="text" name="Presentations[@i].Barcode" class="form-control" value="@Model.Presentations[i].Barcode" required /></td>
-                                    <td><input type="number" name="Presentations[@i].Quantity" class="form-control" value="@Model.Presentations[i].Quantity.ToString(System.Globalization.CultureInfo.InvariantCulture)" step="0.01" required /></td>
-                                    <td><input type="number" name="Presentations[@i].Price" class="form-control" value="@Model.Presentations[i].Price?.ToString(System.Globalization.CultureInfo.InvariantCulture)" step="0.01" /></td>
+                                    <td>
+                                        <select name="Presentations[@i].IsBulk" class="form-control">
+                                            @if (Model.Presentations[i].IsBulk)
+                                            {
+                                                <option value="false">Unidad</option>
+                                                <option value="true" selected>Bulto</option>
+                                            }
+                                            else
+                                            {
+                                                <option value="false" selected>Unidad</option>
+                                                <option value="true">Bulto</option>
+                                            }
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <div style="display: flex; gap: 0.5rem;">
+                                            <input type="text" id="presBarcode_@i" name="Presentations[@i].Barcode" class="form-control" value="@Model.Presentations[i].Barcode" required />
+                                            <button type="button" class="btn-secondary" style="padding: 4px 8px; font-size: 0.8rem;" onclick="generateInternalBarcode('presBarcode_@i')" title="Generar código interno"><i class="fas fa-barcode"></i></button>
+                                        </div>
+                                    </td>
+                                    <td><input type="number" name="Presentations[@i].Quantity" class="form-control" step="0.01" value="@Model.Presentations[i].Quantity.ToString(System.Globalization.CultureInfo.InvariantCulture)" required /></td>
+                                    <td><input type="number" name="Presentations[@i].Price" class="form-control" step="0.01" value="@(Model.Presentations[i].Price?.ToString(System.Globalization.CultureInfo.InvariantCulture))" /></td>
                                     <td style="text-align: center;"><input type="checkbox" name="Presentations[@i].NeedsLabelPrint" value="true" @(Model.Presentations[i].NeedsLabelPrint ? "checked" : "") /></td>
                                     <td><button type="button" class="btn-danger" style="padding: 4px 8px;" onclick="removePresentation(this)">X</button></td>
                                 </tr>
@@ -522,13 +542,35 @@
                     <input type="hidden" name="Presentations[${index}].IsActive" value="true" />
                     <input type="text" name="Presentations[${index}].Name" class="form-control" required />
                 </td>
-                <td><input type="text" name="Presentations[${index}].Barcode" class="form-control" required /></td>
+                <td>
+                    <select name="Presentations[${index}].IsBulk" class="form-control">
+                        <option value="false">Unidad</option>
+                        <option value="true">Bulto</option>
+                    </select>
+                </td>
+                <td>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <input type="text" id="presBarcode_${index}" name="Presentations[${index}].Barcode" class="form-control" required />
+                        <button type="button" class="btn-secondary" style="padding: 4px 8px; font-size: 0.8rem;" onclick="generateInternalBarcode('presBarcode_${index}')" title="Generar código interno"><i class="fas fa-barcode"></i></button>
+                    </div>
+                </td>
                 <td><input type="number" name="Presentations[${index}].Quantity" class="form-control" step="0.01" value="1" required /></td>
                 <td><input type="number" name="Presentations[${index}].Price" class="form-control" step="0.01" /></td>
                 <td style="text-align: center;"><input type="checkbox" name="Presentations[${index}].NeedsLabelPrint" value="true" /></td>
                 <td><button type="button" class="btn-danger" style="padding: 4px 8px;" onclick="removePresentation(this)">X</button></td>
             `;
             tbody.appendChild(tr);
+        }
+
+        async function generateInternalBarcode(inputId) {
+            try {
+                const response = await fetch('@Url.Action("GenerateUniqueBarcode", "Products")');
+                const data = await response.json();
+                document.getElementById(inputId).value = data.code;
+            } catch (error) {
+                console.error('Error generating barcode', error);
+                alert('No se pudo generar el código. Intente de nuevo.');
+            }
         }
     </script>
 }

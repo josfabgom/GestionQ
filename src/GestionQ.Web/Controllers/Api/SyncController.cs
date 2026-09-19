@@ -116,10 +116,18 @@ namespace GestionQ.Web.Controllers.Api
                 DiscountPercentage = pm.DiscountPercentage
             }).ToListAsync();
 
+            var defaultPmSetting = await _context.SystemSettings.FirstOrDefaultAsync(s => s.Key == "DefaultPaymentMethodId");
+            int? defaultPmId = null;
+            if (defaultPmSetting != null && int.TryParse(defaultPmSetting.Value, out int parsedId))
+            {
+                defaultPmId = parsedId;
+            }
+
             var companyInfo = new CompanyInfoSyncDto
             {
                 Name = _config["CompanyInfo:Name"] ?? "GestionQ",
-                LogoUrl = "/images/logo.png"
+                LogoUrl = "/images/logo.png",
+                DefaultPaymentMethodId = defaultPmId
             };
 
             var activePromos = await _context.PromotionRules
@@ -188,6 +196,7 @@ namespace GestionQ.Web.Controllers.Api
                     Barcode = p.Barcode,
                     Quantity = p.Quantity,
                     Price = p.Price,
+                    IsBulk = p.IsBulk,
                     IsActive = p.IsActive
                 }).ToListAsync();
 

@@ -17,7 +17,12 @@ static class Program
             try {
                 Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions.ExecuteSqlRaw(db.Database, "CREATE TABLE IF NOT EXISTS SystemSettings (Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, \"Key\" TEXT NOT NULL, Value TEXT NULL, Description TEXT NULL);");
                 Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions.ExecuteSqlRaw(db.Database, "CREATE TABLE IF NOT EXISTS OfflineCashRegisters (Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, GlobalId TEXT NOT NULL, UserId TEXT NOT NULL, OpeningDate TEXT NOT NULL, ClosingDate TEXT NULL, InitialBalance TEXT NOT NULL, FinalCashBalance TEXT NULL, IsSynced INTEGER NOT NULL, ServerCashRegisterId INTEGER NULL);");
-                Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions.ExecuteSqlRaw(db.Database, "CREATE TABLE IF NOT EXISTS ProductPresentations (Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, Barcode TEXT NOT NULL, IsActive INTEGER NOT NULL, Name TEXT NOT NULL, NeedsLabelPrint INTEGER NOT NULL, Price TEXT NULL, ProductId INTEGER NOT NULL, Quantity TEXT NOT NULL);");
+                Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions.ExecuteSqlRaw(db.Database, "CREATE TABLE IF NOT EXISTS ProductPresentations (Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, Barcode TEXT NOT NULL, IsActive INTEGER NOT NULL, Name TEXT NOT NULL, NeedsLabelPrint INTEGER NOT NULL, Price TEXT NULL, ProductId INTEGER NOT NULL, Quantity TEXT NOT NULL, IsBulk INTEGER NOT NULL DEFAULT 0);");
+            } catch { }
+            
+            // Alter tables to add new columns for backward compatibility without losing data
+            try {
+                Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions.ExecuteSqlRaw(db.Database, "ALTER TABLE ProductPresentations ADD COLUMN IsBulk INTEGER NOT NULL DEFAULT 0;");
             } catch { }
         }
         

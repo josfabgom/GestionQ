@@ -24,6 +24,8 @@ namespace GestionQ.Domain.Entities
 
         public bool NeedsLabelPrint { get; set; } = false;
 
+        public bool IsBulk { get; set; } = false;
+
         public bool IsActive { get; set; } = true;
     }
 }

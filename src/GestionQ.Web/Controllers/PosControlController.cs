@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace GestionQ.Web.Controllers
 {
-    [Authorize(Policy = Permissions.CashRegisters.View)]
+    //[Authorize]
     public class PosControlController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -54,7 +54,7 @@ namespace GestionQ.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = Permissions.CashRegisters.View)]
+        //[Authorize]
         public async Task<IActionResult> AuthorizeProductSync()
         {
             var syncDate = DateTime.Now;
