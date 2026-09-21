@@ -1,0 +1,96 @@
+@model GestionQ.Domain.Entities.PaymentReceipt
+
+@{
+    Layout = null; // Sin navbar ni sidebar
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <title>Orden de Pago @Model.ReceiptNumber</title>
+    <style>
+        body { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; color: #333; margin: 0; padding: 40px; background: #fff; }
+        .receipt-box { max-width: 800px; margin: 0 auto; border: 1px solid #ccc; padding: 30px; position: relative; }
+        .header { display: flex; justify-content: space-between; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 20px; }
+        .title { font-size: 24px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; }
+        .op-number { font-size: 20px; font-weight: bold; color: #d32f2f; }
+        .date { font-size: 14px; color: #666; margin-top: 10px; }
+        .content-row { display: flex; margin-bottom: 15px; font-size: 16px; }
+        .content-label { font-weight: bold; width: 150px; flex-shrink: 0; }
+        .content-value { border-bottom: 1px dashed #ccc; flex-grow: 1; padding-left: 10px; }
+        .amount-box { border: 2px solid #333; padding: 15px; text-align: center; font-size: 24px; font-weight: bold; width: 250px; margin: 30px auto; background: #f9f9f9; }
+        .signatures { display: flex; justify-content: space-between; margin-top: 80px; }
+        .sign-line { border-top: 1px solid #333; width: 250px; text-align: center; padding-top: 10px; font-size: 14px; }
+        @@media print {
+            body { padding: 0; }
+            .receipt-box { border: none; padding: 0; }
+            .no-print { display: none !important; }
+        }
+    </style>
+</head>
+<body onload="window.print()">
+    <div class="no-print" style="text-align: center; margin-bottom: 20px;">
+        <a href="/PaymentReceipts" style="display: inline-block; padding: 10px 20px; background: #333; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; font-family: sans-serif;">Volver al Listado</a>
+        <button onclick="window.print()" style="padding: 10px 20px; background: #10b981; color: white; border: none; border-radius: 5px; margin-left: 10px; cursor: pointer; font-weight: bold;">Reimprimir</button>
+    </div>
+    <div class="receipt-box">
+        <div class="header">
+            <div>
+                <div class="title">ORDEN DE PAGO</div>
+                <div class="date">Fecha: @Model.Date.ToString("dd/MM/yyyy HH:mm")</div>
+            </div>
+            <div style="text-align: right;">
+                <div class="op-number">N° @Model.ReceiptNumber</div>
+                <div style="font-size: 12px; margin-top: 5px; color: #666;">Original</div>
+            </div>
+        </div>
+
+        <div class="content-row">
+            <div class="content-label">Pagamos a:</div>
+            <div class="content-value">@(Model.Supplier?.Name ?? Model.Concept)</div>
+        </div>
+
+        <div class="content-row">
+            <div class="content-label">La suma de pesos:</div>
+            <div class="content-value">@Model.Amount.ToString("C2")</div>
+        </div>
+
+        <div class="content-row">
+            <div class="content-label">En concepto de:</div>
+            <div class="content-value">
+                @Model.Concept
+                @if (Model.Purchase != null)
+                {
+                    <span> (Factura N° @Model.Purchase.ReferenceNumber)</span>
+                }
+            </div>
+        </div>
+
+        <div class="content-row">
+            <div class="content-label">Medio de Pago:</div>
+            <div class="content-value">
+                @Model.PaymentMethod?.Name
+                @if (!string.IsNullOrEmpty(Model.ReferenceNumber)) { <span> - Ref: @Model.ReferenceNumber</span> }
+                @if (!string.IsNullOrEmpty(Model.CheckNumber)) { <span> - Cheque: @Model.CheckNumber Banco: @Model.CheckBank Vto: @Model.CheckDueDate?.ToString("dd/MM/yyyy")</span> }
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(Model.Notes))
+        {
+            <div class="content-row">
+                <div class="content-label">Observaciones:</div>
+                <div class="content-value">@Model.Notes</div>
+            </div>
+        }
+
+        <div class="amount-box">
+            @Model.Amount.ToString("C2")
+        </div>
+
+        <div class="signatures">
+            <div class="sign-line">Firma quien entrega<br/><span style="color:#666; font-size:12px;">@(Model.User?.UserName)</span></div>
+            <div class="sign-line">Firma quien recibe<br/><span style="color:#666; font-size:12px;">Aclaración / DNI</span></div>
+        </div>
+    </div>
+</body>
+</html>

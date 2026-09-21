@@ -106,6 +106,19 @@
                     </a>
                 </li>
                 }
+                @if (User.IsInRole("Admin"))
+                {
+                <li>
+                    <a asp-controller="CentralCash" asp-action="Index" style="color: #10b981; font-weight: 600;">
+                        <i class="fa-solid fa-vault"></i> Caja Central
+                    </a>
+                </li>
+                <li>
+                    <a asp-controller="PaymentReceipts" asp-action="Index" style="color: #ef4444; font-weight: 600;">
+                        <i class="fa-solid fa-file-invoice-dollar"></i> Órdenes de Pago
+                    </a>
+                </li>
+                }
                 @if (User.IsInRole("Admin") || User.HasClaim("Permission", Permissions.Customers.View))
                 {
                 <li>

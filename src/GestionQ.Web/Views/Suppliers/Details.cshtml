@@ -1,4 +1,4 @@
-@model GestionQ.Domain.Entities.Supplier
+﻿@model GestionQ.Domain.Entities.Supplier
 
 @{
     ViewData["Title"] = "Detalle de Proveedor";
@@ -7,67 +7,139 @@
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
     <h1 class="page-title" style="margin-bottom: 0;">Detalle de Proveedor</h1>
     <div>
+        <a asp-controller="PaymentReceipts" asp-action="Create" asp-route-supplierId="@Model.Id" class="btn-primary" style="background: var(--accent); margin-right: 1rem;">Registrar Pago</a>
         <a asp-action="Edit" asp-route-id="@Model.Id" class="btn-primary">Editar</a>
         <a asp-action="Index" class="btn-secondary">Volver al Listado</a>
     </div>
 </div>
 
-<div class="glass-panel" style="max-width: 800px;">
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+<div class="glass-panel" style="margin-bottom: 2rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
         <div>
-            <div style="margin-bottom: 1.5rem;">
-                <label style="display: block; opacity: 0.5; font-size: 0.8rem;">Nombre / Razón Social:</label>
-                <span style="font-weight: 600; font-size: 1.2rem; color: var(--accent);">@Model.Name</span>
-            </div>
-
-            <div style="margin-bottom: 1.5rem;">
-                <label style="display: block; opacity: 0.5; font-size: 0.8rem;">CUIT/CUIL:</label>
-                <span style="font-weight: 600;">@(Model.TaxId ?? "-")</span>
-            </div>
-
-            <div style="margin-bottom: 1.5rem;">
-                <label style="display: block; opacity: 0.5; font-size: 0.8rem;">Condición IVA:</label>
-                <span style="font-weight: 600;">@(Model.TaxCondition?.Name ?? "-")</span>
-            </div>
-
-            <div style="margin-bottom: 1.5rem;">
-                <label style="display: block; opacity: 0.5; font-size: 0.8rem;">Persona de Contacto:</label>
-                <span style="font-weight: 600;">@(Model.ContactPerson ?? "-")</span>
-            </div>
+            <h2 style="margin: 0; font-size: 1.5rem; color: var(--accent);">@Model.Name</h2>
+            <div style="opacity: 0.7; margin-top: 0.5rem;">CUIT: @(Model.TaxId ?? "-") | Condición IVA: @(Model.TaxCondition?.Name ?? "-")</div>
         </div>
-
-        <div>
-            <div style="margin-bottom: 1.5rem;">
-                <label style="display: block; opacity: 0.5; font-size: 0.8rem;">Teléfono:</label>
-                <span style="font-weight: 600;">@(Model.Phone ?? "-")</span>
+        <div style="text-align: right;">
+            <div style="opacity: 0.7; font-size: 0.9rem;">Saldo de Cuenta Corriente</div>
+            <div style="font-size: 2rem; font-weight: 700; color: @(Model.Balance > 0 ? "#ef4444" : "#10b981");">
+                @Model.Balance.ToString("C2")
             </div>
+            @if (Model.Balance > 0)
+            {
+                <div style="font-size: 0.8rem; color: #ef4444;">Deuda pendiente a favor del proveedor</div>
+            }
+        </div>
+    </div>
+</div>
 
-            <div style="margin-bottom: 1.5rem;">
-                <label style="display: block; opacity: 0.5; font-size: 0.8rem;">Email:</label>
-                <span style="font-weight: 600;">@(Model.Email ?? "-")</span>
-            </div>
-
-            <div style="margin-bottom: 1.5rem;">
-                <label style="display: block; opacity: 0.5; font-size: 0.8rem;">Localidad:</label>
-                <span style="font-weight: 600;">@(Model.City ?? "-")</span>
-            </div>
-
-            <div style="margin-bottom: 1.5rem;">
-                <label style="display: block; opacity: 0.5; font-size: 0.8rem;">Dirección:</label>
-                <span style="font-weight: 600;">@(Model.Address ?? "-")</span>
-            </div>
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+    <div class="glass-panel">
+        <h3 style="margin-top: 0; margin-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">Información de Contacto</h3>
+        <div style="margin-bottom: 1rem;">
+            <label style="display: block; opacity: 0.5; font-size: 0.8rem;">Persona de Contacto:</label>
+            <span style="font-weight: 600;">@(Model.ContactPerson ?? "-")</span>
+        </div>
+        <div style="margin-bottom: 1rem;">
+            <label style="display: block; opacity: 0.5; font-size: 0.8rem;">Teléfono:</label>
+            <span style="font-weight: 600;">@(Model.Phone ?? "-")</span>
+        </div>
+        <div style="margin-bottom: 1rem;">
+            <label style="display: block; opacity: 0.5; font-size: 0.8rem;">Email:</label>
+            <span style="font-weight: 600;">@(Model.Email ?? "-")</span>
+        </div>
+        <div style="margin-bottom: 1rem;">
+            <label style="display: block; opacity: 0.5; font-size: 0.8rem;">Localidad y Dirección:</label>
+            <span style="font-weight: 600;">@(Model.City ?? "-") - @(Model.Address ?? "-")</span>
         </div>
     </div>
 
-    <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.1);">
-        <label style="display: block; opacity: 0.5; font-size: 0.8rem; margin-bottom: 0.5rem;">Estado:</label>
-        @if (Model.IsActive)
+    <div class="glass-panel">
+        <h3 style="margin-top: 0; margin-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">Historial de Pagos</h3>
+        @if (Model.Payments != null && Model.Payments.Any())
         {
-            <span class="badge" style="background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 0.4rem 1rem; border-radius: 20px; font-weight: 600;">Activo</span>
+            <div style="max-height: 250px; overflow-y: auto;">
+                <table class="table" style="width: 100%; font-size: 0.9rem;">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Monto</th>
+                            <th>Método</th>
+                            <th>Ref/Comprobante</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var p in Model.Payments)
+                        {
+                            <tr>
+                                <td>@p.Date.ToString("dd/MM/yyyy")</td>
+                                <td style="font-weight: bold; color: #10b981;">@p.Amount.ToString("C2")</td>
+                                <td>@p.PaymentMethod?.Name</td>
+                                <td>
+                                    @(p.ReferenceNumber)
+                                    @if (!string.IsNullOrEmpty(p.CheckNumber))
+                                    {
+                                        <span> (Cheque: @p.CheckNumber)</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
         }
         else
         {
-            <span class="badge" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 0.4rem 1rem; border-radius: 20px; font-weight: 600;">Inactivo</span>
+            <div style="opacity: 0.5; text-align: center; padding: 2rem 0;">No hay pagos registrados.</div>
         }
     </div>
+</div>
+
+<div class="glass-panel">
+    <h3 style="margin-top: 0; margin-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">Facturas / Compras Recibidas</h3>
+    @if (Model.Purchases != null && Model.Purchases.Any(p => p.Status == GestionQ.Domain.Entities.PurchaseStatus.Received))
+    {
+        <div style="overflow-x: auto;">
+            <table class="table" style="width: 100%;">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Ref. / Nro Factura</th>
+                        <th>Total</th>
+                        <th>Pagado</th>
+                        <th>Saldo Pendiente</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var pur in Model.Purchases.Where(p => p.Status == GestionQ.Domain.Entities.PurchaseStatus.Received))
+                    {
+                        decimal pendiente = pur.TotalAmount - pur.PaidAmount;
+                        <tr>
+                            <td>@pur.Date.ToString("dd/MM/yyyy")</td>
+                            <td>@pur.ReferenceNumber</td>
+                            <td style="font-weight: 600;">@pur.TotalAmount.ToString("C2")</td>
+                            <td style="color: #10b981;">@pur.PaidAmount.ToString("C2")</td>
+                            <td style="font-weight: 600; color: @(pendiente > 0 ? "#ef4444" : "inherit");">
+                                @pendiente.ToString("C2")
+                            </td>
+                            <td>
+                                @if (pendiente > 0)
+                                {
+                                    <a asp-controller="PaymentReceipts" asp-action="Create" asp-route-supplierId="@Model.Id" asp-route-purchaseId="@pur.Id" class="btn-primary" style="padding: 0.3rem 0.6rem; font-size: 0.8rem; background: var(--accent);">Abonar Factura</a>
+                                }
+                                else
+                                {
+                                    <span style="color: #10b981; font-weight: bold; font-size: 0.8rem;">Saldada</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div style="opacity: 0.5; text-align: center; padding: 2rem 0;">No hay compras recibidas para este proveedor.</div>
+    }
 </div>

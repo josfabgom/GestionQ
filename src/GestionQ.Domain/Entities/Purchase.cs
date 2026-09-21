@@ -25,6 +25,7 @@ namespace GestionQ.Domain.Entities
         public string? ImageUrl { get; set; }
 
         public decimal TotalAmount { get; set; }
+        public decimal PaidAmount { get; set; } = 0;
 
         public string? Notes { get; set; }
         public PurchaseStatus Status { get; set; } = PurchaseStatus.Received;

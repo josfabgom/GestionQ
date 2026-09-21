@@ -41,6 +41,9 @@ namespace GestionQ.Domain.Entities
 
         public bool IsActive { get; set; } = true;
 
+        public decimal Balance { get; set; } = 0;
+
         public ICollection<Purchase> Purchases { get; set; } = new List<Purchase>();
+        public ICollection<SupplierPayment> Payments { get; set; } = new List<SupplierPayment>();
     }
 }

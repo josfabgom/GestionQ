@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using GestionQ.Domain.Entities;
@@ -22,6 +22,9 @@ namespace GestionQ.Infrastructure.Data
         public DbSet<CashRegister> CashRegisters { get; set; }
         public DbSet<CashRegisterMovement> CashRegisterMovements { get; set; }
         public DbSet<Supplier> Suppliers { get; set; }
+        public DbSet<SupplierPayment> SupplierPayments { get; set; }
+        public DbSet<PaymentReceipt> PaymentReceipts { get; set; }
+        public DbSet<CentralCashMovement> CentralCashMovements { get; set; }
         public DbSet<Purchase> Purchases { get; set; }
         public DbSet<PurchaseItem> PurchaseItems { get; set; }
         public DbSet<StockMovement> StockMovements { get; set; }
@@ -102,7 +105,7 @@ namespace GestionQ.Infrastructure.Data
                 string changes = "";
                 if (entry.State == EntityState.Added)
                 {
-                    changes = "Creación de artículo";
+                    changes = "CreaciÃ³n de artÃ­culo";
                 }
                 else
                 {
@@ -123,8 +126,8 @@ namespace GestionQ.Infrastructure.Data
                                 "Price" => "Precio",
                                 "Stock" => "Stock",
                                 "Name" => "Nombre",
-                                "InternalCode" => "Código Int.",
-                                "Barcode" => "Cód. Barras",
+                                "InternalCode" => "CÃ³digo Int.",
+                                "Barcode" => "CÃ³d. Barras",
                                 "IsActive" => "Estado",
                                 "Cost" => "Costo",
                                 _ => propName
@@ -137,7 +140,7 @@ namespace GestionQ.Infrastructure.Data
                                 current = cPrice.ToString("C2");
                             }
 
-                            changeParts.Add($"{nombreES} ({original} ➡️ {current})");
+                            changeParts.Add($"{nombreES} ({original} âž¡ï¸ {current})");
                         }
                     }
                     if (changeParts.Count == 0) continue; 
@@ -156,4 +159,5 @@ namespace GestionQ.Infrastructure.Data
         }
     }
 }
+
 

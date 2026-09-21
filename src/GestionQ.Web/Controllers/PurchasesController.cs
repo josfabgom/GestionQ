@@ -221,6 +221,17 @@ namespace GestionQ.Web.Controllers
                 purchase.Status = PurchaseStatus.Received;
                 purchase.Date = DateTime.Now; // Update date to arrival date
                 
+                // Actualizar saldo del proveedor (sumar la deuda por lo recibido)
+                var supplier = await _context.Suppliers.FindAsync(purchase.SupplierId);
+                if (supplier != null)
+                {
+                    // Recalcular TotalAmount en base a lo recibido realmente
+                    decimal actualTotal = purchase.Items.Sum(i => (i.ReceivedQuantity ?? i.Quantity) * i.UnitCost);
+                    purchase.TotalAmount = actualTotal;
+                    supplier.Balance += actualTotal;
+                    _context.Suppliers.Update(supplier);
+                }
+
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
 
@@ -270,6 +281,14 @@ namespace GestionQ.Web.Controllers
                             product.Stock -= qtyToReverse;
                             _context.StockMovements.Add(movement);
                         }
+                    }
+
+                    // Restar deuda al proveedor
+                    var supplier = await _context.Suppliers.FindAsync(purchase.SupplierId);
+                    if (supplier != null)
+                    {
+                        supplier.Balance -= purchase.TotalAmount;
+                        _context.Suppliers.Update(supplier);
                     }
                 }
 

@@ -1063,6 +1063,13 @@ public class Form1 : Form
 			}
 		}
 		string q = text.Trim();
+		bool wildcardPresentations = false;
+		if (q.StartsWith("/"))
+		{
+			wildcardPresentations = true;
+			q = q.Substring(1).TrimStart();
+		}
+
 		if (q.Length >= 3)
 		{
 			try 
@@ -1075,20 +1082,41 @@ public class Form1 : Form
 				
 				// Traemos las presentaciones activas y filtramos en memoria para evitar problemas de traduccion de EF Core
 				var allPresentations = await db.ProductPresentations.Where(p => p.IsActive).ToListAsync();
-				var presentations = allPresentations.Where(p => productIds.Contains(p.ProductId) || p.Barcode == q).ToList();
+				
+				// Encontramos presentaciones que coincidan directamente (por nombre o codigo de barras)
+				var directPresentations = allPresentations.Where(p => p.Barcode == q || (p.Name != null && p.Name.ToLower().Contains(qLower))).ToList();
 					
-				var missingProductIds = presentations.Select(p => p.ProductId).Except(productIds).ToList();
+				var missingProductIds = directPresentations.Select(p => p.ProductId).Except(productIds).ToList();
 				if (missingProductIds.Any())
 				{
 					products.AddRange(await db.Products.Where(p => missingProductIds.Contains(p.Id)).ToListAsync());
+					productIds.AddRange(missingProductIds);
 				}
+				
+				// Traemos TODAS las presentaciones de los productos que encontramos
+				var productPresentations = allPresentations.Where(p => productIds.Contains(p.ProductId)).ToList();
 
 				lstSearch.Items.Clear();
 				foreach (Product item in products)
 				{
-					lstSearch.Items.Add(new ComboBoxItem($"{item.Name} - ${item.Price:N2}", item.Id));
+					var itemPresentations = productPresentations.Where(p => p.ProductId == item.Id).ToList();
 					
-					foreach (var pres in presentations.Where(p => p.ProductId == item.Id))
+					if (wildcardPresentations)
+					{
+						// Si se usó el comodín, mostramos el producto base SOLO si no tiene presentaciones
+						if (!itemPresentations.Any())
+						{
+							lstSearch.Items.Add(new ComboBoxItem($"{item.Name} - ${item.Price:N2}", item.Id));
+						}
+					}
+					else
+					{
+						// Comportamiento normal: mostramos el producto base
+						lstSearch.Items.Add(new ComboBoxItem($"{item.Name} - ${item.Price:N2}", item.Id));
+					}
+					
+					// Mostramos las presentaciones
+					foreach (var pres in itemPresentations)
 					{
 						string typeStr = pres.IsBulk ? $"[BULTO x{pres.Quantity:0.##}]" : $"[UNIDAD x{pres.Quantity:0.##}]";
 						decimal price = pres.Price ?? (item.Price * pres.Quantity);

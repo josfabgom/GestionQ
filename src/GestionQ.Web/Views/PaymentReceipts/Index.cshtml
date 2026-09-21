@@ -1,0 +1,58 @@
+﻿@model IEnumerable<GestionQ.Domain.Entities.PaymentReceipt>
+
+@{
+    ViewData["Title"] = "Órdenes de Pago / Egresos";
+}
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <h1 class="page-title" style="margin-bottom: 0;">Órdenes de Pago y Gastos</h1>
+    <a asp-action="Create" class="btn-primary" style="padding: 0.8rem 1.5rem; background: #f59e0b; border: none;">+ Registrar Nuevo Pago</a>
+</div>
+
+<div class="glass-panel">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Nro. OP</th>
+                <th>Fecha</th>
+                <th>Concepto / Proveedor</th>
+                <th>Medio de Pago</th>
+                <th>Usuario</th>
+                <th style="text-align: right;">Monto</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td style="font-weight: 600; color: var(--accent);">@item.ReceiptNumber</td>
+                    <td>@item.Date.ToString("dd/MM/yyyy HH:mm")</td>
+                    <td>
+                        @if (item.Supplier != null)
+                        {
+                            <strong>@item.Supplier.Name</strong><br/>
+                            <span style="font-size: 0.8rem; opacity: 0.7;">@item.Concept</span>
+                        }
+                        else
+                        {
+                            @item.Concept
+                        }
+                    </td>
+                    <td>@(item.PaymentMethod?.Name ?? "-")</td>
+                    <td style="opacity: 0.7;">@(item.User?.UserName ?? "-")</td>
+                    <td style="text-align: right; font-weight: 600; color: #ef4444;">- @item.Amount.ToString("C2")</td>
+                    <td style="text-align: right;">
+                        <a asp-action="Print" asp-route-id="@item.Id" class="btn-secondary" style="padding: 0.4rem 0.75rem; color: #10b981; border-color: rgba(16,185,129,0.3);" target="_blank">
+                            <i class="fa-solid fa-print"></i>
+                        </a>
+                    </td>
+                </tr>
+            }
+            @if (!Model.Any())
+            {
+                <tr><td colspan="7" style="text-align: center; opacity: 0.5; padding: 2rem;">No hay recibos registrados.</td></tr>
+            }
+        </tbody>
+    </table>
+</div>

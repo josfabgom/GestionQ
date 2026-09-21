@@ -38,6 +38,9 @@ namespace GestionQ.Web.Controllers
             if (id == null) return NotFound();
             var supplier = await _context.Suppliers
                 .Include(s => s.TaxCondition)
+                .Include(s => s.Purchases.OrderByDescending(p => p.Date))
+                .Include(s => s.Payments.OrderByDescending(p => p.Date))
+                    .ThenInclude(p => p.PaymentMethod)
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (supplier == null) return NotFound();
             return View(supplier);

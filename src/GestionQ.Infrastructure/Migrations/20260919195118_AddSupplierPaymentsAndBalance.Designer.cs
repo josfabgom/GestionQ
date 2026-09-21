@@ -4,6 +4,7 @@ using GestionQ.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GestionQ.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260919195118_AddSupplierPaymentsAndBalance")]
+    partial class AddSupplierPaymentsAndBalance
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -126,50 +129,6 @@ namespace GestionQ.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Categories");
-                });
-
-            modelBuilder.Entity("GestionQ.Domain.Entities.CentralCashMovement", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<decimal>("Amount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("Concept")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<DateTime>("Date")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("PaymentReceiptId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("SourceCashRegisterId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<string>("UserId")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PaymentReceiptId");
-
-                    b.HasIndex("SourceCashRegisterId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("CentralCashMovements");
                 });
 
             modelBuilder.Entity("GestionQ.Domain.Entities.Customer", b =>
@@ -468,73 +427,6 @@ namespace GestionQ.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("PaymentMethods");
-                });
-
-            modelBuilder.Entity("GestionQ.Domain.Entities.PaymentReceipt", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<decimal>("Amount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("CheckBank")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<DateTime?>("CheckDueDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CheckNumber")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("Concept")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<DateTime>("Date")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Notes")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("PaymentMethodId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("PurchaseId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ReceiptNumber")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<string>("ReferenceNumber")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<int?>("SupplierId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("UserId")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PaymentMethodId");
-
-                    b.HasIndex("PurchaseId");
-
-                    b.HasIndex("SupplierId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("PaymentReceipts");
                 });
 
             modelBuilder.Entity("GestionQ.Domain.Entities.PointOfSale", b =>
@@ -1512,27 +1404,6 @@ namespace GestionQ.Infrastructure.Migrations
                     b.Navigation("CashRegister");
                 });
 
-            modelBuilder.Entity("GestionQ.Domain.Entities.CentralCashMovement", b =>
-                {
-                    b.HasOne("GestionQ.Domain.Entities.PaymentReceipt", "PaymentReceipt")
-                        .WithMany()
-                        .HasForeignKey("PaymentReceiptId");
-
-                    b.HasOne("GestionQ.Domain.Entities.CashRegister", "SourceCashRegister")
-                        .WithMany()
-                        .HasForeignKey("SourceCashRegisterId");
-
-                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId");
-
-                    b.Navigation("PaymentReceipt");
-
-                    b.Navigation("SourceCashRegister");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("GestionQ.Domain.Entities.Customer", b =>
                 {
                     b.HasOne("GestionQ.Domain.Entities.TaxCondition", "TaxCondition")
@@ -1597,35 +1468,6 @@ namespace GestionQ.Infrastructure.Migrations
                         .HasForeignKey("PointOfSaleId");
 
                     b.Navigation("PointOfSale");
-                });
-
-            modelBuilder.Entity("GestionQ.Domain.Entities.PaymentReceipt", b =>
-                {
-                    b.HasOne("GestionQ.Domain.Entities.PaymentMethod", "PaymentMethod")
-                        .WithMany()
-                        .HasForeignKey("PaymentMethodId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("GestionQ.Domain.Entities.Purchase", "Purchase")
-                        .WithMany()
-                        .HasForeignKey("PurchaseId");
-
-                    b.HasOne("GestionQ.Domain.Entities.Supplier", "Supplier")
-                        .WithMany()
-                        .HasForeignKey("SupplierId");
-
-                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId");
-
-                    b.Navigation("PaymentMethod");
-
-                    b.Navigation("Purchase");
-
-                    b.Navigation("Supplier");
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("GestionQ.Domain.Entities.Product", b =>

@@ -1,0 +1,152 @@
+﻿@model GestionQ.Domain.Entities.PaymentReceipt
+
+@{
+    ViewData["Title"] = "Registrar Orden de Pago";
+}
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <h1 class="page-title" style="margin-bottom: 0;">Emitir Orden de Pago</h1>
+    <a asp-action="Index" class="btn-secondary">Volver al Listado</a>
+</div>
+
+<div class="glass-panel" style="max-width: 800px; margin: 0 auto;">
+    <p style="opacity: 0.8; margin-bottom: 1.5rem;">Todo pago registrado aquí generará un <strong style="color: #ef4444;">Egreso</strong> automático de la <strong>Caja Central</strong>.</p>
+    
+    @if (ViewBag.SupplierBalance != null)
+    {
+        <div style="margin-bottom: 1.5rem; padding: 1rem; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px;">
+            Deuda actual con Proveedor: <strong style="color: #ef4444; font-size: 1.2rem;">@(((decimal)ViewBag.SupplierBalance).ToString("C2"))</strong>
+        </div>
+    }
+
+    <form asp-action="Create" method="post">
+        <div asp-validation-summary="ModelOnly" class="text-danger" style="margin-bottom: 1rem; color: #ef4444;"></div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+            <div>
+                <label asp-for="SupplierId" class="control-label" style="display: block; margin-bottom: 0.5rem;"></label>
+                <select asp-for="SupplierId" id="SupplierId" class="form-control" asp-items="ViewBag.Suppliers" style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white;">
+                    <option value="">-- Pago Libre / Gasto General --</option>
+                </select>
+                <span style="font-size: 0.75rem; opacity: 0.7; margin-top: 0.3rem; display: block;">Si seleccionas un proveedor, se descontará de su saldo.</span>
+            </div>
+
+            <div id="purchaseContainer" style="@(Model.SupplierId.HasValue ? "" : "display: none;")">
+                <label asp-for="PurchaseId" class="control-label" style="display: block; margin-bottom: 0.5rem;">Factura Asignada</label>
+                <select asp-for="PurchaseId" id="PurchaseId" class="form-control" asp-items="ViewBag.UnpaidPurchases" style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white;">
+                    <option value="">-- Pago a Cuenta Corriente (Global) --</option>
+                </select>
+            </div>
+        </div>
+
+        <div style="margin-bottom: 1.5rem;">
+            <label asp-for="Concept" class="control-label" style="display: block; margin-bottom: 0.5rem;">Concepto del Pago</label>
+            <input asp-for="Concept" class="form-control" placeholder="Ej: Pago Factura X, Pago Edesur, Adelanto Sueldo..." style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white;" required />
+            <span asp-validation-for="Concept" class="text-danger" style="color: #ef4444; font-size: 0.8rem;"></span>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+            <div>
+                <label asp-for="Amount" class="control-label" style="display: block; margin-bottom: 0.5rem;"></label>
+                <div style="position: relative;">
+                    <span style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); opacity: 0.5;">$</span>
+                    <input asp-for="Amount" type="number" step="0.01" class="form-control" style="width: 100%; padding: 0.8rem 0.8rem 0.8rem 2rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white;" required />
+                </div>
+                <span asp-validation-for="Amount" class="text-danger" style="color: #ef4444; font-size: 0.8rem;"></span>
+            </div>
+
+            <div>
+                <label asp-for="PaymentMethodId" class="control-label" style="display: block; margin-bottom: 0.5rem;"></label>
+                <select asp-for="PaymentMethodId" id="PaymentMethodId" class="form-control" style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white;" required>
+                    <option value="">-- Seleccionar Medio de Pago --</option>
+                    @foreach (var pm in ViewBag.PaymentMethods)
+                    {
+                        <option value="@pm.Id" data-name="@pm.Name.ToLower()">@pm.Name</option>
+                    }
+                </select>
+                <span asp-validation-for="PaymentMethodId" class="text-danger" style="color: #ef4444; font-size: 0.8rem;"></span>
+            </div>
+        </div>
+
+        <div id="transferFields" style="display: none; margin-bottom: 1.5rem; padding: 1.5rem; background: rgba(255,255,255,0.05); border-radius: 8px;">
+            <label asp-for="ReferenceNumber" class="control-label" style="display: block; margin-bottom: 0.5rem;">Nro. de Transferencia / Comprobante</label>
+            <input asp-for="ReferenceNumber" class="form-control" style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white;" />
+        </div>
+
+        <div id="checkFields" style="display: none; margin-bottom: 1.5rem; padding: 1.5rem; background: rgba(255,255,255,0.05); border-radius: 8px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+                <div>
+                    <label asp-for="CheckNumber" class="control-label" style="display: block; margin-bottom: 0.5rem;"></label>
+                    <input asp-for="CheckNumber" class="form-control" style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white;" />
+                </div>
+                <div>
+                    <label asp-for="CheckBank" class="control-label" style="display: block; margin-bottom: 0.5rem;"></label>
+                    <input asp-for="CheckBank" class="form-control" style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white;" />
+                </div>
+                <div>
+                    <label asp-for="CheckDueDate" class="control-label" style="display: block; margin-bottom: 0.5rem;"></label>
+                    <input asp-for="CheckDueDate" type="date" class="form-control" style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white;" />
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-bottom: 2rem;">
+            <label asp-for="Notes" class="control-label" style="display: block; margin-bottom: 0.5rem;">Observaciones / Notas adicionales</label>
+            <textarea asp-for="Notes" class="form-control" rows="2" style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white;"></textarea>
+        </div>
+
+        <div style="text-align: right;">
+            <button type="submit" class="btn-primary" style="padding: 0.8rem 2rem; font-size: 1.1rem; background: #10b981; border: none;"><i class="fa-solid fa-file-invoice-dollar"></i> Generar Orden de Pago</button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            var methodSelect = document.getElementById("PaymentMethodId");
+            var transferFields = document.getElementById("transferFields");
+            var checkFields = document.getElementById("checkFields");
+            var supplierSelect = document.getElementById("SupplierId");
+            var purchaseContainer = document.getElementById("purchaseContainer");
+
+            function toggleFields() {
+                var selectedOption = methodSelect.options[methodSelect.selectedIndex];
+                var methodName = selectedOption ? selectedOption.getAttribute("data-name") : "";
+                
+                transferFields.style.display = "none";
+                checkFields.style.display = "none";
+
+                if (methodName && (methodName.includes("transferencia") || methodName.includes("deposito"))) {
+                    transferFields.style.display = "block";
+                } else if (methodName && methodName.includes("cheque")) {
+                    checkFields.style.display = "block";
+                }
+            }
+            
+            function toggleSupplier() {
+                if(supplierSelect.value) {
+                    purchaseContainer.style.display = "block";
+                } else {
+                    purchaseContainer.style.display = "none";
+                    document.getElementById("PurchaseId").value = "";
+                }
+            }
+
+            methodSelect.addEventListener("change", toggleFields);
+            supplierSelect.addEventListener("change", function() {
+                // If they change supplier, we should probably reload the page to get the unpaid purchases of that supplier.
+                // For simplicity, we just submit the form via GET to reload with new supplierId.
+                if(this.value) {
+                    window.location.href = "?supplierId=" + this.value;
+                } else {
+                    window.location.href = "?";
+                }
+            });
+            
+            toggleFields(); // Initial run
+        });
+    </script>
+}
+
