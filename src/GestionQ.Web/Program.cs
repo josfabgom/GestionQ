@@ -154,5 +154,10 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
+try {
+    await GestionQ.Web.HistoricCentralCashFix.Run(app.Services);
+} catch (Exception ex) {
+    Console.WriteLine("Error corriendo corrección histórica: " + ex.Message);
+}
 
 app.Run();

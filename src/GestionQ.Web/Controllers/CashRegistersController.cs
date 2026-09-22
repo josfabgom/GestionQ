@@ -260,6 +260,57 @@ namespace GestionQ.Web.Controllers
                 register.ClosingDate = DateTime.Now;
 
                 _context.CashRegisters.Update(register);
+                
+                // --- INTEGRACIÓN CAJA CENTRAL ---
+                // Efectivo neto = FinalCashBalance - InitialBalance (lo que efectivamente rindió de ganancia/perdida)
+                decimal netoEfectivo = (register.FinalCashBalance ?? 0m) - register.InitialBalance;
+                if (netoEfectivo > 0)
+                {
+                    _context.CentralCashMovements.Add(new CentralCashMovement
+                    {
+                        Date = DateTime.Now,
+                        Type = "Ingreso",
+                        Amount = netoEfectivo,
+                        Concept = $"Rendición Caja #{register.Id} - Efectivo",
+                        UserId = user.Id,
+                        SourceCashRegisterId = register.Id
+                    });
+                }
+                else if (netoEfectivo < 0)
+                {
+                    _context.CentralCashMovements.Add(new CentralCashMovement
+                    {
+                        Date = DateTime.Now,
+                        Type = "Egreso",
+                        Amount = Math.Abs(netoEfectivo),
+                        Concept = $"Faltante/Retiro Caja #{register.Id} - Efectivo",
+                        UserId = user.Id,
+                        SourceCashRegisterId = register.Id
+                    });
+                }
+
+                // Otros Medios de Pago (Transferencias, Tarjetas, etc)
+                var otrosPagos = register.Sales
+                    .SelectMany(s => s.Payments)
+                    .Where(p => p.PaymentMethod != null && p.PaymentMethod.Name != "Efectivo")
+                    .GroupBy(p => p.PaymentMethod!.Name)
+                    .Select(g => new { Metodo = g.Key, Total = g.Sum(x => x.Amount) })
+                    .Where(g => g.Total > 0)
+                    .ToList();
+
+                foreach (var pago in otrosPagos)
+                {
+                    _context.CentralCashMovements.Add(new CentralCashMovement
+                    {
+                        Date = DateTime.Now,
+                        Type = "Ingreso",
+                        Amount = pago.Total,
+                        Concept = $"Rendición Caja #{register.Id} - {pago.Metodo}",
+                        UserId = user.Id,
+                        SourceCashRegisterId = register.Id
+                    });
+                }
+
                 await _context.SaveChangesAsync();
 
                 return RedirectToAction(nameof(Details), new { id = register.Id });

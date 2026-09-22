@@ -464,6 +464,58 @@ namespace GestionQ.Web.Controllers.Api
                     register.Difference = regDto.FinalCashBalance - register.ExpectedCashBalance;
 
                     _context.CashRegisters.Update(register);
+                    
+                    // --- INTEGRACIÓN CAJA CENTRAL ---
+                    var alreadySynced = await _context.CentralCashMovements.AnyAsync(m => m.SourceCashRegisterId == register.Id);
+                    if (!alreadySynced)
+                    {
+                        decimal netoEfectivo = (register.FinalCashBalance ?? 0m) - register.InitialBalance;
+                        if (netoEfectivo > 0)
+                        {
+                            _context.CentralCashMovements.Add(new CentralCashMovement
+                            {
+                                Date = DateTime.Now,
+                                Type = "Ingreso",
+                                Amount = netoEfectivo,
+                                Concept = $"Rendición Caja POS #{register.Id} - Efectivo",
+                                UserId = register.UserId,
+                                SourceCashRegisterId = register.Id
+                            });
+                        }
+                        else if (netoEfectivo < 0)
+                        {
+                            _context.CentralCashMovements.Add(new CentralCashMovement
+                            {
+                                Date = DateTime.Now,
+                                Type = "Egreso",
+                                Amount = Math.Abs(netoEfectivo),
+                                Concept = $"Faltante/Retiro Caja POS #{register.Id} - Efectivo",
+                                UserId = register.UserId,
+                                SourceCashRegisterId = register.Id
+                            });
+                        }
+
+                        var otrosPagos = register.Sales.Where(s => !s.IsCancelled)
+                            .SelectMany(s => s.Payments)
+                            .Where(p => p.PaymentMethod != null && p.PaymentMethod.Name != "Efectivo")
+                            .GroupBy(p => p.PaymentMethod!.Name)
+                            .Select(g => new { Metodo = g.Key, Total = g.Sum(x => x.Amount) })
+                            .Where(g => g.Total > 0)
+                            .ToList();
+
+                        foreach (var pago in otrosPagos)
+                        {
+                            _context.CentralCashMovements.Add(new CentralCashMovement
+                            {
+                                Date = DateTime.Now,
+                                Type = "Ingreso",
+                                Amount = pago.Total,
+                                Concept = $"Rendición Caja POS #{register.Id} - {pago.Metodo}",
+                                UserId = register.UserId,
+                                SourceCashRegisterId = register.Id
+                            });
+                        }
+                    }
                 }
             }
             await _context.SaveChangesAsync();

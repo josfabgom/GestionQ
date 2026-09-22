@@ -618,33 +618,22 @@ public class Form1 : Form
 		gridItems.Columns.Add("Name", "PRODUCTO");
 		gridItems.Columns["OriginalName"].Visible = false;
 		gridItems.Columns.Add("Price", "PRECIO UNIT.");
-		DataGridViewButtonColumn dataGridViewButtonColumn = new DataGridViewButtonColumn
-		{
-			Name = "btnMinus",
-			HeaderText = "",
-			Text = "-",
-			UseColumnTextForButtonValue = true,
-			Width = 45,
-			FlatStyle = FlatStyle.Flat
-		};
-		dataGridViewButtonColumn.DefaultCellStyle.BackColor = Color.FromArgb(45, 48, 66);
-		dataGridViewButtonColumn.DefaultCellStyle.ForeColor = Color.White;
-		gridItems.Columns.Add(dataGridViewButtonColumn);
 		gridItems.Columns.Add("Quantity", "CANTIDAD");
-		DataGridViewButtonColumn dataGridViewButtonColumn2 = new DataGridViewButtonColumn
-		{
-			Name = "btnPlus",
-			HeaderText = "",
-			Text = "+",
-			UseColumnTextForButtonValue = true,
-			Width = 45,
-			FlatStyle = FlatStyle.Flat
-		};
-		dataGridViewButtonColumn2.DefaultCellStyle.BackColor = Color.FromArgb(45, 48, 66);
-		dataGridViewButtonColumn2.DefaultCellStyle.ForeColor = Color.White;
-		gridItems.Columns.Add(dataGridViewButtonColumn2);
 		gridItems.Columns.Add("Discount", "DESCUENTO");
 		gridItems.Columns.Add("SubTotal", "SUBTOTAL");
+		DataGridViewButtonColumn dataGridViewButtonColumnDelete = new DataGridViewButtonColumn
+		{
+			Name = "btnDelete",
+			HeaderText = "",
+			Text = "🗑️",
+			UseColumnTextForButtonValue = true,
+			Width = 50,
+			FlatStyle = FlatStyle.Flat
+		};
+		dataGridViewButtonColumnDelete.DefaultCellStyle.BackColor = Color.FromArgb(220, 38, 38);
+		dataGridViewButtonColumnDelete.DefaultCellStyle.ForeColor = Color.White;
+		dataGridViewButtonColumnDelete.DefaultCellStyle.Font = new Font("Segoe UI Emoji", 14f);
+		gridItems.Columns.Add(dataGridViewButtonColumnDelete);
 		gridItems.Columns["Id"].Visible = false;
 		gridItems.Columns["Name"].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
 		gridItems.Columns["Price"].Width = 140;
@@ -1278,7 +1267,14 @@ public class Form1 : Form
 					{
 						lstSearch.Focus();
 						lstSearch.SelectedIndex = 0;
-						SelectSearchItem();
+						if (text.StartsWith("/") && lstSearch.Items.Count > 1)
+						{
+							// Se deja el foco en lstSearch para que el usuario elija manualmente
+						}
+						else
+						{
+							SelectSearchItem();
+						}
 					}
 					else
 					{
@@ -1299,12 +1295,23 @@ public class Form1 : Form
 
 	private async Task<bool> ProcessBarcodeAsync(string barcode, decimal quantity)
 	{
+		bool removeMode = false;
+		if (barcode.StartsWith("-") && barcode.Length > 1)
+		{
+			removeMode = true;
+			barcode = barcode.Substring(1);
+		}
+
 		string barcode2 = barcode;
 		using LocalDbContext db = new LocalDbContext();
 		Product product = await db.Products.FirstOrDefaultAsync((Product p) => p.Barcode == barcode2 || p.InternalCode.ToString() == barcode2);
 		
 		if (product != null)
 		{
+			if (removeMode)
+			{
+				return RemoveItemFromGrid(product.Id);
+			}
 			AddRow(product.Id, product.Name, product.Price, quantity, product.Stock);
 			UpdateArticleImage(product.ImageUrl);
 			return true;
@@ -1317,22 +1324,19 @@ public class Form1 : Form
 			var parentProduct = await db.Products.FirstOrDefaultAsync(p => p.Id == presentation.ProductId);
 			if (parentProduct != null)
 			{
+				if (removeMode)
+				{
+					return RemoveItemFromGrid(parentProduct.Id);
+				}
 				string typeStr = presentation.IsBulk ? $"[BULTO x{presentation.Quantity:0.##}]" : $"[UNIDAD x{presentation.Quantity:0.##}]";
 				string presText = presentation.Name.Equals(parentProduct.Name, StringComparison.OrdinalIgnoreCase) ? "" : $" ({presentation.Name})";
 				string displayName = $"{typeStr} {parentProduct.Name}{presText}";
 				decimal unitPrice = presentation.Price ?? parentProduct.Price;
 				
-				// Si la presentacin tiene precio fijo, lo dividimos por la cantidad que trae para mantener
-				// la coherencia en la fila (que descuenta N unidades de stock), o simplemente
-				// aadimos la fila as: el grid usa (Precio Unitario * Cantidad).
-				// Como la presentacin trae N unidades, multiplicamos la cantidad a aadir por la cantidad del bulto,
-				// PERO el "Precio Fijo" del bulto sera total. Para que en pantalla el precio sea correcto:
-				// Precio Unitario en pantalla = PrecioBulto / CantidadUnidadesBulto.
 				decimal finalUnitPrice = (presentation.Price.HasValue && presentation.Quantity > 0) 
 					? (presentation.Price.Value / presentation.Quantity) 
 					: parentProduct.Price;
 
-				// La cantidad que se aade a la venta (y descuenta de stock) es cant Bultos * unidades por Bulto
 				decimal finalQuantity = quantity * presentation.Quantity;
 
 				AddRow(parentProduct.Id, displayName, finalUnitPrice, finalQuantity, parentProduct.Stock);
@@ -1342,6 +1346,31 @@ public class Form1 : Form
 		}
 
 		return false;
+	}
+
+	private bool RemoveItemFromGrid(int productId)
+	{
+		bool removed = false;
+		for (int i = gridItems.Rows.Count - 1; i >= 0; i--)
+		{
+			if ((int)gridItems.Rows[i].Cells["Id"].Value == productId)
+			{
+				gridItems.Rows.RemoveAt(i);
+				removed = true;
+			}
+		}
+		
+		if (removed)
+		{
+			UpdateTotals();
+			return true;
+		}
+		else
+		{
+			MessageBox.Show("El artículo no se encuentra en el detalle de la venta.", "No encontrado", MessageBoxButtons.OK, MessageBoxIcon.Information);
+			// Retornamos true para limpiar el campo de texto de todos modos
+			return true; 
+		}
 	}
 
 	private async Task CreateNewCustomerDialog()
@@ -1654,31 +1683,9 @@ public class Form1 : Form
 			return;
 		}
 		DataGridViewRow dataGridViewRow = gridItems.Rows[e.RowIndex];
-		decimal num = Convert.ToDecimal(dataGridViewRow.Cells["Quantity"].Value);
-		decimal price = Convert.ToDecimal(dataGridViewRow.Cells["Price"].Value);
-		if (e.ColumnIndex == gridItems.Columns["btnMinus"].Index)
+		if (e.ColumnIndex == gridItems.Columns["btnDelete"].Index)
 		{
-			if (num > 1m)
-			{
-				dataGridViewRow.Cells["Quantity"].Value = num - 1m;
-				decimal newSubTotal = CalculateSubTotal((int)dataGridViewRow.Cells["Id"].Value, price, num - 1m);
-				decimal newDiscount = (price * (num - 1m)) - newSubTotal;
-				dataGridViewRow.Cells["Discount"].Value = newDiscount > 0m ? (object)newDiscount : null;
-				dataGridViewRow.Cells["SubTotal"].Value = newSubTotal;
-			}
-			else
-			{
-				gridItems.Rows.RemoveAt(e.RowIndex);
-			}
-			UpdateTotals();
-		}
-		else if (e.ColumnIndex == gridItems.Columns["btnPlus"].Index)
-		{
-			dataGridViewRow.Cells["Quantity"].Value = num + 1m;
-			decimal newSubTotal = CalculateSubTotal((int)dataGridViewRow.Cells["Id"].Value, price, num + 1m);
-			decimal newDiscount = (price * (num + 1m)) - newSubTotal;
-			dataGridViewRow.Cells["Discount"].Value = newDiscount > 0m ? (object)newDiscount : null;
-			dataGridViewRow.Cells["SubTotal"].Value = newSubTotal;
+			gridItems.Rows.RemoveAt(e.RowIndex);
 			UpdateTotals();
 		}
 	}
@@ -1757,7 +1764,7 @@ public class Form1 : Form
 			string text = $"{name} ({stock:0.##})";
 			decimal subTotal = CalculateSubTotal(id, price, qty);
 			decimal discount = (price * qty) - subTotal;
-			int rowIndex = gridItems.Rows.Add(id, text, text, price, "-", qty, "+", discount > 0m ? (object)discount : null, subTotal);
+			int rowIndex = gridItems.Rows.Add(id, text, text, price, qty, discount > 0m ? (object)discount : null, subTotal);
 			if (name.Contains("[BULTO"))
 			{
 				gridItems.Rows[rowIndex].DefaultCellStyle.ForeColor = Color.FromArgb(255, 193, 7);

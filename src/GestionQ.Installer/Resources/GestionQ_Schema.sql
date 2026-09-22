@@ -2078,6 +2078,193 @@ BEGIN
     VALUES (N'20260918180511_AddIsBulkToPresentations', N'9.0.15');
 END;
 
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919195118_AddSupplierPaymentsAndBalance'
+)
+BEGIN
+    ALTER TABLE [Suppliers] ADD [Balance] decimal(18,2) NOT NULL DEFAULT 0.0;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919195118_AddSupplierPaymentsAndBalance'
+)
+BEGIN
+    ALTER TABLE [Purchases] ADD [PaidAmount] decimal(18,2) NOT NULL DEFAULT 0.0;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919195118_AddSupplierPaymentsAndBalance'
+)
+BEGIN
+    CREATE TABLE [SupplierPayments] (
+        [Id] int NOT NULL IDENTITY,
+        [SupplierId] int NOT NULL,
+        [PurchaseId] int NULL,
+        [Date] datetime2 NOT NULL,
+        [Amount] decimal(18,2) NOT NULL,
+        [PaymentMethodId] int NOT NULL,
+        [ReferenceNumber] nvarchar(100) NULL,
+        [CheckNumber] nvarchar(50) NULL,
+        [CheckBank] nvarchar(100) NULL,
+        [CheckDueDate] datetime2 NULL,
+        [Notes] nvarchar(max) NULL,
+        CONSTRAINT [PK_SupplierPayments] PRIMARY KEY ([Id]),
+        CONSTRAINT [FK_SupplierPayments_PaymentMethods_PaymentMethodId] FOREIGN KEY ([PaymentMethodId]) REFERENCES [PaymentMethods] ([Id]) ON DELETE CASCADE,
+        CONSTRAINT [FK_SupplierPayments_Purchases_PurchaseId] FOREIGN KEY ([PurchaseId]) REFERENCES [Purchases] ([Id]),
+        CONSTRAINT [FK_SupplierPayments_Suppliers_SupplierId] FOREIGN KEY ([SupplierId]) REFERENCES [Suppliers] ([Id]) ON DELETE CASCADE
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919195118_AddSupplierPaymentsAndBalance'
+)
+BEGIN
+    CREATE INDEX [IX_SupplierPayments_PaymentMethodId] ON [SupplierPayments] ([PaymentMethodId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919195118_AddSupplierPaymentsAndBalance'
+)
+BEGIN
+    CREATE INDEX [IX_SupplierPayments_PurchaseId] ON [SupplierPayments] ([PurchaseId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919195118_AddSupplierPaymentsAndBalance'
+)
+BEGIN
+    CREATE INDEX [IX_SupplierPayments_SupplierId] ON [SupplierPayments] ([SupplierId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919195118_AddSupplierPaymentsAndBalance'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20260919195118_AddSupplierPaymentsAndBalance', N'9.0.15');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919202758_AddCentralCashAndReceipts'
+)
+BEGIN
+    CREATE TABLE [PaymentReceipts] (
+        [Id] int NOT NULL IDENTITY,
+        [ReceiptNumber] nvarchar(20) NOT NULL,
+        [Date] datetime2 NOT NULL,
+        [Amount] decimal(18,2) NOT NULL,
+        [Concept] nvarchar(200) NOT NULL,
+        [SupplierId] int NULL,
+        [PurchaseId] int NULL,
+        [PaymentMethodId] int NOT NULL,
+        [ReferenceNumber] nvarchar(100) NULL,
+        [CheckNumber] nvarchar(50) NULL,
+        [CheckBank] nvarchar(100) NULL,
+        [CheckDueDate] datetime2 NULL,
+        [Notes] nvarchar(max) NULL,
+        [UserId] nvarchar(450) NULL,
+        CONSTRAINT [PK_PaymentReceipts] PRIMARY KEY ([Id]),
+        CONSTRAINT [FK_PaymentReceipts_AspNetUsers_UserId] FOREIGN KEY ([UserId]) REFERENCES [AspNetUsers] ([Id]),
+        CONSTRAINT [FK_PaymentReceipts_PaymentMethods_PaymentMethodId] FOREIGN KEY ([PaymentMethodId]) REFERENCES [PaymentMethods] ([Id]) ON DELETE CASCADE,
+        CONSTRAINT [FK_PaymentReceipts_Purchases_PurchaseId] FOREIGN KEY ([PurchaseId]) REFERENCES [Purchases] ([Id]),
+        CONSTRAINT [FK_PaymentReceipts_Suppliers_SupplierId] FOREIGN KEY ([SupplierId]) REFERENCES [Suppliers] ([Id])
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919202758_AddCentralCashAndReceipts'
+)
+BEGIN
+    CREATE TABLE [CentralCashMovements] (
+        [Id] int NOT NULL IDENTITY,
+        [Date] datetime2 NOT NULL,
+        [Type] nvarchar(20) NOT NULL,
+        [Amount] decimal(18,2) NOT NULL,
+        [Concept] nvarchar(200) NOT NULL,
+        [UserId] nvarchar(450) NULL,
+        [SourceCashRegisterId] int NULL,
+        [PaymentReceiptId] int NULL,
+        CONSTRAINT [PK_CentralCashMovements] PRIMARY KEY ([Id]),
+        CONSTRAINT [FK_CentralCashMovements_AspNetUsers_UserId] FOREIGN KEY ([UserId]) REFERENCES [AspNetUsers] ([Id]),
+        CONSTRAINT [FK_CentralCashMovements_CashRegisters_SourceCashRegisterId] FOREIGN KEY ([SourceCashRegisterId]) REFERENCES [CashRegisters] ([Id]),
+        CONSTRAINT [FK_CentralCashMovements_PaymentReceipts_PaymentReceiptId] FOREIGN KEY ([PaymentReceiptId]) REFERENCES [PaymentReceipts] ([Id])
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919202758_AddCentralCashAndReceipts'
+)
+BEGIN
+    CREATE INDEX [IX_CentralCashMovements_PaymentReceiptId] ON [CentralCashMovements] ([PaymentReceiptId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919202758_AddCentralCashAndReceipts'
+)
+BEGIN
+    CREATE INDEX [IX_CentralCashMovements_SourceCashRegisterId] ON [CentralCashMovements] ([SourceCashRegisterId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919202758_AddCentralCashAndReceipts'
+)
+BEGIN
+    CREATE INDEX [IX_CentralCashMovements_UserId] ON [CentralCashMovements] ([UserId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919202758_AddCentralCashAndReceipts'
+)
+BEGIN
+    CREATE INDEX [IX_PaymentReceipts_PaymentMethodId] ON [PaymentReceipts] ([PaymentMethodId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919202758_AddCentralCashAndReceipts'
+)
+BEGIN
+    CREATE INDEX [IX_PaymentReceipts_PurchaseId] ON [PaymentReceipts] ([PurchaseId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919202758_AddCentralCashAndReceipts'
+)
+BEGIN
+    CREATE INDEX [IX_PaymentReceipts_SupplierId] ON [PaymentReceipts] ([SupplierId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919202758_AddCentralCashAndReceipts'
+)
+BEGIN
+    CREATE INDEX [IX_PaymentReceipts_UserId] ON [PaymentReceipts] ([UserId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260919202758_AddCentralCashAndReceipts'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20260919202758_AddCentralCashAndReceipts', N'9.0.15');
+END;
+
 COMMIT;
 GO
 
