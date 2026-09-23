@@ -44,6 +44,8 @@ namespace GestionQ.Domain.Entities
         public bool CanMisMonExt { get; set; } // Cancelled in same foreign currency
         public int CondicionIVAReceptorId { get; set; } // VAT receiver condition (RG 5616)
         
+        public Guid DownloadGuid { get; set; } = Guid.NewGuid();
+        
         public string FormattedVoucherNumber => $"{PointOfSaleNumber:D5}-{InvoiceNumber:D8}";
     }
 }

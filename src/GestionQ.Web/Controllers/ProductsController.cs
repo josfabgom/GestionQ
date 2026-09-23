@@ -123,74 +123,88 @@ namespace GestionQ.Web.Controllers
         {
             if (ModelState.IsValid)
             {
-                var product = new Product
+                if (!string.IsNullOrEmpty(model.Barcode))
                 {
-                    Barcode = model.Barcode,
-                    Name = model.Name,
-                    ShortDescriptionScale = model.ShortDescriptionScale,
-                    SubCategoryId = model.SubCategoryId,
-                    IsPesable = model.IsPesable,
-                    IsFractionable = model.IsFractionable,
-                    SendToScale = model.SendToScale,
-                    IsScaleNovelty = model.SendToScale,
-                    Price = model.Price,
-                    Stock = model.Stock,
-                    MinimumStock = model.MinimumStock,
-                    VatRateId = model.VatRateId,
-                    IsActive = model.IsActive,
-                    ExpirationDays = model.ExpirationDays,
-                    CreationDate = DateTime.Now,
-                    NeedsLabelPrint = true
-                };
-
-                int maxCode = await _context.Products.AnyAsync() ? await _context.Products.MaxAsync(p => p.InternalCode) : 0;
-                product.InternalCode = maxCode + 1;
-
-                if (model.ImageFile != null)
-                {
-                    string folder = Path.Combine(_env.WebRootPath, "images", "products");
-                    if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
-
-                    string fileName = $"{product.InternalCode}_{Guid.NewGuid()}{Path.GetExtension(model.ImageFile.FileName)}";
-                    string filePath = Path.Combine(folder, fileName);
-
-                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    bool exists = await _context.Products.AnyAsync(p => p.Barcode == model.Barcode || p.InternalCode.ToString() == model.Barcode) ||
+                                  await _context.ProductPresentations.AnyAsync(p => p.Barcode == model.Barcode);
+                    if (exists)
                     {
-                        await model.ImageFile.CopyToAsync(stream);
+                        ModelState.AddModelError("Barcode", "El código de barras ya pertenece a otro producto o presentación.");
                     }
-                    product.ImageUrl = $"/images/products/{fileName}";
                 }
 
-                _context.Add(product);
-                await _context.SaveChangesAsync();
-
-                if (product.Stock != 0)
+                // Check again if we added errors
+                if (ModelState.IsValid)
                 {
-                    var stockMovement = new StockMovement
+                    var product = new Product
                     {
-                        Date = DateTime.Now,
-                        ProductId = product.Id,
-                        Quantity = product.Stock,
-                        Type = product.Stock > 0 ? MovementType.AdjustmentIn : MovementType.AdjustmentOut,
-                        Concept = "Stock Inicial",
-                        PreviousStock = 0,
-                        NewStock = product.Stock
+                        Barcode = model.Barcode,
+                        Name = model.Name,
+                        ShortDescriptionScale = model.ShortDescriptionScale,
+                        SubCategoryId = model.SubCategoryId,
+                        IsPesable = model.IsPesable,
+                        IsFractionable = model.IsFractionable,
+                        SendToScale = model.SendToScale,
+                        IsScaleNovelty = model.SendToScale,
+                        Price = model.Price,
+                        Stock = model.Stock,
+                        MinimumStock = model.MinimumStock,
+                        VatRateId = model.VatRateId,
+                        IsActive = model.IsActive,
+                        ExpirationDays = model.ExpirationDays,
+                        CreationDate = DateTime.Now,
+                        NeedsLabelPrint = true
                     };
-                    _context.StockMovements.Add(stockMovement);
-                }
 
-                var priceEntry = new ProductPrice
-                {
-                    ProductId = product.Id,
-                    BaseCost = model.BaseCost,
-                    ProfitMargin = model.ProfitMargin,
-                    InternalTax = model.InternalTax,
-                    FinalPrice = model.Price,
-                    UpdateDate = DateTime.Now
-                };
-                _context.ProductPrices.Add(priceEntry);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+                    int maxCode = await _context.Products.AnyAsync() ? await _context.Products.MaxAsync(p => p.InternalCode) : 0;
+                    product.InternalCode = maxCode + 1;
+
+                    if (model.ImageFile != null)
+                    {
+                        string folder = Path.Combine(_env.WebRootPath, "images", "products");
+                        if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
+
+                        string fileName = $"{product.InternalCode}_{Guid.NewGuid()}{Path.GetExtension(model.ImageFile.FileName)}";
+                        string filePath = Path.Combine(folder, fileName);
+
+                        using (var stream = new FileStream(filePath, FileMode.Create))
+                        {
+                            await model.ImageFile.CopyToAsync(stream);
+                        }
+                        product.ImageUrl = $"/images/products/{fileName}";
+                    }
+
+                    _context.Add(product);
+                    await _context.SaveChangesAsync();
+
+                    if (product.Stock != 0)
+                    {
+                        var stockMovement = new StockMovement
+                        {
+                            Date = DateTime.Now,
+                            ProductId = product.Id,
+                            Quantity = product.Stock,
+                            Type = product.Stock > 0 ? MovementType.AdjustmentIn : MovementType.AdjustmentOut,
+                            Concept = "Stock Inicial",
+                            PreviousStock = 0,
+                            NewStock = product.Stock
+                        };
+                        _context.StockMovements.Add(stockMovement);
+                    }
+
+                    var priceEntry = new ProductPrice
+                    {
+                        ProductId = product.Id,
+                        BaseCost = model.BaseCost,
+                        ProfitMargin = model.ProfitMargin,
+                        InternalTax = model.InternalTax,
+                        FinalPrice = model.Price,
+                        UpdateDate = DateTime.Now
+                    };
+                    _context.ProductPrices.Add(priceEntry);
+                    await _context.SaveChangesAsync();
+                    return RedirectToAction(nameof(Index));
+                }
             }
             ViewBag.Categories = await _context.Categories.ToListAsync();
             ViewBag.VatRates = await _context.VatRates.Where(v => v.IsActive).ToListAsync();
@@ -282,8 +296,60 @@ namespace GestionQ.Web.Controllers
 
             if (ModelState.IsValid)
             {
-                try
+                if (!string.IsNullOrEmpty(model.Barcode))
                 {
+                    bool exists = await _context.Products.AnyAsync(p => p.Id != id && (p.Barcode == model.Barcode || p.InternalCode.ToString() == model.Barcode)) ||
+                                  await _context.ProductPresentations.AnyAsync(p => p.ProductId != id && p.Barcode == model.Barcode);
+                    if (exists)
+                    {
+                        ModelState.AddModelError("Barcode", "El código de barras ya pertenece a otro producto o presentación.");
+                    }
+                }
+
+                bool existsInternal = await _context.Products.AnyAsync(p => p.Id != id && (p.InternalCode == model.InternalCode || p.Barcode == model.InternalCode.ToString())) ||
+                                      await _context.ProductPresentations.AnyAsync(p => p.ProductId != id && p.Barcode == model.InternalCode.ToString());
+                if (existsInternal)
+                {
+                    ModelState.AddModelError("InternalCode", "El código interno ya pertenece a otro producto.");
+                }
+
+                if (model.Presentations != null)
+                {
+                    foreach (var pres in model.Presentations)
+                    {
+                        if (!string.IsNullOrEmpty(pres.Barcode))
+                        {
+                            bool presExistsDb = await _context.Products.AnyAsync(p => p.Id != id && (p.Barcode == pres.Barcode || p.InternalCode.ToString() == pres.Barcode)) ||
+                                                await _context.ProductPresentations.AnyAsync(p => p.ProductId != id && p.Barcode == pres.Barcode);
+                            if (presExistsDb)
+                            {
+                                ModelState.AddModelError("", $"El código de barras {pres.Barcode} de la presentación '{pres.Name}' ya existe en otro producto.");
+                            }
+                            
+                            if (model.Barcode == pres.Barcode)
+                            {
+                                ModelState.AddModelError("", $"La presentación '{pres.Name}' tiene el mismo código de barras que el producto principal.");
+                            }
+                        }
+                    }
+                    
+                    var duplicatePresBarcodes = model.Presentations
+                        .Where(p => !string.IsNullOrEmpty(p.Barcode))
+                        .GroupBy(p => p.Barcode)
+                        .Where(g => g.Count() > 1)
+                        .Select(g => g.Key)
+                        .ToList();
+                        
+                    foreach(var dup in duplicatePresBarcodes)
+                    {
+                        ModelState.AddModelError("", $"El código de barras {dup} está repetido en múltiples presentaciones.");
+                    }
+                }
+
+                if (ModelState.IsValid)
+                {
+                    try
+                    {
                     var product = await _context.Products
                         .Include(p => p.Presentations)
                         .FirstOrDefaultAsync(p => p.Id == id);
@@ -407,6 +473,7 @@ namespace GestionQ.Web.Controllers
                     else throw;
                 }
                 return RedirectToAction(nameof(Index));
+                }
             }
             ViewBag.Categories = await _context.Categories.ToListAsync();
             ViewBag.VatRates = await _context.VatRates.Where(v => v.IsActive).ToListAsync();

@@ -63,6 +63,20 @@ namespace GestionQ.Web.Controllers
                 DashboardApiKey = _config["ApiKey"] ?? ""
             };
 
+            var settingsDict = _context.SystemSettings.ToDictionary(s => s.Key, s => s.Value);
+
+            model.SmtpHost = settingsDict.GetValueOrDefault("SmtpHost", "");
+            model.SmtpPort = settingsDict.GetValueOrDefault("SmtpPort", "587");
+            model.SmtpEmail = settingsDict.GetValueOrDefault("SmtpEmail", "");
+            model.SmtpPassword = settingsDict.GetValueOrDefault("SmtpPassword", "");
+
+            model.CloudFtpEnabled = settingsDict.GetValueOrDefault("Cloud_FtpEnabled") == "true";
+            model.CloudFtpHost = settingsDict.GetValueOrDefault("Cloud_FtpHost", "");
+            model.CloudFtpUser = settingsDict.GetValueOrDefault("Cloud_FtpUser", "");
+            model.CloudFtpPassword = settingsDict.GetValueOrDefault("Cloud_FtpPassword", "");
+            model.CloudFtpRemoteFolder = settingsDict.GetValueOrDefault("Cloud_FtpRemoteFolder", "/");
+            model.CloudPublicDomain = settingsDict.GetValueOrDefault("Cloud_PublicDomain", "");
+
             var setting = _context.SystemSettings.FirstOrDefault(s => s.Key == "NextInternalSupplierNumber");
             if (setting != null && int.TryParse(setting.Value, out var nextNum))
             {
@@ -241,6 +255,84 @@ namespace GestionQ.Web.Controllers
             catch (Exception ex)
             {
                 TempData["ErrorMessage"] = "Ocurrió un error al guardar la configuración de Caja POS: " + ex.Message;
+                return RedirectToAction(nameof(SystemSettings));
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateSmtpSettings(ConfigurationViewModel model)
+        {
+            try
+            {
+                var dict = new Dictionary<string, string>
+                {
+                    { "SmtpHost", model.SmtpHost ?? "" },
+                    { "SmtpPort", model.SmtpPort ?? "" },
+                    { "SmtpEmail", model.SmtpEmail ?? "" },
+                    { "SmtpPassword", model.SmtpPassword ?? "" }
+                };
+
+                foreach (var kvp in dict)
+                {
+                    var setting = await _context.SystemSettings.FirstOrDefaultAsync(s => s.Key == kvp.Key);
+                    if (setting == null)
+                    {
+                        _context.SystemSettings.Add(new SystemSetting { Key = kvp.Key, Value = kvp.Value });
+                    }
+                    else
+                    {
+                        setting.Value = kvp.Value;
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+                TempData["SuccessMessage"] = "Configuración de Correo Electrónico guardada correctamente.";
+                return RedirectToAction(nameof(SystemSettings));
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = "Ocurrió un error al guardar la configuración SMTP: " + ex.Message;
+                return RedirectToAction(nameof(SystemSettings));
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateFtpSettings(ConfigurationViewModel model)
+        {
+            try
+            {
+                var dict = new Dictionary<string, string>
+                {
+                    { "Cloud_FtpEnabled", model.CloudFtpEnabled ? "true" : "false" },
+                    { "Cloud_FtpHost", model.CloudFtpHost ?? "" },
+                    { "Cloud_FtpUser", model.CloudFtpUser ?? "" },
+                    { "Cloud_FtpPassword", model.CloudFtpPassword ?? "" },
+                    { "Cloud_FtpRemoteFolder", model.CloudFtpRemoteFolder ?? "" },
+                    { "Cloud_PublicDomain", model.CloudPublicDomain ?? "" }
+                };
+
+                foreach (var kvp in dict)
+                {
+                    var setting = await _context.SystemSettings.FirstOrDefaultAsync(s => s.Key == kvp.Key);
+                    if (setting == null)
+                    {
+                        _context.SystemSettings.Add(new SystemSetting { Key = kvp.Key, Value = kvp.Value });
+                    }
+                    else
+                    {
+                        setting.Value = kvp.Value;
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+                TempData["SuccessMessage"] = "Configuración FTP para PDFs guardada correctamente.";
+                return RedirectToAction(nameof(SystemSettings));
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = "Ocurrió un error al guardar la configuración FTP: " + ex.Message;
                 return RedirectToAction(nameof(SystemSettings));
             }
         }

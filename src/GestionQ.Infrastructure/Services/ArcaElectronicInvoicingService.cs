@@ -56,8 +56,12 @@ namespace GestionQ.Infrastructure.Services
             _keyPath = settings.GetValueOrDefault("Afip_PrivateKeyPath", "");
             _certPassword = settings.GetValueOrDefault("Afip_CertificatePassword", "");
             
-            bool isProduction = settings.GetValueOrDefault("Afip_Environment") == "Production";
-            if (!isProduction) 
+            bool isProduction = false;
+            if (settings.ContainsKey("Afip_Environment"))
+            {
+                isProduction = settings["Afip_Environment"] == "Production";
+            }
+            else
             {
                 bool.TryParse(_configuration["Afip:UseProduction"], out isProduction);
             }

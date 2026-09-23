@@ -2265,6 +2265,23 @@ BEGIN
     VALUES (N'20260919202758_AddCentralCashAndReceipts', N'9.0.15');
 END;
 
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260923141740_AddDownloadGuidToInvoice'
+)
+BEGIN
+    ALTER TABLE [ElectronicInvoices] ADD [DownloadGuid] uniqueidentifier NOT NULL DEFAULT '00000000-0000-0000-0000-000000000000';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260923141740_AddDownloadGuidToInvoice'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20260923141740_AddDownloadGuidToInvoice', N'9.0.15');
+END;
+
 COMMIT;
 GO
 

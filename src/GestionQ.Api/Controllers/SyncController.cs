@@ -105,6 +105,10 @@ namespace GestionQ.Api.Controllers
         [HttpPost("push")]
         public async Task<IActionResult> Push([FromBody] SyncPushRequest request)
         {
+            // Buscar el Punto de Venta actual para asignar correctamente las ventas
+            var currentPos = await _context.PointsOfSale.FirstOrDefaultAsync(p => p.PosIdentifier == request.PosIdentifier);
+            int? currentPosId = currentPos?.Id;
+
             // Process Sales
             foreach (var saleDto in request.Sales)
             {
@@ -124,6 +128,8 @@ namespace GestionQ.Api.Controllers
                     IsSynced = true,
                     SyncedAt = DateTime.Now,
                     RequestElectronicInvoice = saleDto.RequestElectronicInvoice,
+                    PointOfSaleId = currentPosId, // <--- Bug Fix: Asignar el Punto de Venta correcto
+                    CashRegisterId = saleDto.CashRegisterId, // <--- Asignar la caja si existe
                     Items = saleDto.Items.Select(i => new SaleItem
                     {
                         ProductId = i.ProductId,

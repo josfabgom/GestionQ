@@ -8,9 +8,13 @@
 
 <div class="glass-panel" style="width: 100%;">
     <form asp-action="Create" enctype="multipart/form-data">
-        <div style="display: flex; flex-wrap: wrap; gap: 2rem;">
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <div asp-validation-summary="All" class="text-danger" style="margin-bottom: 1.5rem; font-weight: bold; background: rgba(239, 68, 68, 0.1); padding: 1rem; border-radius: 8px; border: 1px solid rgba(239, 68, 68, 0.3);"></div>
+        }
+        <div style="display: flex; flex-wrap: wrap; gap: 1.5rem;">
             <!-- Left Column: Form Fields -->
-            <div style="flex: 1 1 400px; min-width: 0;">
+            <div style="flex: 1 1 500px; min-width: 0;">
                 <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
                     <input asp-for="IsActive" style="width: 20px; height: 20px;" checked />
                     <label asp-for="IsActive" style="margin: 0; font-weight: 600;">Habilitado para la venta</label>
@@ -141,11 +145,11 @@
             </div>
 
             <!-- Right Column: Image Upload -->
-            <div style="flex: 1 1 300px; max-width: 400px;">
+            <div style="flex: 0 0 260px;">
                 <label class="control-label">Imagen del Producto</label>
                 <div style="border: 2px dashed var(--border); border-radius: 12px; padding: 1rem; text-align: center; background: rgba(255,255,255,0.02);">
                     <div id="imagePreview" style="width: 100%; aspect-ratio: 1; border-radius: 8px; overflow: hidden; margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.2);">
-                        <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.2;">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.2;">
                             <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                             <circle cx="8.5" cy="8.5" r="1.5"></circle>
                             <polyline points="21 15 16 10 5 21"></polyline>

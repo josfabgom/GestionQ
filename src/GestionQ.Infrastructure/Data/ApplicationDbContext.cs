@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using GestionQ.Domain.Entities;
@@ -105,7 +105,7 @@ namespace GestionQ.Infrastructure.Data
                 string changes = "";
                 if (entry.State == EntityState.Added)
                 {
-                    changes = "CreaciÃ³n de artÃ­culo";
+                    changes = "Creación de artículo";
                 }
                 else
                 {
@@ -126,12 +126,26 @@ namespace GestionQ.Infrastructure.Data
                                 "Price" => "Precio",
                                 "Stock" => "Stock",
                                 "Name" => "Nombre",
-                                "InternalCode" => "CÃ³digo Int.",
-                                "Barcode" => "CÃ³d. Barras",
+                                "InternalCode" => "Código Int.",
+                                "Barcode" => "Cód. Barras",
                                 "IsActive" => "Estado",
                                 "Cost" => "Costo",
+                                "IsPesable" => "Pesable",
+                                "IsFractionable" => "Fraccionable",
+                                "SendToScale" => "Enviar a Balanza",
+                                "IsScaleNovelty" => "Novedad Balanza",
+                                "MinimumStock" => "Stock Mínimo",
+                                "ExpirationDays" => "Días Venc.",
+                                "VatRateId" => "Tasa IVA",
+                                "SubCategoryId" => "Subcategoría",
+                                "ShortDescriptionScale" => "Desc. Balanza",
                                 _ => propName
                             };
+
+                            if (original == "True") original = "Sí";
+                            if (original == "False") original = "No";
+                            if (current == "True") current = "Sí";
+                            if (current == "False") current = "No";
 
                             if (propName == "Price" || propName == "Cost") {
                                 decimal.TryParse(original, out decimal oPrice);
@@ -140,7 +154,7 @@ namespace GestionQ.Infrastructure.Data
                                 current = cPrice.ToString("C2");
                             }
 
-                            changeParts.Add($"{nombreES} ({original} âž¡ï¸ {current})");
+                            changeParts.Add($"{nombreES} ({original} -> {current})");
                         }
                     }
                     if (changeParts.Count == 0) continue; 

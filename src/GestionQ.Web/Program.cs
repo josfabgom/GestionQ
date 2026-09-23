@@ -22,6 +22,9 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddHttpClient<IElectronicInvoicingService, ArcaElectronicInvoicingService>();
 builder.Services.AddScoped<IScaleService, KretzJDataGateService>();
 builder.Services.AddHttpClient<IMercadoPagoService, MercadoPagoService>();
+builder.Services.AddScoped<IEmailService, SmtpEmailService>();
+builder.Services.AddScoped<IInvoicePdfGenerator, InvoicePdfGenerator>();
+builder.Services.AddScoped<ICloudStorageService, FtpStorageService>();
 builder.Services.AddHostedService<GestionQ.Web.Services.NgrokTunnelService>();
 builder.Services.AddHostedService<GestionQ.Web.Services.StatsSyncService>();
 

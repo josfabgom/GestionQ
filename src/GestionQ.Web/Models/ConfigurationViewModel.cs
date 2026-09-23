@@ -71,5 +71,35 @@ namespace GestionQ.Web.Models
 
         [Display(Name = "Medio de Pago por Defecto en POS")]
         public int? DefaultPaymentMethodId { get; set; }
+
+        [Display(Name = "Servidor SMTP (Ej: smtp.gmail.com)")]
+        public string SmtpHost { get; set; } = string.Empty;
+
+        [Display(Name = "Puerto SMTP (Ej: 587)")]
+        public string SmtpPort { get; set; } = string.Empty;
+
+        [Display(Name = "Correo Remitente")]
+        public string SmtpEmail { get; set; } = string.Empty;
+
+        [Display(Name = "Contraseña SMTP")]
+        public string SmtpPassword { get; set; } = string.Empty;
+
+        [Display(Name = "Activar Subida FTP")]
+        public bool CloudFtpEnabled { get; set; }
+
+        [Display(Name = "Servidor FTP (Ej: ftp.midominio.com)")]
+        public string CloudFtpHost { get; set; } = string.Empty;
+
+        [Display(Name = "Usuario FTP")]
+        public string CloudFtpUser { get; set; } = string.Empty;
+
+        [Display(Name = "Contraseña FTP")]
+        public string CloudFtpPassword { get; set; } = string.Empty;
+
+        [Display(Name = "Carpeta Remota FTP (Ej: /public_html/facturas)")]
+        public string CloudFtpRemoteFolder { get; set; } = string.Empty;
+
+        [Display(Name = "Dominio Público (Ej: https://midominio.com/facturas/)")]
+        public string CloudPublicDomain { get; set; } = string.Empty;
     }
 }

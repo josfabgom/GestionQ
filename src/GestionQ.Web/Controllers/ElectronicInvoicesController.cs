@@ -600,6 +600,127 @@ namespace GestionQ.Web.Controllers
             };
         }
 
+        [HttpPost]
+        public async Task<IActionResult> SendEmail(int invoiceId, string emailAddress)
+        {
+            var invoice = await _context.ElectronicInvoices
+                .Include(e => e.PointOfSale)
+                .Include(e => e.Sale)
+                    .ThenInclude(s => s.Items)
+                    .ThenInclude(si => si.Product)
+                .FirstOrDefaultAsync(e => e.Id == invoiceId);
+
+            if (invoice == null || invoice.Status != "Approved")
+            {
+                return Json(new { success = false, message = "Factura no encontrada o no aprobada." });
+            }
+
+            if (string.IsNullOrWhiteSpace(emailAddress))
+            {
+                return Json(new { success = false, message = "Debe proporcionar una dirección de correo válida." });
+            }
+
+            try
+            {
+                var emailService = HttpContext.RequestServices.GetService(typeof(IEmailService)) as IEmailService;
+                var pdfGenerator = HttpContext.RequestServices.GetService(typeof(IInvoicePdfGenerator)) as IInvoicePdfGenerator;
+
+                if (emailService == null || pdfGenerator == null)
+                    return Json(new { success = false, message = "Los servicios de correo no están configurados." });
+
+                string companyName = _config["CompanyInfo:Name"] ?? "GestionQ";
+                string companyCuit = _config["CompanyInfo:Cuit"] ?? "";
+                string companyCondition = _config["CompanyInfo:TaxCondition"] ?? "";
+                string companyAddress = _config["CompanyInfo:Address"] ?? "";
+
+                byte[] pdfBytes = pdfGenerator.GeneratePdf(invoice, companyName, companyCuit, companyCondition, companyAddress);
+
+                string subject = $"Factura {invoice.InvoiceTypeDesc} N° {invoice.FormattedVoucherNumber} de {companyName}";
+                string htmlMessage = $"<h3>Hola,</h3><p>Adjunto a este correo encontrarás tu comprobante de compra (<strong>{invoice.InvoiceTypeDesc} N° {invoice.FormattedVoucherNumber}</strong>).</p><p>Gracias por tu compra.</p>";
+                string fileName = $"Factura_{invoice.FormattedVoucherNumber}.pdf";
+
+                await emailService.SendEmailAsync(emailAddress, subject, htmlMessage, fileName, pdfBytes);
+
+                return Json(new { success = true, message = "Correo enviado correctamente a " + emailAddress });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> GenerateWhatsAppLink(int invoiceId, string phoneNumber)
+        {
+            var invoice = await _context.ElectronicInvoices
+                .Include(e => e.PointOfSale)
+                .Include(e => e.Sale)
+                    .ThenInclude(s => s.Items)
+                    .ThenInclude(si => si.Product)
+                .FirstOrDefaultAsync(e => e.Id == invoiceId);
+
+            if (invoice == null || invoice.Status != "Approved")
+            {
+                return Json(new { success = false, message = "Factura no encontrada o no aprobada." });
+            }
+
+            if (string.IsNullOrWhiteSpace(phoneNumber))
+            {
+                return Json(new { success = false, message = "Debe proporcionar un número de celular." });
+            }
+
+            // Clean phone number (remove spaces, dashes)
+            string cleanPhone = new string(phoneNumber.Where(char.IsDigit).ToArray());
+            
+            string downloadUrl = null;
+
+            // Try Cloud Storage First
+            var cloudStorage = HttpContext.RequestServices.GetService(typeof(ICloudStorageService)) as ICloudStorageService;
+            var pdfGenerator = HttpContext.RequestServices.GetService(typeof(IInvoicePdfGenerator)) as IInvoicePdfGenerator;
+
+            if (cloudStorage != null && pdfGenerator != null)
+            {
+                try
+                {
+                    string companyName = _config["CompanyInfo:Name"] ?? "GestionQ";
+                    string companyCuit = _config["CompanyInfo:Cuit"] ?? "";
+                    string companyCondition = _config["CompanyInfo:TaxCondition"] ?? "";
+                    string companyAddress = _config["CompanyInfo:Address"] ?? "";
+
+                    byte[] pdfBytes = pdfGenerator.GeneratePdf(invoice, companyName, companyCuit, companyCondition, companyAddress);
+                    string fileName = $"Factura_{invoice.FormattedVoucherNumber}.pdf";
+
+                    string cloudUrl = await cloudStorage.UploadInvoicePdfAsync(pdfBytes, fileName);
+                    if (!string.IsNullOrEmpty(cloudUrl))
+                    {
+                        downloadUrl = cloudUrl;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Log error and fallback to Ngrok
+                    Console.WriteLine("Cloud Upload Failed: " + ex.Message);
+                }
+            }
+
+            if (string.IsNullOrEmpty(downloadUrl))
+            {
+                // Fallback to Ngrok / Local
+                string baseUrl = $"{Request.Scheme}://{Request.Host}";
+                string ngrokDomain = _config["Ngrok:Domain"];
+                if (!string.IsNullOrEmpty(ngrokDomain))
+                {
+                    baseUrl = $"https://{ngrokDomain}";
+                }
+                downloadUrl = $"{baseUrl}/PublicInvoices/Download/{invoice.DownloadGuid}";
+            }
+
+            string message = $"Hola! Te enviamos tu comprobante de venta N° {invoice.FormattedVoucherNumber}. Puedes descargar el PDF aquí: {downloadUrl}";
+            string waLink = $"https://wa.me/{cleanPhone}?text={Uri.EscapeDataString(message)}";
+
+            return Json(new { success = true, link = waLink });
+        }
+
         private void ConfigureViewBags()
         {
             ViewBag.VoucherTypes = new List<SelectListItem>
