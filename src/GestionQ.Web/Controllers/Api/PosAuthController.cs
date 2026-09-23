@@ -213,8 +213,10 @@ namespace GestionQ.Web.Controllers.Api
 
             _context.CashRegisters.Update(register);
             await _context.SaveChangesAsync();
+            
+            var ticketText = GestionQ.Web.Services.CashRegisterTicketGenerator.GenerateReport(register, true);
 
-            return Ok(new { success = true });
+            return Ok(new { success = true, ticketText = ticketText });
         }
 
         [HttpGet("print-register/{id}")]
@@ -235,7 +237,7 @@ namespace GestionQ.Web.Controllers.Api
 
             if (register == null) return NotFound();
 
-            var ticketText = GestionQ.Web.Services.CashRegisterTicketGenerator.GenerateXReport(register);
+            var ticketText = GestionQ.Web.Services.CashRegisterTicketGenerator.GenerateReport(register);
             return Ok(new { success = true, ticketText = ticketText });
         }
 

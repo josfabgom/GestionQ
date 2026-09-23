@@ -8,7 +8,7 @@ namespace GestionQ.Web.Services
 {
     public class CashRegisterTicketGenerator
     {
-        public static string GenerateXReport(CashRegister register)
+        public static string GenerateReport(CashRegister register, bool isZReport = false)
         {
             var sb = new StringBuilder();
 
@@ -105,8 +105,18 @@ namespace GestionQ.Web.Services
 
             sb.AppendLine(FormatLine("Fecha/hora de impresión:", DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss")));
             sb.AppendLine();
-            sb.AppendLine(CenterText("PARCIAL DE CAJA"));
-            sb.AppendLine(CenterText("INFORME X"));
+            
+            if (isZReport || register.ClosingDate != null)
+            {
+                sb.AppendLine(CenterText("CIERRE DE CAJA"));
+                sb.AppendLine(CenterText("INFORME Z"));
+            }
+            else
+            {
+                sb.AppendLine(CenterText("PARCIAL DE CAJA"));
+                sb.AppendLine(CenterText("INFORME X"));
+            }
+            
             sb.AppendLine(new string('-', 42));
             sb.AppendLine(FormatCol3("medios de cobro", "veces", "monto"));
             sb.AppendLine();
