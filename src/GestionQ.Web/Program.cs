@@ -151,6 +151,8 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
+app.UseMiddleware<GestionQ.Web.Middleware.LicenseMiddleware>();
+
 app.UseStaticFiles();
 
 app.MapControllerRoute(

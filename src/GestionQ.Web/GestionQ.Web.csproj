@@ -35,6 +35,7 @@
   <ItemGroup>
     <ProjectReference Include="..\GestionQ.Infrastructure\GestionQ.Infrastructure.csproj" />
     <ProjectReference Include="..\GestionQ.Domain\GestionQ.Domain.csproj" />
+    <ProjectReference Include="..\GestionQ.Licensing\GestionQ.Licensing.csproj" />
   </ItemGroup>
 
   <ItemGroup>

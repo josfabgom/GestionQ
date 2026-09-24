@@ -6,6 +6,33 @@
 @inject Microsoft.AspNetCore.Hosting.IWebHostEnvironment Env
 @inject Microsoft.AspNetCore.Authorization.IAuthorizationService AuthorizationService
 @inject Microsoft.Extensions.Configuration.IConfiguration Configuration
+@using GestionQ.Licensing
+@{
+    string vencimiento = "Sin licencia";
+    string licKey = Configuration["LicenseKey"] ?? "";
+    if (!string.IsNullOrEmpty(licKey)) {
+        try {
+            byte[] jsonBytes = Convert.FromBase64String(licKey);
+            string json = System.Text.Encoding.UTF8.GetString(jsonBytes);
+            var lic = LicenseModel.FromJson(json);
+            if (lic != null) {
+                if (lic.ExpirationDate.HasValue) {
+                    var expDate = lic.ExpirationDate.Value.ToLocalTime();
+                    var days = (expDate - DateTime.Now).TotalDays;
+                    if (days < 0) {
+                        vencimiento = "Licencia Expirada";
+                    } else if (days <= 7) {
+                        vencimiento = $"Vence en {Math.Ceiling(days)} días";
+                    } else {
+                        vencimiento = "Vence: " + expDate.ToString("dd/MM/yyyy");
+                    }
+                } else {
+                    vencimiento = "Licencia: Permanente";
+                }
+            }
+        } catch {}
+    }
+}
 
 <!DOCTYPE html>
 <html lang="es">
@@ -61,8 +88,12 @@
                 }
             </a>
 
-            <div style="text-align: center; font-size: 0.75rem; color: var(--text-muted); margin-top: -1rem; margin-bottom: 1.5rem;">
+            <div style="text-align: center; font-size: 0.75rem; color: var(--text-muted); margin-top: -1rem; margin-bottom: 0.5rem;">
                 v@(System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0.0")
+            </div>
+
+            <div style="text-align: center; font-size: 0.75rem; color: #10b981; margin-bottom: 1.5rem; font-weight: 600;">
+                <i class="fa-solid fa-certificate"></i> @vencimiento
             </div>
 
             <div
@@ -227,6 +258,11 @@
                     <li>
                         <a asp-controller="Configuration" asp-action="Index" style="color: #a78bfa; font-weight: 600;">
                             <i class="fa-solid fa-gears"></i> Ajustes Generales
+                        </a>
+                    </li>
+                    <li>
+                        <a asp-controller="Configuration" asp-action="Updates" style="color: #3b82f6; font-weight: 600;">
+                            <i class="fa-solid fa-cloud-arrow-down"></i> Actualizaciones
                         </a>
                     </li>
                 }

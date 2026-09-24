@@ -101,5 +101,8 @@ namespace GestionQ.Web.Models
 
         [Display(Name = "Dominio Público (Ej: https://midominio.com/facturas/)")]
         public string CloudPublicDomain { get; set; } = string.Empty;
+
+        [Display(Name = "URL del Servidor de Actualizaciones")]
+        public string UpdateManifestUrl { get; set; } = string.Empty;
     }
 }

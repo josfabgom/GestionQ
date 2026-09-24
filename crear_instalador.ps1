@@ -7,9 +7,9 @@ $SqlBootstrapper = ".\out\SQL2022-SSEI-Expr.exe"
 $AssetsFolder = ".\src\installer_assets"
 $InstallerResources = ".\src\GestionQ.Installer\Resources"
 $FinalExePath = ".\out\Instalar_GestionQ.exe"
-$UpdateZipPath = ".\out\GestionQ_Actualizacion.zip"
+$UpdateZipPath = ".\out\GestionQ_Instalador_Full.zip"
 
-Write-Host "Iniciando empaquetado del Instalador Gráfico (WPF) para GestionQ..." -ForegroundColor Cyan
+Write-Host "Iniciando empaquetado del Instalador GrÃ¡fico (WPF) para GestionQ..." -ForegroundColor Cyan
 
 # 1. Limpieza
 if (Test-Path ".\out") { Remove-Item -Path ".\out\app*" -Recurse -Force -ErrorAction SilentlyContinue }
@@ -19,11 +19,14 @@ if (Test-Path "$InstallerResources\payload.zip") { Remove-Item "$InstallerResour
 # 1b. Generar script SQL de estructura de base de datos
 Write-Host "Generando script SQL de la base de datos..." -ForegroundColor Yellow
 dotnet ef migrations script --project src\GestionQ.Infrastructure --startup-project src\GestionQ.Web --idempotent --configuration Release --output "$AssetsFolder\GestionQ_Schema.sql"
-if ($LASTEXITCODE -ne 0) { Write-Host "Advertencia: No se pudo generar el script de migración SQL." -ForegroundColor Red }
+if ($LASTEXITCODE -ne 0) { Write-Host "Advertencia: No se pudo generar el script de migraciÃ³n SQL." -ForegroundColor Red }
 
-# 2. Publicar proyectos de la aplicación
+# 2. Publicar proyectos de la aplicaciÃ³n
 Write-Host "Ejecutando dotnet publish (Web)..." -ForegroundColor Yellow
 dotnet publish $ProjectPath -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o $AppFolder
+
+Write-Host "Ejecutando dotnet publish (AutoUpdater)..." -ForegroundColor Yellow
+dotnet publish ".\src\GestionQ.AutoUpdater\GestionQ.AutoUpdater.csproj" -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o $AppFolder
 
 Write-Host "Ejecutando dotnet publish (Desktop para Cliente)..." -ForegroundColor Yellow
 dotnet publish ".\src\GestionQ.Desktop\GestionQ.Desktop.csproj" -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o $ClientAppFolder
@@ -62,28 +65,29 @@ if (Test-Path "$AssetsFolder\GestionQ_Schema.sql") { Copy-Item "$AssetsFolder\Ge
 if (Test-Path "$AssetsFolder\GestionQ_Datos_Basicos.sql") { Copy-Item "$AssetsFolder\GestionQ_Datos_Basicos.sql" -Destination $InstallerResources -Force }
 
 # 6. Publicar el Instalador WPF (Instalador Maestro)
-Write-Host "Compilando Instalador WPF Gráfico..." -ForegroundColor Yellow
+Write-Host "Compilando Instalador WPF GrÃ¡fico..." -ForegroundColor Yellow
 dotnet publish ".\src\GestionQ.Installer\GestionQ.Installer.csproj" -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o ".\out\installer_publish"
 
 if (Test-Path ".\out\installer_publish\GestionQ.Installer.exe") {
     Copy-Item ".\out\installer_publish\GestionQ.Installer.exe" -Destination $FinalExePath -Force
     Remove-Item ".\out\installer_publish" -Recurse -Force
-    Write-Host "Instalador Maestro creado con éxito en: $FinalExePath" -ForegroundColor Green
+    Write-Host "Instalador Maestro creado con Ã©xito en: $FinalExePath" -ForegroundColor Green
 } else {
     Write-Host "Error al compilar el Instalador WPF." -ForegroundColor Red
     exit 1
 }
 
-# 7. Crear el paquete de actualización
-Write-Host "Creando paquete de actualización..." -ForegroundColor Yellow
+# 7. Crear el paquete de actualizaciÃ³n
+Write-Host "Creando paquete de actualizaciÃ³n..." -ForegroundColor Yellow
 $UpdateTmp = ".\out\update_tmp"
 New-Item -ItemType Directory -Path $UpdateTmp -Force | Out-Null
 Copy-Item $FinalExePath -Destination "$UpdateTmp\Instalar_GestionQ.exe" -Force
 Compress-Archive -Path "$UpdateTmp\*" -DestinationPath $UpdateZipPath -Force
 Remove-Item $UpdateTmp -Recurse -Force | Out-Null
-Write-Host "Paquete de actualización creado en: $UpdateZipPath" -ForegroundColor Green
+Write-Host "Paquete de actualizaciÃ³n creado en: $UpdateZipPath" -ForegroundColor Green
 
 Write-Host "========================================================" -ForegroundColor Green
-Write-Host "Proceso finalizado con éxito." -ForegroundColor Green
+Write-Host "Proceso finalizado con Ã©xito." -ForegroundColor Green
 Write-Host "========================================================" -ForegroundColor Green
+
 

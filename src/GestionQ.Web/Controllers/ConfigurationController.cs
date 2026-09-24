@@ -76,6 +76,7 @@ namespace GestionQ.Web.Controllers
             model.CloudFtpPassword = settingsDict.GetValueOrDefault("Cloud_FtpPassword", "");
             model.CloudFtpRemoteFolder = settingsDict.GetValueOrDefault("Cloud_FtpRemoteFolder", "/");
             model.CloudPublicDomain = settingsDict.GetValueOrDefault("Cloud_PublicDomain", "");
+            model.UpdateManifestUrl = settingsDict.GetValueOrDefault("UpdateManifestUrl", "https://tudominio.com/updates/update_manifest.json");
 
             var setting = _context.SystemSettings.FirstOrDefault(s => s.Key == "NextInternalSupplierNumber");
             if (setting != null && int.TryParse(setting.Value, out var nextNum))
@@ -96,6 +97,52 @@ namespace GestionQ.Web.Controllers
             ViewBag.PaymentMethods = new SelectList(_context.PaymentMethods.Where(p => p.IsActive).OrderBy(p => p.Name), "Id", "Name");
 
             return View(model);
+        }
+
+        public IActionResult Updates()
+        {
+            var historyPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "update_history.json");
+            var history = new List<GestionQ.Web.Models.UpdateManifest>();
+            if (System.IO.File.Exists(historyPath))
+            {
+                var json = System.IO.File.ReadAllText(historyPath);
+                try {
+                    history = JsonSerializer.Deserialize<List<GestionQ.Web.Models.UpdateManifest>>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                } catch { }
+            }
+            // Sort by release date descending
+            history.Reverse();
+            return View(history);
+        }
+
+        [HttpPost]
+        public IActionResult LaunchUpdater()
+        {
+            try
+            {
+                var updaterPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "GestionQ.AutoUpdater.exe");
+                if (!System.IO.File.Exists(updaterPath))
+                {
+                    TempData["ErrorMessage"] = "No se encontró el actualizador automático en la carpeta del sistema.";
+                    return RedirectToAction("Updates");
+                }
+
+                var settingsDict = _context.SystemSettings.ToDictionary(s => s.Key, s => s.Value);
+                string manifestUrl = settingsDict.GetValueOrDefault("UpdateManifestUrl", "https://tudominio.com/updates/update_manifest.json");
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = updaterPath,
+                    Arguments = $"\"{manifestUrl}\"",
+                    UseShellExecute = true
+                });
+
+                TempData["SuccessMessage"] = "Buscador de actualizaciones lanzado. Por favor revise las ventanas abiertas en su equipo.";
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = "Error al lanzar el actualizador: " + ex.Message;
+            }
+            return RedirectToAction("Updates");
         }
 
         [HttpPost]
@@ -335,6 +382,31 @@ namespace GestionQ.Web.Controllers
                 TempData["ErrorMessage"] = "Ocurrió un error al guardar la configuración FTP: " + ex.Message;
                 return RedirectToAction(nameof(SystemSettings));
             }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateUpdaterSettings(ConfigurationViewModel model)
+        {
+            try
+            {
+                var setting = await _context.SystemSettings.FirstOrDefaultAsync(s => s.Key == "UpdateManifestUrl");
+                if (setting == null)
+                {
+                    _context.SystemSettings.Add(new SystemSetting { Key = "UpdateManifestUrl", Value = model.UpdateManifestUrl ?? "" });
+                }
+                else
+                {
+                    setting.Value = model.UpdateManifestUrl ?? "";
+                }
+                await _context.SaveChangesAsync();
+                TempData["SuccessMessage"] = "Configuración del Actualizador guardada.";
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = "Error al guardar: " + ex.Message;
+            }
+            return RedirectToAction("SystemSettings");
         }
 
         [HttpPost]
