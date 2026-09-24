@@ -20,6 +20,37 @@ namespace GestionQ.CajaPOS;
 
 public class Form1 : Form
 {
+	private Image? LoadImageFromFile(string path)
+	{
+		try
+		{
+			if (File.Exists(path))
+			{
+				byte[] bytes = File.ReadAllBytes(path);
+				MemoryStream ms = new MemoryStream(bytes);
+				return Image.FromStream(ms);
+			}
+		}
+		catch { }
+		return null;
+	}
+
+	private void ReloadLogo()
+	{
+		try
+		{
+			string text = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "images", "logo.png");
+			Image? newLogo = LoadImageFromFile(text);
+			if (newLogo != null)
+			{
+				Image? oldLogo = picLogo?.Image;
+				if (picLogo != null) picLogo.Image = newLogo;
+				oldLogo?.Dispose();
+			}
+		}
+		catch { }
+	}
+
 	private class ComboBoxItem
 	{
 		public string Text { get; set; }
@@ -87,6 +118,7 @@ public class Form1 : Form
 	private Label lblMultiplier = new Label();
 
 	private PictureBox picArticle = new PictureBox();
+	private PictureBox picLogo;
 
 	private decimal _nextQuantity = 1m;
 
@@ -146,6 +178,7 @@ public class Form1 : Form
 			Invoke((MethodInvoker)delegate
 			{
 				LoadInitialDataAsync();
+				ReloadLogo();
 				btnSync.Text = "Sincronizado ✔\ufe0f";
 				btnSync.ForeColor = greenColor;
 			});
@@ -336,14 +369,22 @@ public class Form1 : Form
 			Button button = new Button
 			{
 				Text = (string.IsNullOrEmpty(dept.Hotkey) ? dept.Name : (dept.Name + "\n[" + dept.Hotkey + "]")),
-				Width = 80,
-				Height = 45,
+				Width = 130,
+				Height = 60,
 				FlatStyle = FlatStyle.Flat,
 				ForeColor = textColor,
-				BackColor = bgColor,
-				Font = new Font("Segoe UI", 9f)
+				BackColor = Color.FromArgb(31, 41, 55),
+				Font = new Font("Segoe UI", 10f, FontStyle.Bold),
+				Cursor = Cursors.Hand
 			};
-			button.FlatAppearance.BorderColor = Color.FromArgb(60, 60, 80);
+			
+			while (TextRenderer.MeasureText(button.Text, button.Font).Width > button.Width - 10 && button.Font.Size > 6f)
+			{
+				button.Font = new Font(button.Font.FontFamily, button.Font.Size - 0.5f, button.Font.Style);
+			}
+			
+			button.FlatAppearance.BorderColor = accentColor;
+			button.FlatAppearance.BorderSize = 1;
 			button.Tag = dept;
 			button.Click += async delegate
 			{
@@ -785,7 +826,7 @@ public class Form1 : Form
 			WrapContents = false,
 			Padding = new Padding(0, 10, 0, 0)
 		};
-		PictureBox picLogo = new PictureBox
+		picLogo = new PictureBox
 		{
 			Height = 100,
 			Width = rightPanel.Width - 20,
@@ -795,7 +836,7 @@ public class Form1 : Form
 		string text = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "images", "logo.png");
 		if (File.Exists(text))
 		{
-			picLogo.Image = Image.FromFile(text);
+			picLogo.Image = LoadImageFromFile(text);
 		}
 		else
 		{
@@ -925,7 +966,7 @@ public class Form1 : Form
 		string text2 = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "images", "logo.png");
 		if (File.Exists(text2))
 		{
-			picArticle.Image = Image.FromFile(text2);
+			picArticle.Image = LoadImageFromFile(text2);
 		}
 		gbImagen.Controls.Add(picArticle);
 		leftSplit.Controls.Add(gbImagen);
@@ -1846,7 +1887,7 @@ public class Form1 : Form
 			if (File.Exists(text))
 			{
 				Image image = picArticle.Image;
-				picArticle.Image = Image.FromFile(text);
+				picArticle.Image = LoadImageFromFile(text);
 				image?.Dispose();
 			}
 		}

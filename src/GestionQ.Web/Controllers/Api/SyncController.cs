@@ -69,7 +69,7 @@ namespace GestionQ.Web.Controllers.Api
 
             if (pos.SyncOnlyWithStock)
             {
-                query = query.Where(p => p.Price > 0 && (p.Stock > 0 || p.IsDepartment));
+                query = query.Where(p => (p.Price > 0 && p.Stock > 0) || p.IsDepartment);
             }
 
             var products = await query.Select(p => new ProductSyncDto
