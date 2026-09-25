@@ -1586,6 +1586,10 @@ public class Form1 : Form
 			MessageBox.Show("Producto virtual del departamento no encontrado.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
 			return;
 		}
+		
+		// Update image immediately when button is clicked
+		UpdateArticleImage(product.ImageUrl);
+
 		Form modal = new Form();
 		try
 		{
@@ -1704,11 +1708,11 @@ public class Form1 : Form
 				decimal price = Convert.ToDecimal(txtPrice.Text.Trim().Replace(".", ","));
 				string name = (string.IsNullOrWhiteSpace(textBox.Text) ? dept2.Name : textBox.Text);
 				AddRow(product.Id, name, price, 1m);
-				UpdateArticleImage(null);
 			}
 		}
 		finally
 		{
+			UpdateArticleImage(null);
 			if (modal != null)
 			{
 				((IDisposable)modal).Dispose();

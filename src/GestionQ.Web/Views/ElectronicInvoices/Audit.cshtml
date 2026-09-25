@@ -1,0 +1,206 @@
+﻿@{
+    ViewData["Title"] = "Auditoría AFIP / ARCA";
+}
+
+<div class="container-fluid mt-4">
+    <div class="row mb-3">
+        <div class="col-12">
+            <h2 class="text-primary"><i class="fas fa-search-dollar"></i> Auditoría de Facturas contra ARCA</h2>
+            <p class="text-muted">Consulta en tiempo real el estado oficial de tus facturas en ARCA para detectar inconsistencias, microcortes o diferencias de importes.</p>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <form id="auditForm" class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label">Desde</label>
+                    <input type="date" class="form-control" id="startDate" value="@DateTime.Now.AddDays(-7).ToString("yyyy-MM-dd")" required>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Hasta</label>
+                    <input type="date" class="form-control" id="endDate" value="@DateTime.Now.ToString("yyyy-MM-dd")" required>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary w-100" id="btnRunAudit">
+                        <i class="fas fa-play"></i> Iniciar Auditoría
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body p-0 table-responsive">
+                    <table class="table table-hover table-striped mb-0" id="resultsTable">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Comprobante</th>
+                                <th>Total Local</th>
+                                <th>Estado Local</th>
+                                <th>Total ARCA</th>
+                                <th>Estado ARCA</th>
+                                <th>Resultado</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="8" class="text-center py-4 text-muted">Seleccione un rango de fechas y presione "Iniciar Auditoría"</td>
+                            </tr>
+                        </tbody>
+                        <tfoot id="resultsFooter" class="table-dark" style="display:none;">
+                            <tr>
+                                <th colspan="2" class="text-end">Totales (<span id="totalCount">0</span> comprobantes):</th>
+                                <th id="totalLocal">$0.00</th>
+                                <th></th>
+                                <th id="totalArca">$0.00</th>
+                                <th colspan="3"></th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            document.getElementById('auditForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                runAudit();
+            });
+        });
+
+        function runAudit() {
+            var btn = document.getElementById('btnRunAudit');
+            var start = document.getElementById('startDate').value;
+            var end = document.getElementById('endDate').value;
+            var tbody = document.querySelector('#resultsTable tbody');
+            var tfoot = document.getElementById('resultsFooter');
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Consultando a ARCA...';
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4"><i class="fas fa-spinner fa-spin fa-2x text-primary"></i><br>Consultando web services de AFIP. Esto puede tardar varios segundos...</td></tr>';
+            tfoot.style.display = 'none';
+
+            fetch('@Url.Action("RunAudit", "ElectronicInvoices")?startDate=' + encodeURIComponent(start) + '&endDate=' + encodeURIComponent(end), {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(res => {
+                if(res.success) {
+                    tbody.innerHTML = '';
+                    if(res.results.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">No se encontraron facturas locales en el rango seleccionado.</td></tr>';
+                        return;
+                    }
+
+                    let sumLocal = 0;
+                    let sumArca = 0;
+
+                    res.results.forEach(function(item) {
+                        sumLocal += item.localTotal || 0;
+                        sumArca += item.arcaTotal || 0;
+
+                        var rowClass = "";
+                        var icon = "";
+                        
+                        if(item.state === "OK") {
+                            rowClass = "table-success";
+                            icon = '<i class="fas fa-check-circle text-success"></i>';
+                        } else if(item.state === "Desincronizado") {
+                            rowClass = "table-warning";
+                            icon = '<i class="fas fa-exclamation-triangle text-warning"></i>';
+                        } else {
+                            rowClass = "table-danger";
+                            icon = '<i class="fas fa-times-circle text-danger"></i>';
+                        }
+
+                        var btnFix = "";
+                        if(item.state === "Desincronizado" && item.arcaStatus === "Aprobado") {
+                            btnFix = `<button class="btn btn-sm btn-outline-primary" onclick="fixInvoice(${item.localId})"><i class="fas fa-wrench"></i> Reparar</button>`;
+                        }
+
+                        var localStatusEs = item.localStatus;
+                        if(localStatusEs === "Approved") localStatusEs = "Aprobado";
+                        else if(localStatusEs === "Rejected") localStatusEs = "Rechazado";
+                        else if(localStatusEs === "Pending") localStatusEs = "Pendiente";
+                        else if(localStatusEs === "Failed") localStatusEs = "Falló";
+
+                        var tr = document.createElement('tr');
+                        tr.className = rowClass;
+                        tr.innerHTML = `
+                            <td>${item.date}</td>
+                            <td>${item.number}</td>
+                            <td>$${item.localTotal}</td>
+                            <td>${localStatusEs}</td>
+                            <td>${item.arcaTotal !== null ? '$' + item.arcaTotal : '-'}</td>
+                            <td>${item.arcaStatus}</td>
+                            <td>${icon} ${item.message}</td>
+                            <td>${btnFix}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+
+                    document.getElementById('totalCount').innerText = res.results.length;
+                    document.getElementById('totalLocal').innerText = '$' + sumLocal.toFixed(2);
+                    document.getElementById('totalArca').innerText = '$' + sumArca.toFixed(2);
+                    tfoot.style.display = '';
+
+                } else {
+                    Swal.fire("Error", "Error al ejecutar la auditoría.", "error");
+                    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-danger">Error al obtener datos.</td></tr>';
+                }
+            })
+            .catch(error => {
+                Swal.fire("Error", "Error de conexión con el servidor.", "error");
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-danger">Error de conexión.</td></tr>';
+            })
+            .finally(() => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-play"></i> Iniciar Auditoría';
+            });
+        }
+
+        function fixInvoice(id) {
+            Swal.fire({
+                title: '¿Reparar Factura?',
+                text: "Se actualizará el estado y el CAE de la factura local usando los datos oficiales de ARCA.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Sí, reparar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    fetch('@Url.Action("FixInvoice", "ElectronicInvoices")', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(id)
+                    })
+                    .then(res => res.json())
+                    .then(res => {
+                        if(res.success) {
+                            Swal.fire('¡Reparado!', res.message, 'success');
+                            runAudit(); // Refresh
+                        } else {
+                            Swal.fire('Error', res.message, 'error');
+                        }
+                    })
+                    .catch(error => {
+                        Swal.fire('Error', 'No se pudo comunicar con el servidor.', 'error');
+                    });
+                }
+            });
+        }
+    </script>
+}

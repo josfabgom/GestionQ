@@ -9,6 +9,7 @@ namespace GestionQ.Infrastructure.Services
         Task<ElectronicInvoiceResponse> RequestCAEAsync(ElectronicInvoiceRequest request);
         Task<int> GetLastAuthorizedVoucherAsync(int posNumber, int voucherTypeCode);
         Task<bool> CheckInfrastructureStatusAsync(); // FEDummy
+        Task<ElectronicInvoiceDetails?> GetInvoiceDetailsAsync(int posNumber, int invoiceTypeCode, int invoiceNumber);
     }
 
     public class ElectronicInvoiceRequest
@@ -41,5 +42,20 @@ namespace GestionQ.Infrastructure.Services
         public string Status { get; set; } = "Rejected"; // Approved, Rejected, Observed
         public List<string> Errors { get; set; } = new();
         public List<string> Warnings { get; set; } = new();
+    }
+
+    public class ElectronicInvoiceDetails
+    {
+        public int InvoiceNumber { get; set; }
+        public int InvoiceTypeCode { get; set; }
+        public int PointOfSaleNumber { get; set; }
+        public string CAE { get; set; } = string.Empty;
+        public DateTime CAEExpirationDate { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public string DocNumber { get; set; } = string.Empty;
+        public decimal TotalAmount { get; set; }
+        public decimal NetAmount { get; set; }
+        public decimal VatAmount { get; set; }
+        public string Date { get; set; } = string.Empty; // CbteFch (yyyyMMdd)
     }
 }

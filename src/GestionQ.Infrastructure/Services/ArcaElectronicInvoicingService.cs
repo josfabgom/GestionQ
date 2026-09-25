@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -515,6 +515,83 @@ namespace GestionQ.Infrastructure.Services
                     response.Errors.Add("La respuesta no contiene el detalle del comprobante.");
                 }
             }
+        }
+
+        public async Task<ElectronicInvoiceDetails?> GetInvoiceDetailsAsync(int posNumber, int invoiceTypeCode, int invoiceNumber)
+        {
+            await LoadSettingsAsync();
+            await EnsureAuthenticatedAsync();
+
+            string soapEnvelope = $@"<?xml version=""1.0"" encoding=""utf-8""?>
+<soap:Envelope xmlns:xsi=""http://www.w3.org/2001/XMLSchema-instance"" xmlns:xsd=""http://www.w3.org/2001/XMLSchema"" xmlns:soap=""http://schemas.xmlsoap.org/soap/envelope/"">
+  <soap:Body>
+    <FECompConsultar xmlns=""http://ar.gov.afip.dif.FEV1/"">
+      <Auth>
+        <Token>{_cachedToken}</Token>
+        <Sign>{_cachedSign}</Sign>
+        <Cuit>{_cuit}</Cuit>
+      </Auth>
+      <FeCompConsReq>
+        <CbteTipo>{invoiceTypeCode}</CbteTipo>
+        <CbteNro>{invoiceNumber}</CbteNro>
+        <PtoVta>{posNumber}</PtoVta>
+      </FeCompConsReq>
+    </FECompConsultar>
+  </soap:Body>
+</soap:Envelope>";
+
+            var httpContent = new StringContent(soapEnvelope, Encoding.UTF8, "text/xml");
+            httpContent.Headers.Add("SOAPAction", "\"http://ar.gov.afip.dif.FEV1/FECompConsultar\"");
+
+            var httpResponse = await _httpClient.PostAsync(_wsfeUrl, httpContent);
+            var responseXml = await httpResponse.Content.ReadAsStringAsync();
+
+            if (!httpResponse.IsSuccessStatusCode)
+            {
+                throw new Exception($"AFIP Error FECompConsultar. HTTP {httpResponse.StatusCode}: {responseXml}");
+            }
+
+            var doc = XDocument.Parse(responseXml);
+            XNamespace ns = "http://ar.gov.afip.dif.FEV1/";
+            
+            var result = doc.Descendants(ns + "FECompConsultarResult").FirstOrDefault();
+            if (result != null)
+            {
+                var errors = result.Element(ns + "Errors");
+                if (errors != null)
+                {
+                    // Si el error es 602, significa que no existe
+                    return null;
+                }
+
+                var cbte = result.Element(ns + "ResultGet");
+                if (cbte != null)
+                {
+                    string fchVtoStr = (string)cbte.Element(ns + "FchVto");
+                    DateTime caeExp = DateTime.MinValue;
+                    if (!string.IsNullOrEmpty(fchVtoStr) && fchVtoStr.Length == 8)
+                    {
+                        caeExp = new DateTime(int.Parse(fchVtoStr.Substring(0,4)), int.Parse(fchVtoStr.Substring(4,2)), int.Parse(fchVtoStr.Substring(6,2)));
+                    }
+
+                    return new ElectronicInvoiceDetails
+                    {
+                        InvoiceNumber = (int)cbte.Element(ns + "CbteDesde"),
+                        InvoiceTypeCode = (int)cbte.Element(ns + "CbteTipo"),
+                        PointOfSaleNumber = (int)cbte.Element(ns + "PtoVta"),
+                        CAE = (string)cbte.Element(ns + "CodAutorizacion"),
+                        CAEExpirationDate = caeExp,
+                        Status = (string)cbte.Element(ns + "Resultado"), // A = Aprobado, R = Rechazado
+                        DocNumber = (string)cbte.Element(ns + "DocNro"),
+                        TotalAmount = (decimal)cbte.Element(ns + "ImpTotal"),
+                        NetAmount = (decimal)cbte.Element(ns + "ImpNeto"),
+                        VatAmount = (decimal)cbte.Element(ns + "ImpIVA"),
+                        Date = (string)cbte.Element(ns + "CbteFch")
+                    };
+                }
+            }
+
+            return null;
         }
     }
 }

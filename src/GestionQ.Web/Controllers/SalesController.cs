@@ -117,7 +117,7 @@ namespace GestionQ.Web.Controllers
             ViewBag.Customers = await _context.Customers.Where(c => c.IsActive).ToListAsync();
             ViewBag.Products = await _context.Products.Where(p => (p.Stock > 0 || p.IsDepartment) && p.IsActive).ToListAsync();
             ViewBag.PaymentMethods = await _context.PaymentMethods.Where(p => p.IsActive).ToListAsync();
-            ViewBag.Departments = await _context.Departments.Include(d => d.VatRate).ToListAsync();
+            ViewBag.Departments = await _context.Departments.Include(d => d.VatRate).Include(d => d.VirtualProduct).ToListAsync();
             ViewBag.Promotions = await _context.PromotionRules
                 .Where(r => r.IsActive && r.StartDate <= DateTime.Now && r.EndDate >= DateTime.Now)
                 .Include(r => r.Products)

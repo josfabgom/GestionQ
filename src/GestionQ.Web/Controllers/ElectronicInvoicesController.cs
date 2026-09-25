@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -1286,6 +1286,149 @@ namespace GestionQ.Web.Controllers
                 failures = failures
             });
         }
+
+        // GET: ElectronicInvoices/Audit
+        [HttpGet]
+        public IActionResult Audit()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> RunAudit(DateTime startDate, DateTime endDate)
+        {
+            endDate = endDate.Date.AddDays(1).AddTicks(-1);
+
+            var localInvoices = await _context.ElectronicInvoices
+                .Include(e => e.PointOfSale)
+                .Where(e => e.IssueDate >= startDate && e.IssueDate <= endDate)
+                .OrderByDescending(e => e.IssueDate)
+                .ToListAsync();
+
+            var results = new List<object>();
+
+            foreach (var inv in localInvoices)
+            {
+                if (inv.PointOfSaleNumber == 0 || inv.InvoiceTypeCode == 0 || inv.InvoiceNumber == 0)
+                {
+                    results.Add(new {
+                        LocalId = inv.Id,
+                        Date = inv.IssueDate.ToString("dd/MM/yyyy HH:mm"),
+                        Number = inv.FormattedVoucherNumber,
+                        LocalTotal = inv.TotalAmount,
+                        LocalStatus = inv.Status,
+                        ArcaTotal = (decimal?)null,
+                        ArcaStatus = "-",
+                        State = "ErrorLocal",
+                        Message = "Faltan datos (Punto de venta, Tipo o Nro) para consultar en ARCA."
+                    });
+                    continue;
+                }
+
+                try
+                {
+                    var afipData = await _invoicingService.GetInvoiceDetailsAsync(inv.PointOfSaleNumber, inv.InvoiceTypeCode, inv.InvoiceNumber);
+
+                    if (afipData == null)
+                    {
+                        results.Add(new {
+                            LocalId = inv.Id,
+                            Date = inv.IssueDate.ToString("dd/MM/yyyy HH:mm"),
+                            Number = inv.FormattedVoucherNumber,
+                            LocalTotal = inv.TotalAmount,
+                            LocalStatus = inv.Status,
+                            ArcaTotal = (decimal?)null,
+                            ArcaStatus = "No Encontrado",
+                            State = inv.Status == "Approved" ? "Peligro" : "OK",
+                            Message = inv.Status == "Approved" ? "Aprobado localmente pero NO EXISTE en ARCA." : "No existe en ARCA (coincide con estado local)."
+                        });
+                    }
+                    else
+                    {
+                        bool isAmountOk = afipData.TotalAmount == inv.TotalAmount;
+                        bool isCaeOk = afipData.CAE == inv.CAE;
+
+                        string state = "OK";
+                        string msg = "Coincide perfectamente.";
+
+                        if (!isAmountOk)
+                        {
+                            state = "Diferencia";
+                            msg = $"Diferencia de importes. Local: ${inv.TotalAmount}, ARCA: ${afipData.TotalAmount}";
+                        }
+                        else if (inv.Status != "Approved")
+                        {
+                            state = "Desincronizado";
+                            msg = $"Localmente está {inv.Status} pero en ARCA está aprobada con CAE {afipData.CAE}";
+                        }
+                        else if (!isCaeOk)
+                        {
+                            state = "Diferencia";
+                            msg = $"CAE no coincide. Local: {inv.CAE}, ARCA: {afipData.CAE}";
+                        }
+
+                        results.Add(new {
+                            LocalId = inv.Id,
+                            Date = inv.IssueDate.ToString("dd/MM/yyyy HH:mm"),
+                            Number = inv.FormattedVoucherNumber,
+                            LocalTotal = inv.TotalAmount,
+                            LocalStatus = inv.Status,
+                            ArcaTotal = afipData.TotalAmount,
+                            ArcaStatus = afipData.Status == "A" ? "Aprobado" : "Rechazado",
+                            ArcaCAE = afipData.CAE,
+                            ArcaCAEExpiration = afipData.CAEExpirationDate.ToString("dd/MM/yyyy"),
+                            State = state,
+                            Message = msg
+                        });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    results.Add(new {
+                        LocalId = inv.Id,
+                        Date = inv.IssueDate.ToString("dd/MM/yyyy HH:mm"),
+                        Number = inv.FormattedVoucherNumber,
+                        LocalTotal = inv.TotalAmount,
+                        LocalStatus = inv.Status,
+                        ArcaTotal = (decimal?)null,
+                        ArcaStatus = "Error",
+                        State = "Error",
+                        Message = $"Error al consultar: {ex.Message}"
+                    });
+                }
+            }
+
+            return Json(new { success = true, results = results });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> FixInvoice([FromBody] int localId)
+        {
+            var inv = await _context.ElectronicInvoices.FindAsync(localId);
+            if (inv == null) return Json(new { success = false, message = "Factura no encontrada localmente." });
+
+            try
+            {
+                var afipData = await _invoicingService.GetInvoiceDetailsAsync(inv.PointOfSaleNumber, inv.InvoiceTypeCode, inv.InvoiceNumber);
+                if (afipData != null && afipData.Status == "A")
+                {
+                    inv.CAE = afipData.CAE;
+                    inv.CAEExpirationDate = afipData.CAEExpirationDate;
+                    inv.Status = "Approved";
+                    inv.ErrorMessage = "Sincronizado con ARCA (Auditoría).";
+                    await _context.SaveChangesAsync();
+                    return Json(new { success = true, message = "Factura sincronizada correctamente con el CAE de ARCA." });
+                }
+                else
+                {
+                    return Json(new { success = false, message = "La factura no está aprobada en ARCA o no se encontró, no se puede auto-reparar." });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
     }
 
     // View Models
@@ -1342,3 +1485,4 @@ namespace GestionQ.Web.Controllers
         public string? Environment { get; set; }
     }
 }
+

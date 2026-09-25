@@ -1,4 +1,4 @@
-@model GestionQ.Domain.Entities.Department
+﻿@model GestionQ.Domain.Entities.Department
 
 @{
     ViewData["Title"] = "Nuevo Departamento";
@@ -7,7 +7,7 @@
 <h1 class="page-title">Nuevo Departamento</h1>
 
 <div class="glass-panel" style="max-width: 500px;">
-    <form asp-action="Create">
+    <form asp-action="Create" enctype="multipart/form-data">
         <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
         <div class="form-group" style="margin-bottom: 1rem;">
@@ -38,6 +38,12 @@
             <label asp-for="VatRateId" class="control-label">Alícuota IVA</label>
             <select asp-for="VatRateId" class="form-control" asp-items="ViewBag.VatRates"></select>
             <span asp-validation-for="VatRateId" class="text-danger"></span>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 1rem;">
+            <label class="control-label">Imagen para Caja POS</label>
+            <input type="file" name="image" class="form-control" accept="image/*" />
+            <small style="color: #64748b; display: block; margin-top: 0.25rem;">Imagen opcional a mostrar en la pantalla de Venta Rápida.</small>
         </div>
 
         <div class="form-group" style="margin-top: 1.5rem; display: flex; gap: 1rem;">

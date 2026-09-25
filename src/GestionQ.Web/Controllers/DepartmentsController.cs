@@ -1,3 +1,7 @@
+using System;
+using System.IO;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -5,6 +9,7 @@ using GestionQ.Infrastructure.Data;
 using GestionQ.Domain.Entities;
 using GestionQ.Domain.Constants;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using System.Threading.Tasks;
 
 namespace GestionQ.Web.Controllers
 {
@@ -12,10 +17,12 @@ namespace GestionQ.Web.Controllers
     public class DepartmentsController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly IWebHostEnvironment _env;
 
-        public DepartmentsController(ApplicationDbContext context)
+        public DepartmentsController(ApplicationDbContext context, IWebHostEnvironment env)
         {
             _context = context;
+            _env = env;
         }
 
         public async Task<IActionResult> Index()
@@ -37,7 +44,7 @@ namespace GestionQ.Web.Controllers
         [HttpPost]
         [Authorize(Policy = Permissions.Config.Create)]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(Department department)
+        public async Task<IActionResult> Create(Department department, IFormFile image)
         {
             // Remove VirtualProduct navigation validation to allow custom creation
             ModelState.Remove(nameof(department.VirtualProduct));
@@ -64,6 +71,21 @@ namespace GestionQ.Web.Controllers
                         VatRateId = department.VatRateId,
                         CreationDate = DateTime.Now
                     };
+
+                    if (image != null)
+                    {
+                        string folder = Path.Combine(_env.WebRootPath, "images", "products");
+                        if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
+
+                        string fileName = $"{virtualProduct.InternalCode}_{Guid.NewGuid()}{Path.GetExtension(image.FileName)}";
+                        string filePath = Path.Combine(folder, fileName);
+
+                        using (var stream = new FileStream(filePath, FileMode.Create))
+                        {
+                            await image.CopyToAsync(stream);
+                        }
+                        virtualProduct.ImageUrl = $"/images/products/{fileName}";
+                    }
 
                     _context.Products.Add(virtualProduct);
                     await _context.SaveChangesAsync();
@@ -101,7 +123,7 @@ namespace GestionQ.Web.Controllers
         [HttpPost]
         [Authorize(Policy = Permissions.Config.Edit)]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, Department department)
+        public async Task<IActionResult> Edit(int id, Department department, IFormFile image)
         {
             if (id != department.Id) return NotFound();
 
@@ -122,6 +144,28 @@ namespace GestionQ.Web.Controllers
                     {
                         virtualProduct.Name = department.Name;
                         virtualProduct.VatRateId = department.VatRateId;
+                        
+                        if (image != null)
+                        {
+                            if (!string.IsNullOrEmpty(virtualProduct.ImageUrl))
+                            {
+                                string oldPath = Path.Combine(_env.WebRootPath, virtualProduct.ImageUrl.TrimStart('/'));
+                                if (System.IO.File.Exists(oldPath)) System.IO.File.Delete(oldPath);
+                            }
+
+                            string folder = Path.Combine(_env.WebRootPath, "images", "products");
+                            if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
+
+                            string fileName = $"{virtualProduct.InternalCode}_{Guid.NewGuid()}{Path.GetExtension(image.FileName)}";
+                            string filePath = Path.Combine(folder, fileName);
+
+                            using (var stream = new FileStream(filePath, FileMode.Create))
+                            {
+                                await image.CopyToAsync(stream);
+                            }
+                            virtualProduct.ImageUrl = $"/images/products/{fileName}";
+                        }
+
                         _context.Products.Update(virtualProduct);
                     }
 

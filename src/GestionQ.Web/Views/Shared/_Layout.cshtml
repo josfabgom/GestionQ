@@ -1,4 +1,4 @@
-@using Microsoft.AspNetCore.Identity
+﻿@using Microsoft.AspNetCore.Identity
 @using Microsoft.AspNetCore.Hosting
 @using GestionQ.Domain.Constants
 @inject SignInManager<IdentityUser> SignInManager
@@ -247,6 +247,11 @@
                 <li>
                     <a asp-controller="ElectronicInvoices" asp-action="Spool" style="color: #34d399; font-weight: 600;">
                         <i class="fa-solid fa-print"></i> Spool Fiscal
+                    </a>
+                </li>
+                <li>
+                    <a asp-controller="ElectronicInvoices" asp-action="Audit">
+                        <i class="fa-solid fa-shield-halved"></i> Auditoría ARCA
                     </a>
                 </li>
                 }
