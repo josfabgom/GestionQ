@@ -1,4 +1,4 @@
-ï»¿@model GestionQ.Domain.Entities.Department
+@model GestionQ.Domain.Entities.Department
 
 @{
     ViewData["Title"] = "Nuevo Departamento";
@@ -12,14 +12,14 @@
 
         <div class="form-group" style="margin-bottom: 1rem;">
             <label asp-for="Name" class="control-label">Nombre del Departamento</label>
-            <input asp-for="Name" class="form-control" placeholder="Ej: CarnicerÃ­a, VerdulerÃ­a..." />
+            <input asp-for="Name" class="form-control" placeholder="Ej: Carnicería, Verdulería..." />
             <span asp-validation-for="Name" class="text-danger"></span>
         </div>
 
         <div class="form-group" style="margin-bottom: 1rem;">
-            <label asp-for="Hotkey" class="control-label">Tecla RÃ¡pida (Hotkey)</label>
+            <label asp-for="Hotkey" class="control-label">Tecla Rápida (Hotkey)</label>
             <select asp-for="Hotkey" class="form-control">
-                <option value="">-- Sin Tecla RÃ¡pida --</option>
+                <option value="">-- Sin Tecla Rápida --</option>
                 <option value="F1">F1</option>
                 <option value="F2">F2</option>
                 <option value="F3">F3</option>
@@ -31,19 +31,29 @@
                 <option value="F10">F10</option>
             </select>
             <span asp-validation-for="Hotkey" class="text-danger"></span>
-            <small style="color: #64748b; display: block; margin-top: 0.25rem;">Esta tecla agregarÃ¡ directamente artÃ­culos a este departamento en la pantalla de ventas.</small>
+            <small style="color: #64748b; display: block; margin-top: 0.25rem;">Esta tecla agregará directamente artículos a este departamento en la pantalla de ventas.</small>
         </div>
 
         <div class="form-group" style="margin-bottom: 1rem;">
-            <label asp-for="VatRateId" class="control-label">AlÃ­cuota IVA</label>
+            <label asp-for="VatRateId" class="control-label">Alícuota IVA</label>
             <select asp-for="VatRateId" class="form-control" asp-items="ViewBag.VatRates"></select>
             <span asp-validation-for="VatRateId" class="text-danger"></span>
         </div>
 
-        <div class="form-group" style="margin-bottom: 1rem;">
+                <div class="form-group" style="margin-bottom: 1rem;">
             <label class="control-label">Imagen para Caja POS</label>
-            <input type="file" name="image" class="form-control" accept="image/*" />
-            <small style="color: #64748b; display: block; margin-top: 0.25rem;">Imagen opcional a mostrar en la pantalla de Venta RÃ¡pida.</small>
+            <div style="border: 2px dashed var(--border); border-radius: 12px; padding: 1rem; text-align: center; background: rgba(255,255,255,0.02);">
+                <div id="imagePreview" style="width: 100%; aspect-ratio: 1; border-radius: 8px; overflow: hidden; margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.2);">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.2;">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                        <polyline points="21 15 16 10 5 21"></polyline>
+                    </svg>
+                </div>
+                <input type="file" name="image" id="imageInput" style="display: none;" accept="image/*" />
+                <button type="button" onclick="document.getElementById('imageInput').click()" class="btn-secondary" style="width: 100%;">Elegir Imagen</button>
+                <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">Pega una imagen (Ctrl+V), arrástrala o presiona el botón.</p>
+            </div>
         </div>
 
         <div class="form-group" style="margin-top: 1.5rem; display: flex; gap: 1rem;">
@@ -52,3 +62,42 @@
         </div>
     </form>
 </div>
+
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        // Image Preview and Copy-Paste functionality
+        const imageInput = document.getElementById("imageInput");
+        const imagePreview = document.getElementById("imagePreview");
+
+        if (imageInput) {
+            imageInput.addEventListener("change", function (e) {
+                if (this.files && this.files[0]) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        imagePreview.innerHTML = "<img src=\"" + e.target.result + "\" style=\"width: 100%; height: 100%; object-fit: contain; padding: 10px;\" />";
+                    }
+                    reader.readAsDataURL(this.files[0]);
+                }
+            });
+        }
+
+        // Paste Image from Clipboard
+        document.addEventListener("paste", function (e) {
+            if (e.clipboardData && e.clipboardData.files && e.clipboardData.files.length > 0) {
+                const file = e.clipboardData.files[0];
+                if (file.type.startsWith("image/")) {
+                    const fileInput = document.getElementById("imageInput");
+                    if (fileInput) {
+                        const dataTransfer = new DataTransfer();
+                        dataTransfer.items.add(file);
+                        fileInput.files = dataTransfer.files;
+                        fileInput.dispatchEvent(new Event("change"));
+                    }
+                }
+            }
+        });
+    </script>
+}
+

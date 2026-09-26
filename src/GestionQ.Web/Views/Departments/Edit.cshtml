@@ -41,10 +41,27 @@
             <span asp-validation-for="VatRateId" class="text-danger"></span>
         </div>
 
-        <div class="form-group" style="margin-bottom: 1rem;">
-            <label class="control-label">Imagen para Caja POS (Reemplazar)</label>
-            <input type="file" name="image" class="form-control" accept="image/*" />
-            <small style="color: #64748b; display: block; margin-top: 0.25rem;">Dejar vacÃ­o para conservar la imagen actual de este departamento.</small>
+                <div class="form-group" style="margin-bottom: 1rem;">
+            <label class="control-label">Imagen para Caja POS</label>
+            <div style="border: 2px dashed var(--border); border-radius: 12px; padding: 1rem; text-align: center; background: rgba(255,255,255,0.02);">
+                <div id="imagePreview" style="width: 100%; aspect-ratio: 1; border-radius: 8px; overflow: hidden; margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.2);">
+                    @if (Model != null && Model.VirtualProduct != null && !string.IsNullOrEmpty(Model.VirtualProduct.ImageUrl))
+                    {
+                        <img src="@Model.VirtualProduct.ImageUrl" style="width: 100%; height: 100%; object-fit: contain; padding: 10px;" />
+                    }
+                    else
+                    {
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.2;">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                            <polyline points="21 15 16 10 5 21"></polyline>
+                        </svg>
+                    }
+                </div>
+                <input type="file" name="image" id="imageInput" style="display: none;" accept="image/*" />
+                <button type="button" onclick="document.getElementById('imageInput').click()" class="btn-secondary" style="width: 100%;">Cambiar Imagen</button>
+                <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">Pega una imagen (Ctrl+V), arrástrala o presiona el botón.<br/>Dejar vacío para mantener la actual.</p>
+            </div>
         </div>
 
         <div class="form-group" style="margin-top: 1.5rem; display: flex; gap: 1rem;">
@@ -53,3 +70,43 @@
         </div>
     </form>
 </div>
+
+
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        // Image Preview and Copy-Paste functionality
+        const imageInput = document.getElementById("imageInput");
+        const imagePreview = document.getElementById("imagePreview");
+
+        if (imageInput) {
+            imageInput.addEventListener("change", function (e) {
+                if (this.files && this.files[0]) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        imagePreview.innerHTML = "<img src=\"" + e.target.result + "\" style=\"width: 100%; height: 100%; object-fit: contain; padding: 10px;\" />";
+                    }
+                    reader.readAsDataURL(this.files[0]);
+                }
+            });
+        }
+
+        // Paste Image from Clipboard
+        document.addEventListener("paste", function (e) {
+            if (e.clipboardData && e.clipboardData.files && e.clipboardData.files.length > 0) {
+                const file = e.clipboardData.files[0];
+                if (file.type.startsWith("image/")) {
+                    const fileInput = document.getElementById("imageInput");
+                    if (fileInput) {
+                        const dataTransfer = new DataTransfer();
+                        dataTransfer.items.add(file);
+                        fileInput.files = dataTransfer.files;
+                        fileInput.dispatchEvent(new Event("change"));
+                    }
+                }
+            }
+        });
+    </script>
+}
+

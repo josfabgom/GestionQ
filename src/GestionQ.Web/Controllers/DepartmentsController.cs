@@ -113,7 +113,7 @@ namespace GestionQ.Web.Controllers
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null) return NotFound();
-            var department = await _context.Departments.FindAsync(id);
+            var department = await _context.Departments.Include(d => d.VirtualProduct).FirstOrDefaultAsync(d => d.Id == id);
             if (department == null) return NotFound();
 
             ViewBag.VatRates = new SelectList(await _context.VatRates.ToListAsync(), "Id", "Rate", department.VatRateId);
@@ -190,7 +190,7 @@ namespace GestionQ.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int id)
         {
-            var department = await _context.Departments.FindAsync(id);
+            var department = await _context.Departments.Include(d => d.VirtualProduct).FirstOrDefaultAsync(d => d.Id == id);
             if (department != null)
             {
                 using var transaction = await _context.Database.BeginTransactionAsync();
@@ -220,3 +220,4 @@ namespace GestionQ.Web.Controllers
         }
     }
 }
+
