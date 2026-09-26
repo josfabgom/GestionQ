@@ -1,4 +1,4 @@
-﻿@{
+@{
     ViewData["Title"] = "Auditoría AFIP / ARCA";
 }
 
@@ -152,6 +152,16 @@
                     document.getElementById('totalLocal').innerText = '$' + sumLocal.toFixed(2);
                     document.getElementById('totalArca').innerText = '$' + sumArca.toFixed(2);
                     tfoot.style.display = '';
+
+                    let arcaDown = res.results.some(item => item.isArcaDown);
+                    if (arcaDown) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error de conexión con ARCA',
+                            text: 'No se puede conectar con ARCA. Sus servidores están experimentando problemas técnicos. Por favor, intente más tarde.',
+                            confirmButtonText: 'Aceptar'
+                        });
+                    }
 
                 } else {
                     Swal.fire("Error", "Error al ejecutar la auditoría.", "error");

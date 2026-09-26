@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -773,7 +773,7 @@ namespace GestionQ.Web.Controllers
                     .Include(s => s.PointOfSale)
                     .Include(s => s.Payments)
                     .ThenInclude(p => p.PaymentMethod)
-                    .Where(s => s.ElectronicInvoice == null)
+                    .Where(s => s.ElectronicInvoice == null && s.RequestElectronicInvoice == true)
                     .OrderByDescending(s => s.Date)
                     .ToListAsync()
             };
@@ -793,7 +793,15 @@ namespace GestionQ.Web.Controllers
 
         // POST: ElectronicInvoices/QuickInvoice
         [HttpPost]
-        public async Task<IActionResult> QuickInvoice(int saleId)
+                [HttpPost]
+        [Route("api/invoice/quick/{globalId}")]
+        public async Task<IActionResult> QuickInvoiceByGlobalId([FromRoute] Guid globalId)
+        {
+            var sale = await _context.Sales.FirstOrDefaultAsync(s => s.GlobalId == globalId);
+            if (sale == null) return Json(new { success = false, message = "Venta no encontrada" });
+            return await QuickInvoice(sale.Id);
+        }
+		public async Task<IActionResult> QuickInvoice(int saleId)
         {
             var sale = await _context.Sales
                 .Include(s => s.Customer)
@@ -976,6 +984,12 @@ namespace GestionQ.Web.Controllers
             else
             {
                 var errors = string.Join("; ", serviceResponse.Errors);
+                
+                if (errors.Contains("ORA-01034") || errors.Contains("ORA-27101") || errors.Contains("InternalServerError") || errors.Contains("/wsfev1"))
+                {
+                    return Json(new { success = false, message = "No se puede conectar con ARCA. Sus servidores están experimentando problemas técnicos. Por favor, intente facturar más tarde." });
+                }
+
                 return Json(new { success = false, message = "ARCA rechazó la solicitud: " + errors });
             }
         }
@@ -1203,12 +1217,22 @@ namespace GestionQ.Web.Controllers
                     }
                     else
                     {
-                        failures.Add($"Venta #{sale.Id}: {string.Join(", ", serviceResponse.Errors)}");
+                        var errors = string.Join(", ", serviceResponse.Errors);
+                        if (errors.Contains("ORA-01034") || errors.Contains("ORA-27101") || errors.Contains("InternalServerError") || errors.Contains("/wsfev1"))
+                        {
+                            errors = "No se puede conectar con ARCA (Problema técnico en sus servidores).";
+                        }
+                        failures.Add($"Venta #{sale.Id}: {errors}");
                     }
                 }
                 catch (Exception ex)
                 {
-                    failures.Add($"Venta #{saleId}: Error - {ex.Message}");
+                    var msg = ex.Message;
+                    if (msg.Contains("ORA-01034") || msg.Contains("ORA-27101") || msg.Contains("InternalServerError") || msg.Contains("/wsfev1"))
+                    {
+                        msg = "No se puede conectar con ARCA (Problema técnico en sus servidores).";
+                    }
+                    failures.Add($"Venta #{saleId}: Error - {msg}");
                 }
             }
 
@@ -1384,6 +1408,12 @@ namespace GestionQ.Web.Controllers
                 }
                 catch (Exception ex)
                 {
+                    bool isArcaDown = ex.Message.Contains("ORA-01034") || ex.Message.Contains("ORA-27101") || ex.Message.Contains("InternalServerError") || ex.Message.Contains("/wsfev1");
+                    
+                    string errorMessage = isArcaDown 
+                        ? "No se puede conectar con ARCA. Sus servidores están experimentando problemas técnicos." 
+                        : $"Error al consultar: {ex.Message}";
+
                     results.Add(new {
                         LocalId = inv.Id,
                         Date = inv.IssueDate.ToString("dd/MM/yyyy HH:mm"),
@@ -1393,7 +1423,8 @@ namespace GestionQ.Web.Controllers
                         ArcaTotal = (decimal?)null,
                         ArcaStatus = "Error",
                         State = "Error",
-                        Message = $"Error al consultar: {ex.Message}"
+                        Message = errorMessage,
+                        IsArcaDown = isArcaDown
                     });
                 }
             }
@@ -1485,4 +1516,6 @@ namespace GestionQ.Web.Controllers
         public string? Environment { get; set; }
     }
 }
+
+
 

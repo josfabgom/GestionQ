@@ -469,7 +469,11 @@ namespace GestionQ.Web.Controllers
                             Status = afipResponse.Success ? "Aprobado" : "Rechazado",
                             CAE = afipResponse.Success ? afipResponse.CAE : null,
                             CAEExpirationDate = afipResponse.Success ? afipResponse.CAEExpirationDate : DateTime.MinValue,
-                            ErrorMessage = afipResponse.Success ? $"Nota de Crédito para Venta #{sale.FormattedTicketNumber}" : string.Join(", ", afipResponse.Errors),
+                            ErrorMessage = afipResponse.Success 
+                                ? $"Nota de Crédito para Venta #{sale.FormattedTicketNumber}" 
+                                : (string.Join(", ", afipResponse.Errors).Contains("ORA-01034") || string.Join(", ", afipResponse.Errors).Contains("ORA-27101") || string.Join(", ", afipResponse.Errors).Contains("InternalServerError") || string.Join(", ", afipResponse.Errors).Contains("/wsfev1")
+                                    ? "No se puede conectar con ARCA (Problema técnico en sus servidores)."
+                                    : string.Join(", ", afipResponse.Errors)),
                             CondicionIVAReceptorId = sale.ElectronicInvoice.CondicionIVAReceptorId
                         };
                         _context.ElectronicInvoices.Add(ncInvoice);
@@ -543,12 +547,18 @@ namespace GestionQ.Web.Controllers
             };
 
             var response = await _electronicInvoicingService.RequestCAEAsync(request);
-            var ei = new ElectronicInvoice {
-                SaleId = sale.Id, PointOfSaleId = posId, PointOfSaleNumber = posNumber, InvoiceTypeCode = defaultInvoiceTypeCode, InvoiceNumber = response.InvoiceNumber,
-                IssueDate = DateTime.Now, TotalAmount = sale.TotalAmount, NetAmount = netAmount, VatAmount = vatAmount, ExemptAmount = exemptAmount,
-                Status = response.Status, CAE = response.CAE, CAEExpirationDate = response.CAEExpirationDate != default ? response.CAEExpirationDate : DateTime.Now,
-                ErrorMessage = string.Join(" | ", response.Errors)
-            };
+                var errors = string.Join(" | ", response.Errors);
+                if (errors.Contains("ORA-01034") || errors.Contains("ORA-27101") || errors.Contains("InternalServerError") || errors.Contains("/wsfev1"))
+                {
+                    errors = "No se puede conectar con ARCA (Problema técnico en sus servidores).";
+                }
+
+                var ei = new ElectronicInvoice {
+                    SaleId = sale.Id, PointOfSaleId = posId, PointOfSaleNumber = posNumber, InvoiceTypeCode = defaultInvoiceTypeCode, InvoiceNumber = response.InvoiceNumber,
+                    IssueDate = DateTime.Now, TotalAmount = sale.TotalAmount, NetAmount = netAmount, VatAmount = vatAmount, ExemptAmount = exemptAmount,
+                    Status = response.Status, CAE = response.CAE, CAEExpirationDate = response.CAEExpirationDate != default ? response.CAEExpirationDate : DateTime.Now,
+                    ErrorMessage = errors
+                };
             _context.ElectronicInvoices.Add(ei);
             await _context.SaveChangesAsync();
         }

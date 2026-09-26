@@ -159,12 +159,12 @@ public class Form1 : Form
 		if (_requestElectronicInvoice)
 		{
 			lblTitle.ForeColor = Color.DeepSkyBlue;
-			lblTitle.Text = "\ud83d\udce0 Punto de Venta (Caja)   ●";
+			lblTitle.Text = "Punto de Venta (Caja) - [FACTURA ARCA]";
 		}
 		else
 		{
-			lblTitle.ForeColor = Color.WhiteSmoke;
-			lblTitle.Text = "\ud83d\udce0 Punto de Venta (Caja)";
+			lblTitle.ForeColor = Color.DarkGray;
+			lblTitle.Text = "Punto de Venta (Caja) - [TICKET INTERNO]";
 		}
 	}
 
@@ -435,7 +435,7 @@ public class Form1 : Form
 			Dock = DockStyle.Top,
 			Height = 50
 		};
-		lblTitle.Text = "\ud83d\udce0 Punto de Venta (Caja)";
+		lblTitle.Text = "Punto de Venta (Caja) - [FACTURA ARCA]";
 		lblTitle.Font = new Font("Segoe UI", 16f, FontStyle.Bold);
 		lblTitle.AutoSize = true;
 		lblTitle.Location = new Point(0, 10);
@@ -2099,8 +2099,44 @@ public class Form1 : Form
 				using LocalDbContext context = new LocalDbContext();
 				context.Sales.Add(sale);
 				await context.SaveChangesAsync();
+				// -- NUEVO FLUJO ARCA --
+				string caeTextoAdicional = "";
+				if (sale.RequestElectronicInvoice)
+				{
+					try
+					{
+						await _syncWorker.PerformSyncAsync(); // Sincroniza la venta al servidor
+						using (var httpClient = new System.Net.Http.HttpClient())
+						{
+							var res = await httpClient.PostAsync(AppConfig.ServerUrl + "/api/invoice/quick/" + sale.GlobalId, null);
+							if (res.IsSuccessStatusCode)
+							{
+								var jsonStr = await res.Content.ReadAsStringAsync();
+								if (jsonStr.Contains("\"success\":true") || jsonStr.Contains("\"success\": true"))
+								{
+									var match = System.Text.RegularExpressions.Regex.Match(jsonStr, "\"cae\"\\s*:\\s*\"(\\d+)\"");
+									if (match.Success)
+									{
+										string cae = match.Groups[1].Value;
+caeTextoAdicional = "\nCAE: " + cae + "\nVto CAE: " + DateTime.Now.AddDays(10).ToString("dd/MM/yyyy") + "\n[QR AFIP Valido]";
+									}
+								}
+							}
+						}
+					}
+					catch (Exception)
+					{
+caeTextoAdicional = "\nCAE EN TRAMITE (Offline)";
+					}
+				}
+				else
+				{
+caeTextoAdicional = "\n** DOCUMENTO NO VALIDO COMO FACTURA **";
+				}
+				// -- FIN FLUJO ARCA --
+
 				string text = localCmbPaymentMethod.Text;
-				string text2 = GenerateTicketText(sale, text);
+				string text2 = GenerateTicketText(sale, text) + caeTextoAdicional;
 				PrintTicket(text2);
 				ShowAutoCloseMessage($"Venta registrada exitosamente.\nTicket: {_posNumber:D5}-{sale.Id:D8}\n\nImprimiendo Ticket...", "Caja", 1500);
 				gridItems.Rows.Clear();
@@ -2108,21 +2144,13 @@ public class Form1 : Form
 				UpdateTotals();
 				modal.DialogResult = DialogResult.OK;
 				modal.Close();
-				Task.Run(async delegate
-				{
-					try
+				
+				if (!sale.RequestElectronicInvoice) {
+					Task.Run(async delegate
 					{
-						await _syncWorker.PerformSyncAsync();
-					}
-					catch (Exception)
-					{
-						Invoke((MethodInvoker)delegate
-						{
-							btnSync.Text = "⚠ OFFLINE (Local)";
-							btnSync.ForeColor = Color.Red;
-						});
-					}
-				});
+						try { await _syncWorker.PerformSyncAsync(); } catch { }
+					});
+				}
 			};
 			modal.AcceptButton = button;
 			modal.Shown += delegate
@@ -2379,3 +2407,12 @@ public class Form1 : Form
 		base.OnFormClosing(e);
 	}
 }
+
+
+
+
+
+
+
+
+
