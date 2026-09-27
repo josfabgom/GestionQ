@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Drawing;
@@ -2096,9 +2096,14 @@ public class Form1 : Form
 					Amount = sale.TotalAmount
 				});
 				sale.DiscountAmount += sale.PaymentDiscountAmount;
-				using LocalDbContext context = new LocalDbContext();
-				context.Sales.Add(sale);
-				await context.SaveChangesAsync();
+								string configuredPrinter = "";
+				using (LocalDbContext context = new LocalDbContext())
+				{
+					context.Sales.Add(sale);
+					await context.SaveChangesAsync();
+					var pSetting = context.SystemSettings.FirstOrDefault(s => s.Key == "TicketPrinter");
+					if (pSetting != null) configuredPrinter = pSetting.Value;
+				}
 				// -- NUEVO FLUJO ARCA --
 				string caeTextoAdicional = "";
 				if (sale.RequestElectronicInvoice)
@@ -2108,25 +2113,51 @@ public class Form1 : Form
 						await _syncWorker.PerformSyncAsync(); // Sincroniza la venta al servidor
 						using (var httpClient = new System.Net.Http.HttpClient())
 						{
+							httpClient.Timeout = TimeSpan.FromSeconds(20);
 							var res = await httpClient.PostAsync(AppConfig.ServerUrl + "/api/invoice/quick/" + sale.GlobalId, null);
+							var jsonStr = await res.Content.ReadAsStringAsync();
 							if (res.IsSuccessStatusCode)
 							{
-								var jsonStr = await res.Content.ReadAsStringAsync();
-								if (jsonStr.Contains("\"success\":true") || jsonStr.Contains("\"success\": true"))
+								try 
 								{
-									var match = System.Text.RegularExpressions.Regex.Match(jsonStr, "\"cae\"\\s*:\\s*\"(\\d+)\"");
-									if (match.Success)
+									using (var doc = System.Text.Json.JsonDocument.Parse(jsonStr))
 									{
-										string cae = match.Groups[1].Value;
-caeTextoAdicional = "\nCAE: " + cae + "\nVto CAE: " + DateTime.Now.AddDays(10).ToString("dd/MM/yyyy") + "\n[QR AFIP Valido]";
+										var root = doc.RootElement;
+										bool isSuccess = root.TryGetProperty("success", out var successProp) && successProp.GetBoolean();
+										if (isSuccess)
+										{
+											string cae = root.TryGetProperty("cae", out var caeProp) ? caeProp.GetString() : "";
+											caeTextoAdicional = "\nCAE: " + cae + "\nVto CAE: " + DateTime.Now.AddDays(10).ToString("dd/MM/yyyy") + "\n[QR AFIP Valido]";
+										}
+										else
+										{
+											string errorMsg = root.TryGetProperty("message", out var msgProp) ? msgProp.GetString() : "Error desconocido en AFIP.";
+											MessageBox.Show("Fallo al generar factura electrónica:\n" + errorMsg, "Error Facturación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+											caeTextoAdicional = "\n** ERROR AL FACTURAR (Verifique AFIP) **";
+										}
 									}
 								}
+								catch
+								{
+									caeTextoAdicional = "\n** ERROR DE RESPUESTA AFIP **";
+								}
+							}
+							else
+							{
+								MessageBox.Show("Error del servidor al facturar. Código: " + res.StatusCode, "Error de Servidor", MessageBoxButtons.OK, MessageBoxIcon.Error);
+								caeTextoAdicional = "\n** ERROR AL FACTURAR (Error " + (int)res.StatusCode + ") **";
 							}
 						}
 					}
-					catch (Exception)
+					catch (TaskCanceledException)
 					{
-caeTextoAdicional = "\nCAE EN TRAMITE (Offline)";
+						MessageBox.Show("Tiempo de espera agotado conectando con AFIP. La factura quedará pendiente de sincronización.", "Timeout", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+						caeTextoAdicional = "\nCAE EN TRAMITE (Offline)";
+					}
+					catch (Exception ex)
+					{
+						MessageBox.Show("Error de red o sincronización:\n" + ex.Message, "Error de Conexión", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+						caeTextoAdicional = "\nCAE EN TRAMITE (Offline)";
 					}
 				}
 				else
@@ -2137,7 +2168,7 @@ caeTextoAdicional = "\n** DOCUMENTO NO VALIDO COMO FACTURA **";
 
 				string text = localCmbPaymentMethod.Text;
 				string text2 = GenerateTicketText(sale, text) + caeTextoAdicional;
-				PrintTicket(text2);
+				PrintTicket(text2, configuredPrinter);
 				ShowAutoCloseMessage($"Venta registrada exitosamente.\nTicket: {_posNumber:D5}-{sale.Id:D8}\n\nImprimiendo Ticket...", "Caja", 1500);
 				gridItems.Rows.Clear();
 				UpdateArticleImage(null);
@@ -2212,6 +2243,17 @@ caeTextoAdicional = "\n** DOCUMENTO NO VALIDO COMO FACTURA **";
 		try
 		{
 			PrintDocument printDocument = new PrintDocument();
+			if (string.IsNullOrEmpty(printerName))
+			{
+				using (LocalDbContext context = new LocalDbContext())
+				{
+					var pSetting = context.SystemSettings.FirstOrDefault(s => s.Key == "TicketPrinter");
+					if (pSetting != null && !string.IsNullOrEmpty(pSetting.Value))
+					{
+						printerName = pSetting.Value;
+					}
+				}
+			}
 			if (!string.IsNullOrEmpty(printerName))
 			{
 				printDocument.PrinterSettings.PrinterName = printerName;
