@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using GestionQ.Domain.Entities;
@@ -33,8 +33,8 @@ namespace GestionQ.Web.Controllers
 
             var movements = await query.OrderByDescending(m => m.Date).ToListAsync();
 
-            decimal totalIngresos = await _context.CentralCashMovements.Where(m => m.Type == "Ingreso").SumAsync(m => m.Amount);
-            decimal totalEgresos = await _context.CentralCashMovements.Where(m => m.Type == "Egreso").SumAsync(m => m.Amount);
+            decimal totalIngresos = await _context.CentralCashMovements.Where(m => m.Type == "Ingreso").SumAsync(m => (decimal?)m.Amount) ?? 0m;
+            decimal totalEgresos = await _context.CentralCashMovements.Where(m => m.Type == "Egreso").SumAsync(m => (decimal?)m.Amount) ?? 0m;
 
             ViewBag.CurrentBalance = totalIngresos - totalEgresos;
             ViewBag.StartDate = startDate;

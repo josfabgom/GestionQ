@@ -68,13 +68,15 @@ namespace GestionQ.Installer
                 }
 
                 // 2. Extract payload
-                ReportProgress("Extrayendo archivos de la aplicación...", 20);
+                ReportProgress("Extrayendo archivos de la aplicaciÃ³n...", 20);
                 ExtractResources(installDir, isUpdate: false);
 
                 if (!IsClientOnly)
                 {
                     // 3. Install SQL Server if needed
-                    string sqlExePath = Path.Combine(installDir, "SQL2022-SSEI-Expr.exe");
+                    string sqlExePath = Path.Combine(installDir, "SQLEXPR_x64_ESN.exe");
+                    if (!File.Exists(sqlExePath)) sqlExePath = Path.Combine(installDir, "SQLEXPR_x64_ENU.exe");
+                    if (!File.Exists(sqlExePath)) sqlExePath = Path.Combine(installDir, "SQL2022-SSEI-Expr.exe");
                     if (File.Exists(sqlExePath))
                     {
                         ReportProgress("Instalando SQL Server Express (puede tardar varios minutos)...", 50);
@@ -120,7 +122,7 @@ namespace GestionQ.Installer
                 
                 LaunchApps(installDir);
 
-                ReportProgress("¡Instalación completada!", 100);
+                ReportProgress("Â¡InstalaciÃ³n completada!", 100);
             }
             catch (Exception ex)
             {
@@ -133,7 +135,7 @@ namespace GestionQ.Installer
         {
             try
             {
-                ReportProgress("Iniciando actualización...", 10);
+                ReportProgress("Iniciando actualizaciÃ³n...", 10);
                 
                 if (!IsClientOnly) { StopService(); }
                 try
@@ -146,7 +148,7 @@ namespace GestionQ.Installer
                 ReportProgress("Actualizando archivos...", 50);
                 ExtractResources(installDir, isUpdate: true);
 
-                ReportProgress("Base de datos será actualizada al iniciar el servicio...", 60);
+                ReportProgress("Base de datos serÃ¡ actualizada al iniciar el servicio...", 60);
                 // SetupDatabase(installDir); // EF Core automaticamente migra al arrancar
 
                 if (!IsClientOnly) { ReportProgress("Verificando Servicio de Windows...", 70); InstallService(installDir); }
@@ -167,7 +169,7 @@ namespace GestionQ.Installer
                 
                 LaunchApps(installDir);
 
-                ReportProgress("¡Actualización completada!", 100);
+                ReportProgress("Â¡ActualizaciÃ³n completada!", 100);
             }
             catch (Exception ex)
             {
@@ -206,13 +208,11 @@ namespace GestionQ.Installer
                 File.Delete(payloadZip);
             }
 
-            // Always extract SQL Scripts for idempotent execution
-            ExtractSingleResource(assembly, "GestionQ.Installer.Resources.GestionQ_Schema.sql", Path.Combine(targetDir, "GestionQ_Schema.sql"));
-            ExtractSingleResource(assembly, "GestionQ.Installer.Resources.GestionQ_Datos_Basicos.sql", Path.Combine(targetDir, "GestionQ_Datos_Basicos.sql"));
-
             if (!isUpdate)
             {
                 // Extract SQL Installer if exists
+                ExtractSingleResource(assembly, "GestionQ.Installer.Resources.SQLEXPR_x64_ESN.exe", Path.Combine(targetDir, "SQLEXPR_x64_ESN.exe"));
+                ExtractSingleResource(assembly, "GestionQ.Installer.Resources.SQLEXPR_x64_ENU.exe", Path.Combine(targetDir, "SQLEXPR_x64_ENU.exe"));
                 ExtractSingleResource(assembly, "GestionQ.Installer.Resources.SQL2022-SSEI-Expr.exe", Path.Combine(targetDir, "SQL2022-SSEI-Expr.exe"));
             }
         }
@@ -234,14 +234,10 @@ namespace GestionQ.Installer
         private void SetupDatabase(string installDir)
         {
             string connectionString = "Server=localhost\\SQLEXPRESS;Database=master;Trusted_Connection=True;TrustServerCertificate=True;";
-            string schemaPath = Path.Combine(installDir, "GestionQ_Schema.sql");
-            string dataPath = Path.Combine(installDir, "GestionQ_Datos_Basicos.sql");
-
-            if (!File.Exists(schemaPath)) return;
 
             // Wait for SQL Server to be ready
             bool isReady = false;
-            for (int i = 0; i < 12; i++) // Try for 1 minute
+            for (int i = 0; i < 120; i++) // Try for 10 minutes
             {
                 try
                 {
@@ -260,42 +256,24 @@ namespace GestionQ.Installer
 
             if (!isReady)
             {
-                throw new Exception("El servidor SQL no respondió después de la instalación.");
+                throw new Exception("El servidor SQL no respondio despues de la instalacion.");
             }
 
             using (var conn = new SqlConnection(connectionString))
             {
                 conn.Open();
-                string createDb = @"
-                    IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = N'gestionq')
+                
+                // Dar permisos de SysAdmin al Servicio de Windows para que EF Core pueda migrar
+                string grantPerms = @"
+                    IF SUSER_ID('NT AUTHORITY\SYSTEM') IS NOT NULL 
                     BEGIN
-                        CREATE DATABASE [gestionq];
+                        ALTER SERVER ROLE sysadmin ADD MEMBER [NT AUTHORITY\SYSTEM];
                     END";
-                using (var cmd = new SqlCommand(createDb, conn))
+                using (var cmd = new SqlCommand(grantPerms, conn))
                 {
                     cmd.ExecuteNonQuery();
                 }
             }
-
-            // Execute schema and data scripts
-            Action<string> executeScript = (path) =>
-            {
-                if (!File.Exists(path)) return;
-                string script = File.ReadAllText(path);
-                string[] batches = System.Text.RegularExpressions.Regex.Split(script, @"^\s*GO\s*$", System.Text.RegularExpressions.RegexOptions.Multiline | System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-                using (var c = new SqlConnection("Server=localhost\\SQLEXPRESS;Database=gestionq;Trusted_Connection=True;TrustServerCertificate=True;"))
-                {
-                    c.Open();
-                    foreach (string batch in batches)
-                    {
-                        if (string.IsNullOrWhiteSpace(batch)) continue;
-                        using (var cmd = new SqlCommand(batch, c)) { cmd.ExecuteNonQuery(); }
-                    }
-                }
-            };
-            
-            executeScript(schemaPath);
-            executeScript(dataPath);
         }
 
         private void InstallService(string installDir)
@@ -307,7 +285,7 @@ namespace GestionQ.Installer
             string exePath = Path.Combine(installDir, "app", "GestionQ.Web.exe");
             if (!File.Exists(exePath))
             {
-                throw new FileNotFoundException($"No se encontró el ejecutable del servicio web en {exePath}");
+                throw new FileNotFoundException($"No se encontrÃ³ el ejecutable del servicio web en {exePath}");
             }
 
             RunProcess("sc.exe", $"create {ServiceName} binPath= \"{exePath}\" start= auto DisplayName= \"{ServiceDisplayName}\"");
@@ -403,12 +381,14 @@ namespace GestionQ.Installer
 
                 if (process.ExitCode != 0 && !ignoreErrors)
                 {
-                    throw new Exception($"Comando falló ({fileName}): {error}");
+                    throw new Exception($"Comando fallÃ³ ({fileName}): {error}");
                 }
             }
         }
     }
 }
+
+
 
 
 
