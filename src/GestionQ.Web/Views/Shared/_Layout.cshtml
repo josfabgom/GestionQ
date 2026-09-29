@@ -1,4 +1,4 @@
-锘緻using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Identity
 @using Microsoft.AspNetCore.Hosting
 @using GestionQ.Domain.Constants
 @inject SignInManager<IdentityUser> SignInManager
@@ -22,7 +22,7 @@
                     if (days < 0) {
                         vencimiento = "Licencia Expirada";
                     } else if (days <= 7) {
-                        vencimiento = $"Vence en {Math.Ceiling(days)} d铆as";
+                        vencimiento = $"Vence en {Math.Ceiling(days)} d韆s";
                     } else {
                         vencimiento = "Vence: " + expDate.ToString("dd/MM/yyyy");
                     }
@@ -58,7 +58,7 @@
     </script>
     @if (SignInManager.IsSignedIn(User))
     {
-        <!-- Bot贸n para Colapsar/Expandir la Barra Lateral -->
+        <!-- Bot髇 para Colapsar/Expandir la Barra Lateral -->
         <button type="button" id="sidebarCollapseBtn" class="sidebar-toggle-btn" onclick="toggleSidebar()">
             <i id="sidebarToggleIcon" class="fa-solid fa-angle-left"></i>
         </button>
@@ -92,17 +92,17 @@
                 v@(System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0.0")
             </div>
 
-            <div style="text-align: center; font-size: 0.75rem; color: #10b981; margin-bottom: 1.5rem; font-weight: 600;">
+            <div style="text-align: center; font-size: 0.75rem; color: #10b981; margin-bottom: 0.5rem; font-weight: 600;">
                 <i class="fa-solid fa-certificate"></i> @vencimiento
             </div>
 
             <div
-                style="font-size: 0.85rem; color: var(--text-muted); padding: 0.5rem 1rem; margin-top: -1rem; margin-bottom: 2rem; border-bottom: 1px solid var(--border); padding-bottom: 1rem;">
+                style="font-size: 0.85rem; color: var(--text-muted); padding: 0.5rem 1rem; margin-top: -0.5rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">
                 Usuario: <br /><strong style="color: white;">@UserManager.GetUserName(User)</strong>
-                <form asp-controller="Account" asp-action="Logout" method="post" style="margin-top: 0.5rem;">
+                <form asp-controller="Account" asp-action="Logout" method="post" style="margin-top: 0.25rem;">
                     <button type="submit"
                         style="background:none; border:none; color:#ef4444; padding:0; cursor:pointer; font-size: 0.8rem; text-decoration: underline;">
-                        Cerrar Sesi贸n
+                        Cerrar Sesi髇
                     </button>
                 </form>
             </div>
@@ -146,7 +146,7 @@
                 </li>
                 <li>
                     <a asp-controller="PaymentReceipts" asp-action="Index" style="color: #ef4444; font-weight: 600;">
-                        <i class="fa-solid fa-file-invoice-dollar"></i> 脫rdenes de Pago
+                        <i class="fa-solid fa-file-invoice-dollar"></i> 觬denes de Pago
                     </a>
                 </li>
                 }
@@ -173,7 +173,7 @@
                     <details class="sidebar-dropdown">
                         <summary style="display: block; padding: 0.8rem 1rem; color: #10b981; font-weight: 600; text-decoration: none; border-radius: 8px; cursor: pointer; transition: background 0.2s; list-style: none;">
                             <div style="display: flex; align-items: center; justify-content: space-between;">
-                                <div><i class="fa-solid fa-scale-balanced" style="margin-right: 10px; width: 20px; text-align: center;"></i> M贸dulo Balanzas</div>
+                                <div><i class="fa-solid fa-scale-balanced" style="margin-right: 10px; width: 20px; text-align: center;"></i> M骴ulo Balanzas</div>
                                 <i class="fa-solid fa-chevron-down" style="font-size: 0.8em; opacity: 0.7;"></i>
                             </div>
                         </summary>
@@ -187,7 +187,7 @@
                             </li>
                             <li>
                                 <a asp-controller="Labels" asp-action="ScaleLabels" style="color: #10b981; padding: 0.6rem 1rem;">
-                                    <i class="fa-solid fa-tag"></i> Impresi贸n Manual
+                                    <i class="fa-solid fa-tag"></i> Impresi髇 Manual
                                 </a>
                             </li>
                             }
@@ -195,7 +195,7 @@
                             {
                             <li>
                                 <a asp-controller="Scale" asp-action="Index" style="color: #f59e0b; padding: 0.6rem 1rem;">
-                                    <i class="fa-solid fa-upload"></i> Env铆o a Red
+                                    <i class="fa-solid fa-upload"></i> Env韔 a Red
                                 </a>
                             </li>
                             }
@@ -213,7 +213,7 @@
                 {
                 <li>
                     <a asp-controller="Prices" asp-action="Index" style="color: #60a5fa;">
-                        <i class="fa-solid fa-tags"></i> Gesti贸n de Precios
+                        <i class="fa-solid fa-tags"></i> Gesti髇 de Precios
                     </a>
                 </li>
                 }
@@ -237,7 +237,7 @@
                 {
                 <li>
                     <a asp-controller="Statistics" asp-action="Index" style="color: #a855f7; font-weight: 600;">
-                        <i class="fa-solid fa-chart-pie"></i> Estad铆sticas
+                        <i class="fa-solid fa-chart-pie"></i> Estad韘ticas
                     </a>
                 </li>
                 }
@@ -251,14 +251,14 @@
                 </li>
                 <li>
                     <a asp-controller="ElectronicInvoices" asp-action="Audit">
-                        <i class="fa-solid fa-shield-halved"></i> Auditor铆a ARCA
+                        <i class="fa-solid fa-shield-halved"></i> Auditor韆 ARCA
                     </a>
                 </li>
                 }
                 @if (User.IsInRole("Admin") || User.HasClaim("Permission", Permissions.Config.View))
                 {
                     <li style="margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1.5rem;">
-                        <span style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); padding-left: 1rem; margin-bottom: 0.5rem; display: block;">Configuraci贸n</span>
+                        <span style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); padding-left: 1rem; margin-bottom: 0.5rem; display: block;">Configuraci髇</span>
                     </li>
                     <li>
                         <a asp-controller="Configuration" asp-action="Index" style="color: #a78bfa; font-weight: 600;">
@@ -291,7 +291,7 @@
         <script>
             Swal.fire({
                 icon: 'info',
-                title: 'Atenci贸n',
+                title: 'Atenci髇',
                 text: '@TempData["Message"]',
                 confirmButtonColor: '#3b82f6'
             });
@@ -319,3 +319,4 @@
 </body>
 
 </html>
+
