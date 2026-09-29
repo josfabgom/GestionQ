@@ -319,6 +319,7 @@
                 <span><kbd>@dept.Hotkey</kbd> @dept.Name.ToUpper()</span>
             }
         }
+        <span><kbd>F9</kbd> Editar Precio</span>
         <span><kbd>F12</kbd> Finalizar Venta</span>
     </div>
 </div>
@@ -1254,6 +1255,12 @@
                 }
                 // (Atajos F2, F3, F4 desactivados para evitar colisiones con teclas rápidas de departamentos)
 
+                // F9: Editar Precio Último Producto
+                if (e.key === 'F9') {
+                    e.preventDefault();
+                    editLastProductPrice();
+                }
+
                 // F12: Finalizar
                 if (e.key === 'F12') {
                     e.preventDefault();
@@ -1614,6 +1621,7 @@
 
             const existingIndex = cart.findIndex(i => 
                 i.productId === id && 
+                !i.isPriceEdited &&
                 (!isDepartment || (i.price === price && (i.customName || null) === (finalCustomName || null)))
             );
 
@@ -1646,6 +1654,8 @@
                     productId: id, 
                     name: finalName, 
                     price: price, 
+                    originalPrice: price,
+                    isPriceEdited: false,
                     quantity: quantity, 
                     stock: stock,
                     isDepartment: isDepartment,
@@ -1659,6 +1669,58 @@
                 showSuccessToast('Restado: ' + finalName);
             } else {
                 showSuccessToast('Agregado: ' + finalName);
+            }
+        }
+
+        async function editLastProductPrice() {
+            if (cart.length === 0) return;
+            const item = cart[0];
+            const { value: newPriceStr } = await Swal.fire({
+                title: 'Editar Precio',
+                html: `<p style="color: #e2e8f0; margin-bottom: 10px;">Producto: <b style="color: var(--accent);">${item.name}</b></p>`,
+                input: 'number',
+                inputLabel: 'Nuevo Precio Unitario ($)',
+                inputValue: item.price,
+                showCancelButton: true,
+                confirmButtonText: '<i class="fa-solid fa-check"></i> Confirmar',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#10b981',
+                inputAttributes: {
+                    min: "0",
+                    step: "any",
+                    style: 'font-size: 1.5rem; text-align: center; height: 3.5rem;'
+                },
+                customClass: {
+                    popup: 'glass-panel',
+                    title: 'text-accent'
+                },
+                background: 'transparent'
+            });
+
+            if (newPriceStr) {
+                const newPrice = parseFloat(newPriceStr);
+                if (!isNaN(newPrice) && newPrice >= 0) {
+                    item.price = newPrice;
+                    item.isPriceEdited = true;
+                    if (newPrice === item.originalPrice) {
+                        item.isPriceEdited = false;
+                    }
+                    renderCart();
+                    showSuccessToast('Precio editado');
+                } else {
+                    Swal.fire('Valor inválido', 'El precio ingresado no es válido.', 'warning');
+                }
+            }
+            document.getElementById('searchProduct').focus();
+        }
+
+        function restoreItemPrice(index) {
+            if (cart[index]) {
+                cart[index].price = cart[index].originalPrice;
+                cart[index].isPriceEdited = false;
+                renderCart();
+                showSuccessToast('Precio restaurado');
+                document.getElementById('searchProduct').focus();
             }
         }
 
@@ -1962,7 +2024,7 @@
                     return Math.min(cartItem.price * cartItem.quantity, discount);
                 }
 
-                if (applicableRules.length > 0) {
+                if (applicableRules.length > 0 && !item.isPriceEdited) {
                     const stackableRules = applicableRules.filter(r => r.isStackable);
                     const nonStackableRules = applicableRules.filter(r => !r.isStackable);
 
@@ -2045,7 +2107,11 @@
                             </div>
                         </div>
                     </td>
-                    <td style="text-align: right; font-family: monospace; font-size: 1.25rem;">$${item.price.toLocaleString('es-AR', {minimumFractionDigits: 2})}</td>
+                    <td style="text-align: right; font-family: monospace; font-size: 1.25rem;">
+                        $${item.price.toLocaleString('es-AR', {minimumFractionDigits: 2})}
+                        ${item.isPriceEdited ? `<br><small style="color: #fbbf24; cursor: pointer; font-size: 0.8rem; background: rgba(251, 191, 36, 0.1); padding: 0.1rem 0.3rem; border-radius: 4px;" onclick="restoreItemPrice(${index})" title="Restaurar precio original ($${item.originalPrice})"><i class="fa-solid fa-arrow-rotate-left"></i> Editado</small>` : ''}
+                        ${index === 0 && !item.isPriceEdited ? `<br><small style="color: #3b82f6; cursor: pointer; font-size: 0.8rem; background: rgba(59, 130, 246, 0.1); padding: 0.1rem 0.3rem; border-radius: 4px; display: inline-block; margin-top: 4px;" onclick="editLastProductPrice()" title="O usa la tecla F9"><i class="fa-solid fa-pen"></i> [F9] Editar</small>` : ''}
+                    </td>
                     <td style="text-align: center;">
                         <div style="display: flex; align-items: center; justify-content: center; gap: 0.75rem;">
                             <button class="qty-btn" onclick="updateQuantityByIndex(${index}, -1)">-</button>

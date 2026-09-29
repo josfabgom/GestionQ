@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Drawing;
@@ -369,8 +369,8 @@ public class Form1 : Form
 			Button button = new Button
 			{
 				Text = (string.IsNullOrEmpty(dept.Hotkey) ? dept.Name : (dept.Name + "\n[" + dept.Hotkey + "]")),
-				Width = 130,
-				Height = 60,
+				Width = 110,
+				Height = 55,
 				FlatStyle = FlatStyle.Flat,
 				ForeColor = textColor,
 				BackColor = Color.FromArgb(31, 41, 55),
@@ -656,8 +656,12 @@ public class Form1 : Form
 		gridItems.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None;
 		gridItems.Columns.Add("Id", "ID");
 		gridItems.Columns.Add("OriginalName", "OriginalName");
+		gridItems.Columns.Add("IsPriceEdited", "IsPriceEdited");
+		gridItems.Columns.Add("OriginalPrice", "OriginalPrice");
 		gridItems.Columns.Add("Name", "PRODUCTO");
 		gridItems.Columns["OriginalName"].Visible = false;
+		gridItems.Columns["IsPriceEdited"].Visible = false;
+		gridItems.Columns["OriginalPrice"].Visible = false;
 		gridItems.Columns.Add("Price", "PRECIO UNIT.");
 		gridItems.Columns.Add("Quantity", "CANTIDAD");
 		gridItems.Columns.Add("Discount", "DESCUENTO");
@@ -736,7 +740,11 @@ public class Form1 : Form
 			BackColor = Color.FromArgb(10, 10, 15),
 			Margin = new Padding(0, 0, 0, 10)
 		};
-		totalBox.Resize += (s, e) => totalBox.Invalidate();
+		totalBox.Resize += (s, e) => 
+		{
+			totalBox.Invalidate();
+			UpdateTotals();
+		};
 		totalBox.Paint += delegate(object? s, PaintEventArgs e)
 		{
 			int thickness = 2;
@@ -819,16 +827,22 @@ public class Form1 : Form
 		totalBox.Controls.Add(lblTotal);
 		totalBox.Controls.Add(lblItemsCount);
 		panel4.Controls.Add(totalBox);
-		FlowLayoutPanel controlsPanel = new FlowLayoutPanel
+		TableLayoutPanel controlsPanel = new TableLayoutPanel
 		{
 			Dock = DockStyle.Fill,
-			FlowDirection = FlowDirection.TopDown,
-			WrapContents = false,
+			ColumnCount = 1,
+			RowCount = 5,
 			Padding = new Padding(0, 10, 0, 0)
 		};
+		controlsPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+		controlsPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+		controlsPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+		controlsPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+		controlsPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+		controlsPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
 		picLogo = new PictureBox
 		{
-			Height = 100,
+			Height = 75,
 			Width = rightPanel.Width - 20,
 			SizeMode = PictureBoxSizeMode.Zoom,
 			Margin = new Padding(0, 0, 0, 10)
@@ -846,7 +860,7 @@ public class Form1 : Form
 			};
 		}
 		controlsPanel.Controls.Add(picLogo);
-		GroupBox gbCliente = CreateGroupBox("Cliente (F5 para crear)", 80);
+		GroupBox gbCliente = CreateGroupBox("Cliente (F5 para crear)", 70);
 		cmbCustomer = new ComboBox
 		{
 			Width = gbCliente.Width - 110,
@@ -876,21 +890,21 @@ public class Form1 : Form
 		gbCliente.Controls.Add(cmbCustomer);
 		gbCliente.Controls.Add(btnNewCustomer);
 		controlsPanel.Controls.Add(gbCliente);
-		GroupBox groupBox = CreateGroupBox("Promociones Activas", 80);
+		GroupBox groupBox = CreateGroupBox("Promociones Activas", 70);
 		lblPromoStatus = new Label
 		{
 			Text = "No hay promociones activas.",
 			Font = new Font("Segoe UI", 10f, FontStyle.Italic),
 			ForeColor = Color.Gray,
 			AutoSize = true,
-			Location = new Point(10, 40)
+			Location = new Point(10, 30)
 		};
 		groupBox.Controls.Add(lblPromoStatus);
 		controlsPanel.Controls.Add(groupBox);
 		
 		Panel splitPanel = new Panel
 		{
-			Height = 400,
+			Dock = DockStyle.Fill,
 			Margin = new Padding(0)
 		};
 		Panel leftSplit = new Panel
@@ -901,7 +915,7 @@ public class Form1 : Form
 		{
 			Dock = DockStyle.Right
 		};
-		GroupBox gbScan = CreateGroupBox("Escanear o Buscar (F1)", 150);
+		GroupBox gbScan = CreateGroupBox("Escanear o Buscar (F1)", 85);
 		txtBarcode = new TextBox
 		{
 			Width = gbScan.Width - 90,
@@ -1025,7 +1039,7 @@ public class Form1 : Form
 			}
 			if (splitPanel != null)
 			{
-				splitPanel.Height = controlsPanel.Height - splitPanel.Top - 10;
+				// splitPanel.Height = controlsPanel.Height - splitPanel.Top - 10;
 				leftSplit.Width = (int)((double)splitPanel.Width * 0.4);
 				rightSplit.Width = splitPanel.Width - leftSplit.Width;
 				gbImagen.Width = leftSplit.Width - 10;
@@ -1160,15 +1174,14 @@ public class Form1 : Form
 					int preferredHeight = lstSearch.Items.Count * lstSearch.ItemHeight + 6;
 					lstSearch.Height = Math.Min(preferredHeight, 250);
 					
-					// Find controlsPanel in rightPanel
-					FlowLayoutPanel controlsPanel = (FlowLayoutPanel)lstSearch.Parent.Controls.OfType<FlowLayoutPanel>().FirstOrDefault();
+					TableLayoutPanel controlsPanel = (TableLayoutPanel)lstSearch.Parent.Controls.OfType<TableLayoutPanel>().FirstOrDefault();
 					if (controlsPanel != null)
 					{
-						// Find gbScan inside controlsPanel
 						GroupBox gbScan = controlsPanel.Controls.OfType<GroupBox>().FirstOrDefault(g => g.Text.Contains("Escanear"));
 						if (gbScan != null)
 						{
-							lstSearch.Location = new Point(controlsPanel.Left + gbScan.Left + 10, controlsPanel.Top + gbScan.Top + 75);
+							Point screenPt = gbScan.PointToScreen(new Point(10, 70));
+							lstSearch.Location = lstSearch.Parent.PointToClient(screenPt);
 						}
 					}
 					
@@ -1735,7 +1748,7 @@ public class Form1 : Form
 		}
 	}
 
-	private decimal CalculateSubTotal(int productId, decimal price, decimal qty)
+	private decimal CalculateSubTotal(int productId, decimal price, decimal qty, bool isPriceEdited = false)
 	{
 		decimal presResult = 0m;
 		decimal remainingQty = qty;
@@ -1760,7 +1773,7 @@ public class Form1 : Form
 		presResult += (remainingQty * price);
 
 		decimal promoResult = price * qty;
-		if (_activePromotions != null)
+		if (!isPriceEdited && _activePromotions != null)
 		{
 			PromotionSyncDto promotionSyncDto = _activePromotions.FirstOrDefault((PromotionSyncDto p) => p.ProductIds != null && p.ProductIds.Contains(productId));
 			if (promotionSyncDto != null)
@@ -1787,16 +1800,18 @@ public class Form1 : Form
 		return Math.Min(presResult, promoResult);
 	}
 
-	private void AddRow(int id, string name, decimal price, decimal qty, decimal stock = 0m)
+	private void AddRow(int id, string name, decimal price, decimal qty, decimal stock = 0m, bool isPriceEdited = false, decimal originalPrice = 0m)
 	{
 		bool flag = false;
-		foreach (DataGridViewRow item in (IEnumerable)gridItems.Rows)
+		foreach (DataGridViewRow item in (System.Collections.IEnumerable)gridItems.Rows)
 		{
-			if ((int)item.Cells["Id"].Value == id && item.Cells["Name"].Value.ToString().StartsWith(name) && Convert.ToDecimal(item.Cells["Price"].Value) == price)
+			bool rowIsEdited = item.Cells["IsPriceEdited"].Value != null && (bool)item.Cells["IsPriceEdited"].Value;
+			if ((int)item.Cells["Id"].Value == id && item.Cells["Name"].Value.ToString().StartsWith(name) && 
+System.Convert.ToDecimal(item.Cells["Price"].Value) == price && rowIsEdited == isPriceEdited)
 			{
-				decimal num = Convert.ToDecimal(item.Cells["Quantity"].Value);
+				decimal num = System.Convert.ToDecimal(item.Cells["Quantity"].Value);
 				item.Cells["Quantity"].Value = num + qty;
-				decimal newSubTotal = CalculateSubTotal((int)item.Cells["Id"].Value, price, num + qty);
+				decimal newSubTotal = CalculateSubTotal((int)item.Cells["Id"].Value, price, num + qty, isPriceEdited);
 				decimal newDiscount = (price * (num + qty)) - newSubTotal;
 				item.Cells["Discount"].Value = newDiscount > 0m ? (object)newDiscount : null;
 				item.Cells["SubTotal"].Value = newSubTotal;
@@ -1807,9 +1822,9 @@ public class Form1 : Form
 		if (!flag)
 		{
 			string text = $"{name} ({stock:0.##})";
-			decimal subTotal = CalculateSubTotal(id, price, qty);
+			decimal subTotal = CalculateSubTotal(id, price, qty, isPriceEdited);
 			decimal discount = (price * qty) - subTotal;
-			int rowIndex = gridItems.Rows.Add(id, text, text, price, qty, discount > 0m ? (object)discount : null, subTotal);
+			int rowIndex = gridItems.Rows.Add(id, text, isPriceEdited, originalPrice == 0m ? price : originalPrice, text, price, qty, discount > 0m ? (object)discount : null, subTotal);
 			if (name.Contains("[BULTO"))
 			{
 				gridItems.Rows[rowIndex].DefaultCellStyle.ForeColor = Color.FromArgb(255, 193, 7);
@@ -1820,16 +1835,24 @@ public class Form1 : Form
 
 	private void UpdateTotals()
 	{
-		decimal value = default(decimal);
-		decimal grossTotal = default(decimal);
+		decimal value = 0m;
+		decimal grossTotal = 0m;
 		decimal num = 0m;
-		foreach (DataGridViewRow item in (IEnumerable)gridItems.Rows)
+		foreach (DataGridViewRow item in (System.Collections.IEnumerable)gridItems.Rows)
 		{
-			value += Convert.ToDecimal(item.Cells["SubTotal"].Value);
-			decimal qty = Convert.ToDecimal(item.Cells["Quantity"].Value);
-			decimal price = Convert.ToDecimal(item.Cells["Price"].Value);
-			grossTotal += (qty * price);
-			num += qty;
+			bool isEdited = item.Cells["IsPriceEdited"].Value != null && (bool)item.Cells["IsPriceEdited"].Value;
+			int pid = (int)item.Cells["Id"].Value;
+			decimal pPrice = System.Convert.ToDecimal(item.Cells["Price"].Value);
+			decimal pQty = System.Convert.ToDecimal(item.Cells["Quantity"].Value);
+			
+			decimal rowSub = CalculateSubTotal(pid, pPrice, pQty, isEdited);
+			item.Cells["SubTotal"].Value = rowSub;
+			decimal rowDesc = (pPrice * pQty) - rowSub;
+			item.Cells["Discount"].Value = rowDesc > 0m ? (object)rowDesc : null;
+
+			value += rowSub;
+			grossTotal += (pQty * pPrice);
+			num += pQty;
 		}
 		
 		decimal discount = grossTotal - value;
@@ -2212,6 +2235,9 @@ caeTextoAdicional = "\n** DOCUMENTO NO VALIDO COMO FACTURA **";
 		case Keys.F1:
 			txtBarcode.Focus();
 			return true;
+		case Keys.F9:
+			EditLastItemPrice();
+			return true;
 		case Keys.F11:
 			ToggleInvoiceType();
 			return true;
@@ -2230,6 +2256,71 @@ caeTextoAdicional = "\n** DOCUMENTO NO VALIDO COMO FACTURA **";
 			}
 			return base.ProcessCmdKey(ref msg, keyData);
 		}
+		}
+	}
+
+		private void EditLastItemPrice()
+	{
+		if (gridItems.Rows.Count == 0) return;
+		int lastIdx = gridItems.Rows.Count - 1;
+		DataGridViewRow lastRow = gridItems.Rows[lastIdx];
+		
+		string productName = lastRow.Cells["Name"].Value.ToString();
+		decimal currentPrice = Convert.ToDecimal(lastRow.Cells["Price"].Value);
+		decimal originalPrice = lastRow.Cells["OriginalPrice"].Value != null && (decimal)lastRow.Cells["OriginalPrice"].Value > 0 ? (decimal)lastRow.Cells["OriginalPrice"].Value : currentPrice;
+
+		using (Form prompt = new Form())
+		{
+			prompt.Width = 400;
+			prompt.Height = 250;
+			prompt.Text = "Editar Precio";
+			prompt.StartPosition = FormStartPosition.CenterParent;
+			prompt.BackColor = Color.FromArgb(20, 20, 30);
+			prompt.ForeColor = Color.White;
+			prompt.FormBorderStyle = FormBorderStyle.FixedDialog;
+			prompt.MaximizeBox = false;
+			prompt.MinimizeBox = false;
+
+			Label textLabel = new Label() { Left = 20, Top = 20, Width = 340, Text = $"Nuevo Precio para:\n{productName}", Font = new Font("Segoe UI", 12f, FontStyle.Bold), AutoSize = true };
+			TextBox inputBox = new TextBox() { Left = 20, Top = 80, Width = 340, Font = new Font("Segoe UI", 16f, FontStyle.Bold), Text = currentPrice.ToString("0.00") };
+			Button confirmation = new Button() { Text = "Guardar", Left = 200, Width = 160, Top = 140, Height = 40, BackColor = Color.FromArgb(16, 185, 129), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 12f, FontStyle.Bold) };
+			Button resetBtn = new Button() { Text = "Restaurar", Left = 20, Width = 160, Top = 140, Height = 40, BackColor = Color.FromArgb(220, 38, 38), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 12f, FontStyle.Bold) };
+			
+			confirmation.Click += (sender, e) => { prompt.DialogResult = DialogResult.OK; prompt.Close(); };
+			resetBtn.Click += (sender, e) => { inputBox.Text = originalPrice.ToString("0.00"); prompt.DialogResult = DialogResult.Yes; prompt.Close(); };
+
+			prompt.Controls.Add(textLabel);
+			prompt.Controls.Add(inputBox);
+			prompt.Controls.Add(confirmation);
+			prompt.Controls.Add(resetBtn);
+			prompt.AcceptButton = confirmation;
+
+			DialogResult result = prompt.ShowDialog();
+			if (result == DialogResult.OK || result == DialogResult.Yes)
+			{
+				if (decimal.TryParse(inputBox.Text.Replace(',', '.'), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out decimal newPrice))
+				{
+					if (newPrice >= 0)
+					{
+						bool isEdited = (newPrice != originalPrice);
+						lastRow.Cells["Price"].Value = newPrice;
+						lastRow.Cells["IsPriceEdited"].Value = isEdited;
+						lastRow.Cells["OriginalPrice"].Value = originalPrice;
+						
+						// Recalculate SubTotal
+						decimal qty = Convert.ToDecimal(lastRow.Cells["Quantity"].Value);
+						int pid = (int)lastRow.Cells["Id"].Value;
+						decimal subTotal = CalculateSubTotal(pid, newPrice, qty, isEdited);
+						decimal discount = (newPrice * qty) - subTotal;
+						
+						lastRow.Cells["SubTotal"].Value = subTotal;
+						lastRow.Cells["Discount"].Value = discount > 0m ? (object)discount : null;
+						
+						UpdateTotals();
+						txtBarcode.Focus();
+					}
+				}
+			}
 		}
 	}
 
@@ -2449,6 +2540,12 @@ caeTextoAdicional = "\n** DOCUMENTO NO VALIDO COMO FACTURA **";
 		base.OnFormClosing(e);
 	}
 }
+
+
+
+
+
+
 
 
 
