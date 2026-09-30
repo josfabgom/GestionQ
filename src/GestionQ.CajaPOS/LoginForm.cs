@@ -18,6 +18,7 @@ namespace GestionQ.CajaPOS
         public LoginForm(AuthClient authClient, string posIdentifier)
         {
             _authClient = authClient;
+            try { this.Icon = System.Drawing.Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }
             _posIdentifier = posIdentifier;
             InitializeComponent();
         }

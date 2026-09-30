@@ -149,7 +149,7 @@ public class Form1 : Form
 
 	private Button btnSalesHistory = new Button();
 
-	private bool _requestElectronicInvoice;
+	private bool _requestElectronicInvoice = true;
 
 	private Label lblTitle = new Label();
 
@@ -170,6 +170,7 @@ public class Form1 : Form
 
 	public Form1()
 	{
+		try { this.Icon = System.Drawing.Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }
 		_authClient = new AuthClient(AppConfig.ServerUrl);
 		InitializeUI();
 		_syncWorker = new SyncWorker(AppConfig.ServerUrl);
@@ -368,9 +369,9 @@ public class Form1 : Form
 			}
 			Button button = new Button
 			{
-				Text = (string.IsNullOrEmpty(dept.Hotkey) ? dept.Name : (dept.Name + "\n[" + dept.Hotkey + "]")),
-				Width = 110,
-				Height = 55,
+				Text = (string.IsNullOrEmpty(dept.Hotkey) ? dept.Name : (dept.Name + " [" + dept.Hotkey + "]")),
+				Width = 130,
+				Height = 40,
 				FlatStyle = FlatStyle.Flat,
 				ForeColor = textColor,
 				BackColor = Color.FromArgb(31, 41, 55),
@@ -421,10 +422,10 @@ public class Form1 : Form
 			RowCount = 2,
 			Padding = new Padding(20, 20, 20, 0)
 		};
-		tableLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 65f));
-		tableLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 35f));
+		tableLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 75f));
+		tableLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25f));
 		tableLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
-		tableLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 60f));
+		tableLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 85f));
 		Panel panel = new Panel
 		{
 			Dock = DockStyle.Fill,
@@ -902,19 +903,7 @@ public class Form1 : Form
 		groupBox.Controls.Add(lblPromoStatus);
 		controlsPanel.Controls.Add(groupBox);
 		
-		Panel splitPanel = new Panel
-		{
-			Dock = DockStyle.Fill,
-			Margin = new Padding(0)
-		};
-		Panel leftSplit = new Panel
-		{
-			Dock = DockStyle.Left
-		};
-		Panel rightSplit = new Panel
-		{
-			Dock = DockStyle.Right
-		};
+		
 		GroupBox gbScan = CreateGroupBox("Escanear o Buscar (F1)", 85);
 		txtBarcode = new TextBox
 		{
@@ -969,8 +958,8 @@ public class Form1 : Form
 		gbScan.Controls.Add(lblMultiplier);
 		controlsPanel.Controls.Add(gbScan);
 		
-		GroupBox gbImagen = CreateGroupBox("Imagen del Artículo", 230);
-		gbImagen.Location = new Point(0, 0);
+				GroupBox gbImagen = CreateGroupBox("Imagen del Artículo", 230);
+		gbImagen.Dock = DockStyle.Fill;
 		picArticle = new PictureBox
 		{
 			Location = new Point(10, 30),
@@ -983,20 +972,17 @@ public class Form1 : Form
 			picArticle.Image = LoadImageFromFile(text2);
 		}
 		gbImagen.Controls.Add(picArticle);
-		leftSplit.Controls.Add(gbImagen);
+		controlsPanel.Controls.Add(gbImagen);
 		
-		GroupBox gbDepts = CreateGroupBox("Venta Rápida por Departamento", 390);
+				GroupBox gbDepts = CreateGroupBox("Venta Rápida por Departamento", 60);
 		panelDepartments = new FlowLayoutPanel
 		{
 			Dock = DockStyle.Fill,
-			Padding = new Padding(5, 20, 5, 5),
-			AutoScroll = true
+			Padding = new Padding(5, 12, 5, 5),
+			AutoScroll = true,
+			WrapContents = false
 		};
 		gbDepts.Controls.Add(panelDepartments);
-		rightSplit.Controls.Add(gbDepts);
-		splitPanel.Controls.Add(leftSplit);
-		splitPanel.Controls.Add(rightSplit);
-		controlsPanel.Controls.Add(splitPanel);
 		Button button = new Button
 		{
 			Text = "✔\ufe0f FINALIZAR VENTA [F12]",
@@ -1018,14 +1004,18 @@ public class Form1 : Form
 		tableLayoutPanel.Controls.Add(panel, 0, 0);
 		tableLayoutPanel.Controls.Add(rightPanel, 1, 0);
 
-		Panel bottomMenu = new Panel
+				Panel bottomMenu = new Panel
 		{
 			Dock = DockStyle.Fill,
 			Margin = new Padding(0),
 			BackColor = Color.FromArgb(15, 15, 20)
 		};
-		flowLayoutPanel.Dock = DockStyle.Fill;
+		flowLayoutPanel.Dock = DockStyle.Right;
+		flowLayoutPanel.AutoSize = true;
 		flowLayoutPanel.Padding = new Padding(0, 15, 20, 0);
+		
+		gbDepts.Dock = DockStyle.Fill;
+		bottomMenu.Controls.Add(gbDepts);
 		bottomMenu.Controls.Add(flowLayoutPanel);
 		
 		tableLayoutPanel.Controls.Add(bottomMenu, 0, 1);
@@ -1037,21 +1027,15 @@ public class Form1 : Form
 			{
 				control.Width = rightPanel.Width - 20;
 			}
-			if (splitPanel != null)
+						if (gbImagen != null)
 			{
-				// splitPanel.Height = controlsPanel.Height - splitPanel.Top - 10;
-				leftSplit.Width = (int)((double)splitPanel.Width * 0.4);
-				rightSplit.Width = splitPanel.Width - leftSplit.Width;
-				gbImagen.Width = leftSplit.Width - 10;
-				gbImagen.Height = splitPanel.Height;
-				gbDepts.Height = splitPanel.Height;
-				gbDepts.Width = rightSplit.Width - 10;
+				gbImagen.Width = rightPanel.Width - 20;
 				picArticle.Width = gbImagen.Width - 20;
 				picArticle.Height = gbImagen.Height - 40;
-				txtBarcode.Width = gbScan.Width - 90;
+				txtBarcode.Width = gbScan.Width - 65;
 				lblMultiplier.Left = txtBarcode.Right + 5;
 				lstSearch.Width = gbScan.Width - 20;
-			}
+				}
 			if (picLogo != null)
 			{
 				picLogo.Width = rightPanel.Width - 20;
@@ -1164,8 +1148,8 @@ public class Form1 : Form
 					{
 						string typeStr = pres.IsBulk ? $"[BULTO x{pres.Quantity:0.##}]" : $"[UNIDAD x{pres.Quantity:0.##}]";
 						decimal price = pres.Price ?? (item.Price * pres.Quantity);
-						string presText = pres.Name.Equals(item.Name, StringComparison.OrdinalIgnoreCase) ? "" : $" ({pres.Name})";
-						lstSearch.Items.Add(new ComboBoxItem($"{typeStr} {item.Name}{presText} - ${price:N2}", item.Id, pres.Id));
+						
+						lstSearch.Items.Add(new ComboBoxItem($"{typeStr} {item.Name} - ${price:N2}", item.Id, pres.Id));
 					}
 				}
 				lstSearch.Visible = lstSearch.Items.Count > 0;
@@ -1223,12 +1207,16 @@ public class Form1 : Form
 			Rectangle rightBounds = e.Bounds;
 			rightBounds.Width -= 10;
 			
-			TextRenderer.DrawText(e.Graphics, namePart, e.Font ?? lstSearch.Font, e.Bounds, foreColor, TextFormatFlags.Left | TextFormatFlags.VerticalCenter);
+			int priceWidth = TextRenderer.MeasureText(e.Graphics, pricePart, e.Font ?? lstSearch.Font).Width;
+			Rectangle nameBounds = e.Bounds;
+			nameBounds.Width -= (priceWidth + 15);
+			
+			TextRenderer.DrawText(e.Graphics, namePart, e.Font ?? lstSearch.Font, nameBounds, foreColor, TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.SingleLine | TextFormatFlags.NoPadding);
 			TextRenderer.DrawText(e.Graphics, pricePart, e.Font ?? lstSearch.Font, rightBounds, foreColor, TextFormatFlags.Right | TextFormatFlags.VerticalCenter);
 		}
 		else
 		{
-			TextRenderer.DrawText(e.Graphics, text, e.Font ?? lstSearch.Font, e.Bounds, foreColor, TextFormatFlags.Left | TextFormatFlags.VerticalCenter);
+			TextRenderer.DrawText(e.Graphics, text, e.Font ?? lstSearch.Font, e.Bounds, foreColor, TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.SingleLine | TextFormatFlags.NoPadding);
 		}
 		
 		e.DrawFocusRectangle();
@@ -1268,8 +1256,8 @@ public class Form1 : Form
 				if (pres != null)
 				{
 					string typeStr = pres.IsBulk ? $"[BULTO x{pres.Quantity:0.##}]" : $"[UNIDAD x{pres.Quantity:0.##}]";
-					string presText = pres.Name.Equals(product.Name, StringComparison.OrdinalIgnoreCase) ? "" : $" ({pres.Name})";
-					string displayName = $"{typeStr} {product.Name}{presText}";
+					
+					string displayName = $"{typeStr} {product.Name}";
 					
 					decimal finalUnitPrice = (pres.Price.HasValue && pres.Quantity > 0) 
 						? (pres.Price.Value / pres.Quantity) 
@@ -1383,8 +1371,8 @@ public class Form1 : Form
 					return RemoveItemFromGrid(parentProduct.Id);
 				}
 				string typeStr = presentation.IsBulk ? $"[BULTO x{presentation.Quantity:0.##}]" : $"[UNIDAD x{presentation.Quantity:0.##}]";
-				string presText = presentation.Name.Equals(parentProduct.Name, StringComparison.OrdinalIgnoreCase) ? "" : $" ({presentation.Name})";
-				string displayName = $"{typeStr} {parentProduct.Name}{presText}";
+				
+				string displayName = $"{typeStr} {parentProduct.Name}";
 				decimal unitPrice = presentation.Price ?? parentProduct.Price;
 				
 				decimal finalUnitPrice = (presentation.Price.HasValue && presentation.Quantity > 0) 
