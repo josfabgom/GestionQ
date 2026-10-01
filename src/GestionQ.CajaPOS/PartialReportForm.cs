@@ -179,14 +179,22 @@ namespace GestionQ.CajaPOS
         {
             try
             {
-                var ventas = _db.Sales.Where(s => s.CashRegisterId == _cashRegisterId && s.Date >= _openingDate && !s.IsCancelled).ToList();
-                var ventaIds = ventas.Select(v => v.Id).ToList();
+                var todasLasVentas = _db.Sales.Where(s => s.CashRegisterId == _cashRegisterId && s.Date >= _openingDate).ToList();
+                
+                var ventasActivas = todasLasVentas.Where(s => !s.IsCancelled).ToList();
+                var ventasAnuladas = todasLasVentas.Where(s => s.IsCancelled).ToList();
+                
+                var ventaIds = ventasActivas.Select(v => v.Id).ToList();
                 var pagos = _db.SalePayments.Where(p => ventaIds.Contains(p.SaleId)).ToList();
                 var movimientos = _db.Movements.Where(m => m.CashRegisterId == _cashRegisterId && m.Date >= _openingDate).ToList();
                 
                 var methodsDict = _db.PaymentMethods.ToDictionary(m => m.Id, m => m.Name);
 
-                decimal totalVentas = ventas.Sum(v => v.TotalAmount);
+                decimal totalVentas = ventasActivas.Sum(v => v.TotalAmount);
+                decimal totalAnuladas = ventasAnuladas.Sum(v => v.TotalAmount);
+                int cantVentas = ventasActivas.Count;
+                int cantAnuladas = ventasAnuladas.Count;
+                
                 decimal ingresosExtra = movimientos.Where(m => m.Type == "Ingreso").Sum(m => m.Amount);
                 decimal retiros = movimientos.Where(m => m.Type == "Egreso").Sum(m => m.Amount);
                 decimal ventasEfectivo = pagos.Where(p => (methodsDict.ContainsKey(p.PaymentMethodId) ? methodsDict[p.PaymentMethodId] : "Efectivo") == "Efectivo").Sum(p => p.Amount);
@@ -206,6 +214,9 @@ namespace GestionQ.CajaPOS
                 sb.AppendLine($"Retiros: {retiros:C2}");
                 sb.AppendLine("--------------------------------");
                 sb.AppendLine($"TOTAL VENTAS: {totalVentas:C2}");
+                sb.AppendLine($"Cant. Tickets Venta: {cantVentas}");
+                sb.AppendLine($"TOTAL ANULACIONES: {totalAnuladas:C2}");
+                sb.AppendLine($"Cant. Tickets Anulados: {cantAnuladas}");
                 sb.AppendLine("");
                 sb.AppendLine("MEDIOS DE PAGO:");
                 var groupedPayments = pagos.GroupBy(p => methodsDict.ContainsKey(p.PaymentMethodId) ? methodsDict[p.PaymentMethodId] : "Desconocido").Select(g => new { Metodo = g.Key, Total = g.Sum(p => p.Amount) }).ToList();

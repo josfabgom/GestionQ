@@ -512,6 +512,10 @@ public class Form1 : Form
 				{
 					PrintTicket(closeRegisterForm.TicketText);
 				}
+				if (!string.IsNullOrEmpty(closeRegisterForm.DifferenceTicketText))
+				{
+					PrintTicket(closeRegisterForm.DifferenceTicketText);
+				}
 				btnSync.ForeColor = Color.Yellow;
 				try
 				{
