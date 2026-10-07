@@ -47,6 +47,8 @@ namespace GestionQ.Web.Controllers
                 .Include(s => s.Items)
                     .ThenInclude(i => i.Product)
                         .ThenInclude(p => p.PriceHistory)
+                .Include(s => s.Items)
+                    .ThenInclude(i => i.Presentation)
                 .Include(s => s.Payments)
                 .ThenInclude(p => p.PaymentMethod)
                 .Where(s => s.Date >= start && s.Date <= endAdjusted && !s.IsCancelled);
@@ -72,8 +74,16 @@ namespace GestionQ.Web.Controllers
                 {
                     ProductId = g.Key,
                     ProductName = g.First().Product?.Name ?? g.First().CustomName ?? "Producto Desconocido",
+                    TotalLooseUnits = g.Where(i => i.PresentationId == null || i.Presentation == null || i.Presentation.Quantity <= 1).Sum(i => i.Quantity),
+                    TotalBulkPackages = g.Where(i => i.PresentationId != null && i.Presentation != null && i.Presentation.Quantity > 1).Sum(i => i.Quantity / i.Presentation.Quantity),
                     TotalQuantity = g.Sum(i => i.Quantity),
-                    TotalAmount = g.Sum(i => i.Quantity * i.UnitPrice - i.DiscountAmount) // Base price minus discount
+                    TotalAmount = g.Sum(i => i.Quantity * i.UnitPrice - i.DiscountAmount),
+                    Presentations = g.GroupBy(i => i.PresentationId).Select(pg => new PresentationSaleStat
+                    {
+                        PresentationName = pg.Key.HasValue && pg.First().Presentation != null ? (pg.First().Presentation.IsBulk ? $"Bulto x{pg.First().Presentation.Quantity:0.##}" : $"Unidad x{pg.First().Presentation.Quantity:0.##}") : "Suelto",
+                        TotalUnits = pg.Sum(i => i.Quantity),
+                        TotalPackages = pg.Key.HasValue && pg.First().Presentation != null && pg.First().Presentation.Quantity > 0 ? Math.Round(pg.Sum(i => i.Quantity) / pg.First().Presentation.Quantity, 2) : 0
+                    }).ToList() // Base price minus discount
                 })
                 .OrderByDescending(p => p.TotalQuantity)
                 .ToList();
@@ -256,6 +266,8 @@ namespace GestionQ.Web.Controllers
             var salesQuery = _context.Sales
                 .Include(s => s.Items)
                 .ThenInclude(i => i.Product)
+                .Include(s => s.Items)
+                .ThenInclude(i => i.Presentation)
                 .Where(s => s.Date >= start && s.Date <= endAdjusted && !s.IsCancelled);
 
             var sales = await salesQuery.ToListAsync();
@@ -267,8 +279,16 @@ namespace GestionQ.Web.Controllers
                 {
                     ProductId = g.Key,
                     ProductName = g.First().Product?.Name ?? g.First().CustomName ?? "Producto Desconocido",
+                    TotalLooseUnits = g.Where(i => i.PresentationId == null || i.Presentation == null || i.Presentation.Quantity <= 1).Sum(i => i.Quantity),
+                    TotalBulkPackages = g.Where(i => i.PresentationId != null && i.Presentation != null && i.Presentation.Quantity > 1).Sum(i => i.Quantity / i.Presentation.Quantity),
                     TotalQuantity = g.Sum(i => i.Quantity),
-                    TotalAmount = g.Sum(i => i.Quantity * i.UnitPrice - i.DiscountAmount)
+                    TotalAmount = g.Sum(i => i.Quantity * i.UnitPrice - i.DiscountAmount),
+                    Presentations = g.GroupBy(i => i.PresentationId).Select(pg => new PresentationSaleStat
+                    {
+                        PresentationName = pg.Key.HasValue && pg.First().Presentation != null ? (pg.First().Presentation.IsBulk ? $"Bulto x{pg.First().Presentation.Quantity:0.##}" : $"Unidad x{pg.First().Presentation.Quantity:0.##}") : "Suelto",
+                        TotalUnits = pg.Sum(i => i.Quantity),
+                        TotalPackages = pg.Key.HasValue && pg.First().Presentation != null && pg.First().Presentation.Quantity > 0 ? Math.Round(pg.Sum(i => i.Quantity) / pg.First().Presentation.Quantity, 2) : 0
+                    }).ToList()
                 })
                 .OrderByDescending(p => p.TotalQuantity) // de mayor a menor por cantidad (o TotalAmount?) 
                 .ToList();
@@ -442,3 +462,4 @@ namespace GestionQ.Web.Controllers
         }
     }
 }
+

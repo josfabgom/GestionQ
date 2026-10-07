@@ -425,5 +425,56 @@
             input.style.boxShadow = '0 0 0 2px var(--accent)';
             setTimeout(() => input.style.boxShadow = 'none', 500);
         }
-    </script>
+    
+        function calculatePresRow(elem) {
+            const row = elem.closest('tr');
+            if (!row) return;
+            const unitCost = parseFloat(document.getElementById('BaseCost').value) || 0;
+            const vatRateId = document.getElementById('VatRateId').value;
+            const vatSelect = document.getElementById('WizardVatRateId');
+            let unitVatRate = 0;
+            if (vatSelect && vatRateId) {
+                const option = Array.from(vatSelect.options).find(o => o.value === vatRateId);
+                if (option) {
+                    unitVatRate = parseFloat(option.dataset.rate) || 0;
+                }
+            }
+            const qty = parseFloat(row.querySelector('.pres-qty').value.replace(',', '.')) || 0;
+            const pMarginStr = row.querySelector('.pres-pmargin').value.replace(',', '.');
+            const priceStr = row.querySelector('.pres-price').value.replace(',', '.');
+            const pMargin = parseFloat(pMarginStr);
+            const price = parseFloat(priceStr);
+            
+            const cost = unitCost * qty;
+            const vatAmt = cost * (unitVatRate / 100);
+            const netCost = cost + vatAmt;
+            
+            row.querySelector('.pres-cost').innerText = cost > 0 ? '$' + cost.toFixed(2) : '-';
+            row.querySelector('.pres-netcost').innerText = netCost > 0 ? '$' + netCost.toFixed(2) : '-';
+            
+            if (!isNaN(pMargin)) {
+                const sugg = netCost * (1 + (pMargin / 100));
+                row.querySelector('.pres-sugg').innerText = sugg > 0 ? '$' + sugg.toFixed(2) : '-';
+            } else {
+                row.querySelector('.pres-sugg').innerText = '-';
+            }
+            
+            if (!isNaN(price) && price > 0 && netCost > 0) {
+                const rMarginCost = ((price - netCost) / netCost) * 100;
+                let color = rMarginCost < 0 ? 'var(--danger)' : (rMarginCost < 10 ? 'var(--warning)' : 'var(--success)');
+                row.querySelector('.pres-rmargin').innerHTML = `<span style="color: ${color}; font-weight: 600;">${rMarginCost.toFixed(1)}%</span>`;
+            } else {
+                row.querySelector('.pres-rmargin').innerText = '-';
+            }
+        }
+        function calculateAllPresRows() {
+            document.querySelectorAll('.pres-row').forEach(row => {
+                const qtyInput = row.querySelector('.pres-qty');
+                if (qtyInput) calculatePresRow(qtyInput);
+            });
+        }
+        document.getElementById('BaseCost').addEventListener('input', calculateAllPresRows);
+        document.getElementById('VatRateId').addEventListener('change', calculateAllPresRows);
+        window.addEventListener('DOMContentLoaded', () => { setTimeout(calculateAllPresRows, 500); });
+</script>
 }

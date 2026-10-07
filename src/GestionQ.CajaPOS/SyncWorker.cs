@@ -196,6 +196,7 @@ namespace GestionQ.CajaPOS
                                 Barcode = presDto.Barcode,
                                 Quantity = presDto.Quantity,
                                 Price = presDto.Price,
+                                ProfitMargin = presDto.ProfitMargin,
                                 IsBulk = presDto.IsBulk,
                                 IsActive = presDto.IsActive
                             });
@@ -272,5 +273,6 @@ namespace GestionQ.CajaPOS
         }
     }
 }
+
 
 

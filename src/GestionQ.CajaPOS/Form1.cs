@@ -295,13 +295,8 @@ public class Form1 : Form
 		catch
 		{
 		}
-		try
-		{
-			db.Database.ExecuteSqlRaw("ALTER TABLE SaleItems ADD COLUMN PresentationId INTEGER NULL;");
-		}
-		catch
-		{
-		}
+		try { db.Database.ExecuteSqlRaw("ALTER TABLE SaleItems ADD COLUMN PresentationId INTEGER NULL;"); } catch { }
+try { db.Database.ExecuteSqlRaw("ALTER TABLE ProductPresentations ADD COLUMN ProfitMargin REAL NULL;"); } catch { }
 		List<Customer> list = await db.Customers.ToListAsync();
 		list.Insert(0, new Customer
 		{
@@ -2513,6 +2508,7 @@ System.Convert.ToDecimal(item.Cells["Price"].Value) == price && rowIsEdited == i
 		base.OnFormClosing(e);
 	}
 }
+
 
 
 

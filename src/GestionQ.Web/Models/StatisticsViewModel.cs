@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace GestionQ.Web.Models
@@ -24,6 +24,8 @@ namespace GestionQ.Web.Models
     {
         public int ProductId { get; set; }
         public string ProductName { get; set; } = string.Empty;
+        public decimal TotalLooseUnits { get; set; }
+        public decimal TotalBulkPackages { get; set; }
         public decimal TotalQuantity { get; set; }
         public decimal TotalAmount { get; set; }
         public List<PresentationSaleStat> Presentations { get; set; } = new();

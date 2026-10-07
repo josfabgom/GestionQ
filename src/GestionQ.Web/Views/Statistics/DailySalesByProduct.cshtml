@@ -10,7 +10,7 @@
     </div>
     <div class="top-bar-actions">
         <a asp-action="Index" asp-route-startDate="@Model.StartDate.ToString("yyyy-MM-dd")" asp-route-endDate="@Model.EndDate.ToString("yyyy-MM-dd")" class="btn-secondary" style="display: flex; align-items: center; gap: 0.5rem;">
-            <i class="fa-solid fa-arrow-left"></i> Volver a Estadísticas
+            <i class="fa-solid fa-arrow-left"></i> Volver a Estadisticas
         </a>
     </div>
 </div>
@@ -104,28 +104,39 @@
                 <thead>
                     <tr>
                         <th>Producto</th>
-                        <th style="text-align: right;">Cantidad Vendida</th>
-                        <th style="text-align: right;">Recaudación</th>
+                        <th style="text-align: right;">Unidades Sueltas</th>
+                        <th style="text-align: right;">Bultos</th>
+                        <th style="text-align: right;">Cantidad Total</th>
+                        <th style="text-align: right;">Recaudaci&oacute;n</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var item in Model.SalesByProduct)
                     {
                         <tr>
-                            <td style="vertical-align: top;">
-                                <strong>@item.ProductName</strong>
-                                @if (item.Presentations != null && item.Presentations.Count > 0)
+                            <td style="vertical-align: middle;"><strong>@item.ProductName</strong></td>
+                            <td style="text-align: right; vertical-align: middle;">@(item.TotalLooseUnits > 0 ? item.TotalLooseUnits.ToString("0.##") + " un." : "-")</td>
+                            <td style="text-align: right; vertical-align: middle;">
+                                @if (item.TotalBulkPackages > 0)
                                 {
-                                    <ul style="margin: 0.5rem 0 0 0; padding-left: 1.2rem; font-size: 0.85rem; color: #94a3b8; list-style-type: square;">
-                                        @foreach (var p in item.Presentations)
-                                        {
-                                            <li>@p.PresentationName: @(p.TotalPackages > 0 ? $"{p.TotalPackages:0.##} Bulto/s ({p.TotalUnits:0.##} un. base)" : $"{p.TotalUnits:0.##} un.")</li>
-                                        }
-                                    </ul>
+                                    <span>@item.TotalBulkPackages.ToString("0.##") bultos</span>
+                                    @if (item.Presentations != null && item.Presentations.Any(p => p.TotalPackages > 0))
+                                    {
+                                        <ul style="margin: 0; padding: 0; list-style-type: none; font-size: 0.8rem; color: #94a3b8;">
+                                            @foreach (var p in item.Presentations.Where(p => p.TotalPackages > 0))
+                                            {
+                                                <li>(@p.TotalPackages.ToString("0.##") @p.PresentationName)</li>
+                                            }
+                                        </ul>
+                                    }
+                                }
+                                else
+                                {
+                                    @:"-"
                                 }
                             </td>
-                            <td style="text-align: right; font-weight: bold; vertical-align: top;">@item.TotalQuantity.ToString("0.##") un.</td>
-                            <td style="text-align: right; font-weight: bold; color: #10b981; vertical-align: top;">@item.TotalAmount.ToString("C")</td>
+                            <td style="text-align: right; font-weight: bold; vertical-align: middle;">@item.TotalQuantity.ToString("0.##") un.</td>
+                            <td style="text-align: right; font-weight: bold; color: #10b981; vertical-align: middle;">@item.TotalAmount.ToString("C")</td>
                         </tr>
                     }
                 </tbody>
@@ -136,7 +147,7 @@
     {
         <div class="empty-state">
             <i class="fa-solid fa-box-open"></i>
-            <p>No hay ventas de productos registradas en este período.</p>
+            <p>No hay ventas de productos registradas en este periodo.</p>
         </div>
     }
 </div>

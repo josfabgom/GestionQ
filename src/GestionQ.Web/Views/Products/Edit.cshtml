@@ -201,56 +201,53 @@
                     <button type="button" class="btn-secondary" onclick="addPresentation()">+ Agregar Presentaci&oacute;n</button>
                 </div>
                 <div class="table-container" style="overflow-x: auto; max-height: 60vh; overflow-y: auto;">
-                    <table class="data-table" id="presentationsTable">
-                        <thead>
-                            <tr>
-                                <th>Nombre (Ej: Fardo x 6)</th>
-                                <th>Tipo</th>
-                                <th>C&oacute;digo de Barras</th>
-                                <th style="width: 100px;">Cant. Unidades</th>
-                                <th style="width: 120px;">Precio Fijo ($)</th>
-                                <th style="width: 80px; text-align: center;">Imp. Etiqueta</th>
-                                <th style="width: 60px;"></th>
-                            </tr>
-                        </thead>
-                        <tbody id="presentationsBody">
-                            @for (int i = 0; i < Model.Presentations.Count; i++)
-                            {
-                                <tr>
-                                    <td>
-                                        <input type="hidden" name="Presentations[@i].Id" value="@Model.Presentations[i].Id" />
-                                        <input type="hidden" name="Presentations[@i].ProductId" value="@Model.Presentations[i].ProductId" />
-                                        <input type="hidden" name="Presentations[@i].IsActive" value="true" />
-                                        <input type="text" name="Presentations[@i].Name" class="form-control" value="@Model.Presentations[i].Name" required />
-                                    </td>
-                                    <td>
-                                        <select name="Presentations[@i].IsBulk" class="form-control">
-                                            @if (Model.Presentations[i].IsBulk)
-                                            {
-                                                <option value="false">Unidad</option>
-                                                <option value="true" selected>Bulto</option>
-                                            }
-                                            else
-                                            {
-                                                <option value="false" selected>Unidad</option>
-                                                <option value="true">Bulto</option>
-                                            }
-                                        </select>
-                                    </td>
-                                    <td>
-                                        <div style="display: flex; gap: 0.5rem;">
-                                            <input type="text" id="presBarcode_@i" name="Presentations[@i].Barcode" class="form-control" value="@Model.Presentations[i].Barcode" required />
-                                            <button type="button" class="btn-secondary" style="padding: 4px 8px; font-size: 0.8rem;" onclick="generateInternalBarcode('presBarcode_@i')" title="Generar código interno"><i class="fas fa-barcode"></i></button>
-                                        </div>
-                                    </td>
-                                    <td><input type="number" name="Presentations[@i].Quantity" class="form-control" step="0.01" value="@Model.Presentations[i].Quantity.ToString(System.Globalization.CultureInfo.InvariantCulture)" required /></td>
-                                    <td><input type="number" name="Presentations[@i].Price" class="form-control" step="0.01" value="@(Model.Presentations[i].Price?.ToString(System.Globalization.CultureInfo.InvariantCulture))" /></td>
-                                    <td style="text-align: center;"><input type="checkbox" name="Presentations[@i].NeedsLabelPrint" value="true" @(Model.Presentations[i].NeedsLabelPrint ? "checked" : "") /></td>
-                                    <td><button type="button" class="btn-danger" style="padding: 4px 8px;" onclick="removePresentation(this)">X</button></td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
+                    <div class="table-responsive">
+                      <table class="data-table presentations-table" id="presentationsTable" style="font-size: 0.85rem;">
+                          <thead>
+                              <tr>
+                                  <th style="width: 20%;">Nombre / Descripci&oacute;n</th>
+                                  <th style="width: 15%;">C&oacute;digo</th>
+                                  <th style="width: 8%;">Cant.</th>
+                                  <th style="width: 10%;">Costo ($)</th>
+                                  <th style="width: 10%;">Margen (%)</th>
+                                  <th style="width: 10%;">Costo+IVA</th>
+                                  <th style="width: 10%;">Sugerido</th>
+                                  <th style="width: 12%;">Precio Fijo</th>
+                                  <th style="width: 10%;">M. Real</th>
+                                  <th style="width: 5%; text-align:center;">Bulto</th>
+                                  <th style="width: 5%;"></th>
+                              </tr>
+                          </thead>
+                          <tbody id="presentationsBody">
+                              @for (int i = 0; i < Model.Presentations.Count; i++)
+                              {
+                                  <tr class="pres-row">
+                                      <td>
+                                          <input type="hidden" name="Presentations[@i].Id" value="@Model.Presentations[i].Id" />
+                                          <input type="hidden" name="Presentations[@i].ProductId" value="@Model.Presentations[i].ProductId" />
+                                          <input type="hidden" name="Presentations[@i].IsActive" value="true" />
+                                          <input type="hidden" name="Presentations[@i].NeedsLabelPrint" value="@(Model.Presentations[i].NeedsLabelPrint ? "true" : "false")" />
+                                          <input type="text" name="Presentations[@i].Name" class="form-control pres-input" value="@Model.Presentations[i].Name" required placeholder="Ej: Fardo x 6" style="padding: 4px; height: 32px; font-size: 0.85rem;" />
+                                      </td>
+                                      <td>
+                                          <div style="display: flex; gap: 2px;">
+                                              <input type="text" id="presBarcode_@i" name="Presentations[@i].Barcode" class="form-control pres-input" value="@Model.Presentations[i].Barcode" required style="padding: 4px; height: 32px; font-size: 0.85rem;" />
+                                              <button type="button" class="btn-secondary" style="padding: 2px 6px;" onclick="generateInternalBarcode('presBarcode_@i')" title="Generar"><i class="fas fa-barcode"></i></button>
+                                          </div>
+                                      </td>
+                                      <td><input type="number" name="Presentations[@i].Quantity" class="form-control pres-input pres-qty" step="0.01" value="@Model.Presentations[i].Quantity.ToString(System.Globalization.CultureInfo.InvariantCulture)" oninput="calculatePresRow(this)" required style="padding: 4px; height: 32px; font-size: 0.85rem; text-align: center;" /></td>
+                                      <td><div class="pres-text pres-cost" style="padding: 4px; height: 32px; background: rgba(255,255,255,0.05); border-radius: 4px; display: flex; align-items: center; justify-content: center;"></div></td>
+                                      <td><input type="number" name="Presentations[@i].ProfitMargin" class="form-control pres-input pres-pmargin" step="0.01" value="@(Model.Presentations[i].ProfitMargin?.ToString(System.Globalization.CultureInfo.InvariantCulture))" oninput="calculatePresRow(this)" style="padding: 4px; height: 32px; font-size: 0.85rem; text-align: center;" /></td>
+                                      <td><div class="pres-text pres-netcost" style="padding: 4px; height: 32px; background: rgba(255,255,255,0.05); border-radius: 4px; display: flex; align-items: center; justify-content: center;"></div></td>
+                                      <td><div class="pres-text pres-sugg" style="padding: 4px; height: 32px; background: rgba(255,255,255,0.05); border-radius: 4px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: var(--accent);"></div></td>
+                                      <td><input type="number" name="Presentations[@i].Price" class="form-control pres-input pres-price" step="0.01" value="@(Model.Presentations[i].Price?.ToString(System.Globalization.CultureInfo.InvariantCulture))" oninput="markManualPrice(this); calculatePresRow(this)" data-manual="@(Model.Presentations[i].Price.HasValue ? "true" : "false")" style="padding: 4px; height: 32px; font-size: 0.85rem; text-align: center;" /></td>
+                                      <td><div class="pres-text pres-rmargin" style="padding: 4px; height: 32px; background: rgba(255,255,255,0.05); border-radius: 4px; display: flex; align-items: center; justify-content: center;"></div></td>
+                                      <td style="text-align: center;"><input type="checkbox" name="Presentations[@i].IsBulk" value="true" @(Model.Presentations[i].IsBulk ? "checked" : "") /></td>
+                                      <td><button type="button" class="btn-danger" style="padding: 4px 8px;" onclick="removePresentation(this)"><i class="fas fa-times"></i></button></td>
+                                  </tr>
+                              }
+                          </tbody>
+                      </table></div>
                 </div>
                 <div style="display: flex; justify-content: flex-end; margin-top: 1.5rem;">
                     <button type="button" class="btn-primary" onclick="closePresentacionesModal()">Aceptar</button>
@@ -536,35 +533,37 @@
         }
 
         function addPresentation() {
-            const tbody = document.getElementById('presentationsBody');
-            const index = tbody.children.length;
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>
-                    <input type="hidden" name="Presentations[${index}].Id" value="0" />
-                    <input type="hidden" name="Presentations[${index}].ProductId" value="@Model.Id" />
-                    <input type="hidden" name="Presentations[${index}].IsActive" value="true" />
-                    <input type="text" name="Presentations[${index}].Name" class="form-control" required />
-                </td>
-                <td>
-                    <select name="Presentations[${index}].IsBulk" class="form-control">
-                        <option value="false">Unidad</option>
-                        <option value="true">Bulto</option>
-                    </select>
-                </td>
-                <td>
-                    <div style="display: flex; gap: 0.5rem;">
-                        <input type="text" id="presBarcode_${index}" name="Presentations[${index}].Barcode" class="form-control" required />
-                        <button type="button" class="btn-secondary" style="padding: 4px 8px; font-size: 0.8rem;" onclick="generateInternalBarcode('presBarcode_${index}')" title="Generar código interno"><i class="fas fa-barcode"></i></button>
-                    </div>
-                </td>
-                <td><input type="number" name="Presentations[${index}].Quantity" class="form-control" step="0.01" value="1" required /></td>
-                <td><input type="number" name="Presentations[${index}].Price" class="form-control" step="0.01" /></td>
-                <td style="text-align: center;"><input type="checkbox" name="Presentations[${index}].NeedsLabelPrint" value="true" /></td>
-                <td><button type="button" class="btn-danger" style="padding: 4px 8px;" onclick="removePresentation(this)">X</button></td>
-            `;
-            tbody.appendChild(tr);
-        }
+                const tbody = document.getElementById('presentationsBody');
+                const index = tbody.children.length;
+                const tr = document.createElement('tr');
+                tr.className = 'pres-row';
+                tr.innerHTML = `
+                    <td>
+                        <input type="hidden" name="Presentations[${index}].Id" value="0" />
+                        <input type="hidden" name="Presentations[${index}].ProductId" value="@Model.Id" />
+                        <input type="hidden" name="Presentations[${index}].IsActive" value="true" />
+                        <input type="hidden" name="Presentations[${index}].NeedsLabelPrint" value="false" />
+                        <input type="text" name="Presentations[${index}].Name" class="form-control pres-input" required placeholder="Ej: Fardo x 6" style="padding: 4px; height: 32px; font-size: 0.85rem;" />
+                    </td>
+                    <td>
+                        <div style="display: flex; gap: 2px;">
+                            <input type="text" id="presBarcode_${index}" name="Presentations[${index}].Barcode" class="form-control pres-input" required style="padding: 4px; height: 32px; font-size: 0.85rem;" />
+                            <button type="button" class="btn-secondary" style="padding: 2px 6px;" onclick="generateInternalBarcode('presBarcode_${index}')" title="Generar"><i class="fas fa-barcode"></i></button>
+                        </div>
+                    </td>
+                    <td><input type="number" name="Presentations[${index}].Quantity" class="form-control pres-input pres-qty" step="0.01" value="1" oninput="calculatePresRow(this)" required style="padding: 4px; height: 32px; font-size: 0.85rem; text-align: center;" /></td>
+                    <td><div class="pres-text pres-cost" style="padding: 4px; height: 32px; background: rgba(255,255,255,0.05); border-radius: 4px; display: flex; align-items: center; justify-content: center;"></div></td>
+                    <td><input type="number" name="Presentations[${index}].ProfitMargin" class="form-control pres-input pres-pmargin" step="0.01" oninput="calculatePresRow(this)" style="padding: 4px; height: 32px; font-size: 0.85rem; text-align: center;" /></td>
+                    <td><div class="pres-text pres-netcost" style="padding: 4px; height: 32px; background: rgba(255,255,255,0.05); border-radius: 4px; display: flex; align-items: center; justify-content: center;"></div></td>
+                    <td><div class="pres-text pres-sugg" style="padding: 4px; height: 32px; background: rgba(255,255,255,0.05); border-radius: 4px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: var(--accent);"></div></td>
+                    <td><input type="number" name="Presentations[${index}].Price" class="form-control pres-input pres-price" step="0.01" oninput="markManualPrice(this); calculatePresRow(this)" data-manual="false" style="padding: 4px; height: 32px; font-size: 0.85rem; text-align: center;" /></td>
+                    <td><div class="pres-text pres-rmargin" style="padding: 4px; height: 32px; background: rgba(255,255,255,0.05); border-radius: 4px; display: flex; align-items: center; justify-content: center;"></div></td>
+                    <td style="text-align: center;"><input type="checkbox" name="Presentations[${index}].IsBulk" value="true" checked /></td>
+                    <td><button type="button" class="btn-danger" style="padding: 4px 8px;" onclick="removePresentation(this)"><i class="fas fa-times"></i></button></td>
+                `;
+                tbody.appendChild(tr);
+                calculatePresRow(tr.querySelector('.pres-qty'));
+            }
 
         async function generateInternalBarcode(inputId) {
             try {
@@ -576,5 +575,68 @@
                 alert('No se pudo generar el código. Intente de nuevo.');
             }
         }
-    </script>
+    
+                function markManualPrice(elem) {
+            elem.dataset.manual = elem.value ? 'true' : 'false';
+        }
+        function calculatePresRow(elem) {
+            const row = elem.closest('tr');
+            if (!row) return;
+            const unitCost = parseFloat(document.getElementById('BaseCost').value) || 0;
+            const vatRateId = document.getElementById('VatRateId').value;
+            const vatSelect = document.getElementById('WizardVatRateId');
+            let unitVatRate = 0;
+            if (vatSelect && vatRateId) {
+                const option = Array.from(vatSelect.options).find(o => o.value === vatRateId);
+                if (option) {
+                    unitVatRate = parseFloat(option.dataset.rate) || 0;
+                }
+            }
+            const qty = parseFloat(row.querySelector('.pres-qty').value.replace(',', '.')) || 0;
+            const pMarginStr = row.querySelector('.pres-pmargin').value.replace(',', '.');
+            const priceStr = row.querySelector('.pres-price').value.replace(',', '.');
+            const pMargin = parseFloat(pMarginStr);
+            const price = parseFloat(priceStr);
+            
+            const cost = unitCost * qty;
+            const vatAmt = cost * (unitVatRate / 100);
+            const netCost = cost + vatAmt;
+            
+            row.querySelector('.pres-cost').innerText = cost > 0 ? '$' + cost.toFixed(2) : '-';
+            row.querySelector('.pres-netcost').innerText = netCost > 0 ? '$' + netCost.toFixed(2) : '-';
+            
+            let suggValue = 0;
+            if (!isNaN(pMargin)) {
+                suggValue = netCost * (1 + (pMargin / 100));
+                row.querySelector('.pres-sugg').innerText = suggValue > 0 ? '$' + suggValue.toFixed(2) : '-';
+            } else {
+                row.querySelector('.pres-sugg').innerText = '-';
+            }
+            
+            const priceInput = row.querySelector('.pres-price');
+            let currentPrice = price;
+            
+            if (suggValue > 0 && priceInput.dataset.manual !== 'true') {
+                priceInput.value = suggValue.toFixed(2);
+                currentPrice = suggValue;
+            }
+            
+            if (!isNaN(currentPrice) && currentPrice > 0 && netCost > 0) {
+                const rMarginCost = ((currentPrice - netCost) / netCost) * 100;
+                let color = rMarginCost < 0 ? 'var(--danger)' : (rMarginCost < 10 ? 'var(--warning)' : 'var(--success)');
+                row.querySelector('.pres-rmargin').innerHTML = `<span style="color: ${color}; font-weight: 600;">${rMarginCost.toFixed(1)}%</span>`;
+            } else {
+                row.querySelector('.pres-rmargin').innerText = '-';
+            }
+        }
+        function calculateAllPresRows() {
+            document.querySelectorAll('.pres-row').forEach(row => {
+                const qtyInput = row.querySelector('.pres-qty');
+                if (qtyInput) calculatePresRow(qtyInput);
+            });
+        }
+        document.getElementById('BaseCost').addEventListener('input', calculateAllPresRows);
+        document.getElementById('VatRateId').addEventListener('change', calculateAllPresRows);
+        window.addEventListener('DOMContentLoaded', () => { setTimeout(calculateAllPresRows, 500); });
+</script>
 }

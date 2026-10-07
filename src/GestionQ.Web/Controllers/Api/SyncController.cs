@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Linq;
@@ -79,7 +79,7 @@ namespace GestionQ.Web.Controllers.Api
                 Barcode = p.Barcode,
                 Name = p.Name,
                 Price = p.Price,
-                Stock = p.Stock,
+                                    Stock = p.Stock,
                 IsActive = p.IsActive,
                 LastModified = p.LastModified,
                 ImageUrl = p.ImageUrl
@@ -150,12 +150,12 @@ namespace GestionQ.Web.Controllers.Api
             var activePromosEntities = await _context.PromotionRules.Include(p => p.Products).ThenInclude(p => p.Product).Where(p => p.IsActive).ToListAsync();
             var activePromosResult = activePromosEntities.Select(p => new PromotionSyncDto {
                 Id = p.Id,
-                Name = "• " + p.Name,
+                Name = "â€¢ " + p.Name,
                 Details = (p.Type == GestionQ.Domain.Entities.PromotionType.Percentage ? $"Descuento: {p.Value}%" :
                            p.Type == GestionQ.Domain.Entities.PromotionType.FixedAmount ? $"Descuento: ${p.Value}" :
                            p.Type == GestionQ.Domain.Entities.PromotionType.XForY ? $"Lleva {p.BuyQuantity} Paga {p.PayQuantity}" :
                            $"Volumen: {p.Value}") + "\r\nProductos aplicables:\r\n" + string.Join("\r\n", p.Products.Select(pr => "- " + pr.Product?.Name)) + 
-                           $"\r\nVálido hasta: {(p.EndDate.HasValue ? p.EndDate.Value.ToString("dd/MM/yyyy") : "Sin límite")}",
+                           $"\r\nVÃ¡lido hasta: {(p.EndDate.HasValue ? p.EndDate.Value.ToString("dd/MM/yyyy") : "Sin lÃ­mite")}",
                 Type = p.Type.ToString(),
                 Value = p.Value,
                 BuyQuantity = p.BuyQuantity,
@@ -196,6 +196,7 @@ namespace GestionQ.Web.Controllers.Api
                     Barcode = p.Barcode,
                     Quantity = p.Quantity,
                     Price = p.Price,
+                    ProfitMargin = p.ProfitMargin,
                     IsBulk = p.IsBulk,
                     IsActive = p.IsActive
                 }).ToListAsync();
@@ -310,7 +311,7 @@ namespace GestionQ.Web.Controllers.Api
                                     ProductId = product.Id,
                                     Quantity = item.Quantity,
                                     Type = MovementType.Return,
-                                    Concept = $"Anulación de Venta (Sincronización POS) de {item.Quantity} un.",
+                                    Concept = $"AnulaciÃ³n de Venta (SincronizaciÃ³n POS) de {item.Quantity} un.",
                                     PreviousStock = previousStock,
                                     NewStock = product.Stock
                                 });
@@ -466,7 +467,7 @@ namespace GestionQ.Web.Controllers.Api
 
                     _context.CashRegisters.Update(register);
                     
-                    // --- INTEGRACIÓN CAJA CENTRAL ---
+                    // --- INTEGRACIÃ“N CAJA CENTRAL ---
                     var alreadySynced = await _context.CentralCashMovements.AnyAsync(m => m.SourceCashRegisterId == register.Id);
                     if (!alreadySynced)
                     {
@@ -478,7 +479,7 @@ namespace GestionQ.Web.Controllers.Api
                                 Date = DateTime.Now,
                                 Type = "Ingreso",
                                 Amount = netoEfectivo,
-                                Concept = $"Rendición Caja POS #{register.Id} - Efectivo",
+                                Concept = $"RendiciÃ³n Caja POS #{register.Id} - Efectivo",
                                 UserId = register.UserId,
                                 SourceCashRegisterId = register.Id
                             });
@@ -511,7 +512,7 @@ namespace GestionQ.Web.Controllers.Api
                                 Date = DateTime.Now,
                                 Type = "Ingreso",
                                 Amount = pago.Total,
-                                Concept = $"Rendición Caja POS #{register.Id} - {pago.Metodo}",
+                                Concept = $"RendiciÃ³n Caja POS #{register.Id} - {pago.Metodo}",
                                 UserId = register.UserId,
                                 SourceCashRegisterId = register.Id
                             });
@@ -525,4 +526,6 @@ namespace GestionQ.Web.Controllers.Api
         }
     }
 }
+
+
 

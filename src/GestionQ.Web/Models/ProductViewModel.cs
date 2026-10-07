@@ -81,6 +81,7 @@ namespace GestionQ.Web.Models
         public string Barcode { get; set; } = string.Empty;
         public decimal Quantity { get; set; }
         public decimal? Price { get; set; }
+        public decimal? ProfitMargin { get; set; }
         public bool NeedsLabelPrint { get; set; }
         public bool IsBulk { get; set; }
         public bool IsActive { get; set; } = true;
