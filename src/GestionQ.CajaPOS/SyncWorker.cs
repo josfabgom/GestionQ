@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
@@ -78,7 +78,7 @@ namespace GestionQ.CajaPOS
                     Sales = unsyncedSales.Select(s => {
                         var customer = s.CustomerId.HasValue ? db.Customers.Find(s.CustomerId.Value) : null;
                         var offlineReg = allOfflineRegisters.FirstOrDefault(r => r.Id == s.CashRegisterId);
-                        return new SaleSyncDto { GlobalId = s.GlobalId, Date = s.Date, TotalAmount = s.TotalAmount, SubTotal = s.SubTotal, DiscountAmount = s.DiscountAmount, PaymentDiscountAmount = s.PaymentDiscountAmount, UserId = s.UserId, CashRegisterId = offlineReg == null ? s.CashRegisterId : offlineReg.ServerCashRegisterId, OfflineCashRegisterGlobalId = offlineReg?.GlobalId, CustomerDni = customer?.Dni, RequestElectronicInvoice = s.RequestElectronicInvoice, IsCancelled = s.IsCancelled, CancellationDate = s.CancellationDate, Items = s.Items.Select(i => new SaleItemSyncDto { ProductId = i.ProductId, Quantity = i.Quantity, UnitPrice = i.UnitPrice, DiscountAmount = i.DiscountAmount }).ToList(), Payments = s.Payments.Select(p => new SalePaymentSyncDto { PaymentMethodId = p.PaymentMethodId, Amount = p.Amount, TransactionReference = p.TransactionReference }).ToList() };
+                        return new SaleSyncDto { GlobalId = s.GlobalId, Date = s.Date, TotalAmount = s.TotalAmount, SubTotal = s.SubTotal, DiscountAmount = s.DiscountAmount, PaymentDiscountAmount = s.PaymentDiscountAmount, UserId = s.UserId, CashRegisterId = offlineReg == null ? s.CashRegisterId : offlineReg.ServerCashRegisterId, OfflineCashRegisterGlobalId = offlineReg?.GlobalId, CustomerDni = customer?.Dni, RequestElectronicInvoice = s.RequestElectronicInvoice, IsCancelled = s.IsCancelled, CancellationDate = s.CancellationDate, Items = s.Items.Select(i => new SaleItemSyncDto { ProductId = i.ProductId, PresentationId = i.PresentationId, Quantity = i.Quantity, UnitPrice = i.UnitPrice, DiscountAmount = i.DiscountAmount }).ToList(), Payments = s.Payments.Select(p => new SalePaymentSyncDto { PaymentMethodId = p.PaymentMethodId, Amount = p.Amount, TransactionReference = p.TransactionReference }).ToList() };
                     }).ToList(),
                     Movements = unsyncedMovements.Select(m => {
                         var offlineReg = allOfflineRegisters.FirstOrDefault(r => r.Id == m.CashRegisterId);
@@ -242,7 +242,7 @@ namespace GestionQ.CajaPOS
                 }
             }
             
-            // Para simplificar, asumimos que siempre notificamos si hubo conexión exitosa
+            // Para simplificar, asumimos que siempre notificamos si hubo conexiÃ³n exitosa
             OnSyncCompleted?.Invoke();
         }
 
@@ -272,4 +272,5 @@ namespace GestionQ.CajaPOS
         }
     }
 }
+
 

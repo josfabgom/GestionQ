@@ -26,6 +26,14 @@ namespace GestionQ.Web.Models
         public string ProductName { get; set; } = string.Empty;
         public decimal TotalQuantity { get; set; }
         public decimal TotalAmount { get; set; }
+        public List<PresentationSaleStat> Presentations { get; set; } = new();
+    }
+
+    public class PresentationSaleStat
+    {
+        public string PresentationName { get; set; } = string.Empty;
+        public decimal TotalUnits { get; set; }
+        public decimal TotalPackages { get; set; }
     }
 
     public class PaymentMethodStat

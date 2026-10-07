@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Drawing;
@@ -291,6 +291,13 @@ public class Form1 : Form
 		try
 		{
 			db.Database.ExecuteSqlRaw("ALTER TABLE PaymentMethods ADD COLUMN DiscountValidTo TEXT;");
+		}
+		catch
+		{
+		}
+		try
+		{
+			db.Database.ExecuteSqlRaw("ALTER TABLE SaleItems ADD COLUMN PresentationId INTEGER NULL;");
 		}
 		catch
 		{
@@ -671,6 +678,8 @@ public class Form1 : Form
 		gridItems.Columns.Add("Quantity", "CANTIDAD");
 		gridItems.Columns.Add("Discount", "DESCUENTO");
 		gridItems.Columns.Add("SubTotal", "SUBTOTAL");
+		gridItems.Columns.Add("PresentationId", "PresentationId");
+		gridItems.Columns["PresentationId"].Visible = false;
 		DataGridViewButtonColumn dataGridViewButtonColumnDelete = new DataGridViewButtonColumn
 		{
 			Name = "btnDelete",
@@ -1269,7 +1278,7 @@ public class Form1 : Form
 						
 					decimal finalQuantity = qtyToAdd * pres.Quantity;
 					
-					AddRow(product.Id, displayName, finalUnitPrice, finalQuantity, product.Stock);
+					AddRow(product.Id, displayName, finalUnitPrice, finalQuantity, product.Stock, false, 0m, comboBoxItem.PresentationId);
 				}
 			}
 			else
@@ -1385,7 +1394,7 @@ public class Form1 : Form
 
 				decimal finalQuantity = quantity * presentation.Quantity;
 
-				AddRow(parentProduct.Id, displayName, finalUnitPrice, finalQuantity, parentProduct.Stock);
+				AddRow(parentProduct.Id, displayName, finalUnitPrice, finalQuantity, parentProduct.Stock, false, 0m, presentation.Id);
 				UpdateArticleImage(parentProduct.ImageUrl);
 				return true;
 			}
@@ -1792,7 +1801,7 @@ public class Form1 : Form
 		return Math.Min(presResult, promoResult);
 	}
 
-	private void AddRow(int id, string name, decimal price, decimal qty, decimal stock = 0m, bool isPriceEdited = false, decimal originalPrice = 0m)
+	private void AddRow(int id, string name, decimal price, decimal qty, decimal stock = 0m, bool isPriceEdited = false, decimal originalPrice = 0m, int? presentationId = null)
 	{
 		bool flag = false;
 		foreach (DataGridViewRow item in (System.Collections.IEnumerable)gridItems.Rows)
@@ -1817,6 +1826,7 @@ System.Convert.ToDecimal(item.Cells["Price"].Value) == price && rowIsEdited == i
 			decimal subTotal = CalculateSubTotal(id, price, qty, isPriceEdited);
 			decimal discount = (price * qty) - subTotal;
 			int rowIndex = gridItems.Rows.Add(id, text, isPriceEdited, originalPrice == 0m ? price : originalPrice, text, price, qty, discount > 0m ? (object)discount : null, subTotal);
+			gridItems.Rows[rowIndex].Cells["PresentationId"].Value = presentationId;
 			if (name.Contains("[BULTO"))
 			{
 				gridItems.Rows[rowIndex].DefaultCellStyle.ForeColor = Color.FromArgb(255, 193, 7);
@@ -1917,12 +1927,9 @@ System.Convert.ToDecimal(item.Cells["Price"].Value) == price && rowIsEdited == i
 
 	private async void BtnFinalize_Click(object? sender, EventArgs e)
 	{
-		if (gridItems.Rows.Count == 0)
-		{
-			return;
-		}
-		decimal total = default(decimal);
-		decimal num = default(decimal);
+		if (gridItems.Rows.Count == 0) return;
+		decimal total = 0m;
+		decimal num = 0m;
 		Sale sale = new Sale
 		{
 			GlobalId = Guid.NewGuid(),
@@ -1933,185 +1940,179 @@ System.Convert.ToDecimal(item.Cells["Price"].Value) == price && rowIsEdited == i
 			CashRegisterId = _cashRegisterId,
 			RequestElectronicInvoice = _requestElectronicInvoice
 		};
-		foreach (DataGridViewRow item in (IEnumerable)gridItems.Rows)
+		foreach (System.Windows.Forms.DataGridViewRow item in (System.Collections.IEnumerable)gridItems.Rows)
 		{
 			int productId = Convert.ToInt32(item.Cells["Id"].Value);
 			decimal num2 = Convert.ToDecimal(item.Cells["Price"].Value);
 			decimal num3 = Convert.ToDecimal(item.Cells["Quantity"].Value);
 			num += num2 * num3;
 			total += CalculateSubTotal(productId, num2, num3);
-			sale.Items.Add(new SaleItem
-			{
-				ProductId = productId,
-				UnitPrice = num2,
-				Quantity = num3
-			});
+			int? presId = null;
+			if (item.Cells["PresentationId"].Value != null) presId = (int)item.Cells["PresentationId"].Value;
+			sale.Items.Add(new SaleItem { ProductId = productId, UnitPrice = num2, Quantity = num3, PresentationId = presId });
 		}
 		sale.SubTotal = num;
 		sale.DiscountAmount = num - total;
 		sale.TotalAmount = total;
+
 		Form modal = new Form();
 		try
 		{
 			modal.Text = "Finalizar Venta";
-			modal.Size = new Size(400, 390);
+			modal.Size = new Size(460, 610);
 			modal.StartPosition = FormStartPosition.CenterParent;
 			modal.BackColor = Color.FromArgb(20, 20, 30);
 			modal.ForeColor = Color.White;
 			modal.FormBorderStyle = FormBorderStyle.FixedDialog;
 			modal.MaximizeBox = false;
 			modal.MinimizeBox = false;
-			Label title = new Label
-			{
-				Text = "Medio de Pago",
-				Font = new Font("Segoe UI", 16f, FontStyle.Bold),
-				ForeColor = Color.LightSkyBlue,
-				AutoSize = true,
-				Location = new Point(40, 20)
-			};
-			Label lblTotalText = new Label
-			{
-				Text = $"Total a cobrar: ${total:N2}",
-				Font = new Font("Segoe UI", 14f, FontStyle.Bold),
-				ForeColor = Color.YellowGreen,
-				AutoSize = true,
-				Location = new Point(40, 60)
-			};
-			Label lblMethod = new Label
-			{
-				Text = "Medio de Pago",
-				Location = new Point(40, 115),
-				AutoSize = true
-			};
-			ComboBox localCmbPaymentMethod = new ComboBox
-			{
-				Location = new Point(40, 140),
-				Width = 300,
-				Font = new Font("Segoe UI", 12f),
-				DropDownStyle = ComboBoxStyle.DropDownList,
-				BackColor = Color.FromArgb(30, 30, 45),
-				ForeColor = Color.White
-			};
+
+			Label title = new Label { Text = "Cobro Dividido", Font = new Font("Segoe UI", 18f, FontStyle.Bold), ForeColor = Color.LightSkyBlue, AutoSize = true, Location = new Point(40, 20) };
+			Label lblTotalText = new Label { Text = $"Total Ticket: ${total:N2}", Font = new Font("Segoe UI", 14f, FontStyle.Bold), ForeColor = Color.WhiteSmoke, AutoSize = true, Location = new Point(40, 65) };
+			Label lblFaltaPagar = new Label { Text = $"Falta Pagar: ${total:N2}", Font = new Font("Segoe UI", 16f, FontStyle.Bold), ForeColor = Color.YellowGreen, AutoSize = true, Location = new Point(40, 95) };
+			
+			Label lblMethod = new Label { Text = "Medio de Pago", Location = new Point(40, 135), AutoSize = true, Font = new Font("Segoe UI", 11f) };
+			ComboBox localCmbPaymentMethod = new ComboBox { Location = new Point(40, 160), Width = 365, Font = new Font("Segoe UI", 12f), DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Color.FromArgb(30, 30, 45), ForeColor = Color.White };
+			
 			using LocalDbContext db = new LocalDbContext();
-			List<PaymentMethod> list = await db.PaymentMethods.Where((PaymentMethod p) => p.IsActive).ToListAsync();
-			if (list.Count == 0)
-			{
-				list.Add(new PaymentMethod
-				{
-					Id = 1,
-					Name = "Efectivo"
-				});
-			}
-			foreach (var pm in list)
-			{
-				localCmbPaymentMethod.Items.Add(pm);
-			}
+			List<PaymentMethod> list = db.PaymentMethods.Where((PaymentMethod p) => p.IsActive).ToList();
+			if (list.Count == 0) list.Add(new PaymentMethod { Id = 1, Name = "Efectivo" });
+			foreach (var pm in list) localCmbPaymentMethod.Items.Add(pm);
 			localCmbPaymentMethod.DisplayMember = "Name";
 			localCmbPaymentMethod.ValueMember = "Id";
 			
-			var defaultPaymentSetting = await db.SystemSettings.FirstOrDefaultAsync(s => s.Key == "DefaultPaymentMethodId");
+			var defaultPaymentSetting = db.SystemSettings.FirstOrDefault(s => s.Key == "DefaultPaymentMethodId");
 			bool wasSet = false;
 			if (defaultPaymentSetting != null && int.TryParse(defaultPaymentSetting.Value, out int defaultMethodId))
 			{
 				var item = list.FirstOrDefault(p => p.Id == defaultMethodId);
-				if (item != null)
-				{
-					localCmbPaymentMethod.SelectedItem = item;
-					wasSet = true;
-				}
+				if (item != null) { localCmbPaymentMethod.SelectedItem = item; wasSet = true; }
 			}
-			
-			// Si no logramos seleccionar por configuración
 			if (!wasSet)
 			{
-				// Fallback to Efectivo if exists
 				var efectivo = list.FirstOrDefault(p => p.Name.ToLower() == "efectivo");
-				if (efectivo != null)
-				{
-					localCmbPaymentMethod.SelectedItem = efectivo;
-				}
+				if (efectivo != null) localCmbPaymentMethod.SelectedItem = efectivo;
+				else localCmbPaymentMethod.SelectedIndex = 0;
 			}
 
+			Label labelAmount = new Label { Text = "Monto que cubre ($)", Location = new Point(40, 205), AutoSize = true, Font = new Font("Segoe UI", 11f) };
+			TextBox txtPagaCon = new TextBox { Text = total.ToString("0.00"), Location = new Point(40, 230), Width = 150, Font = new Font("Segoe UI", 14f), BackColor = Color.FromArgb(30, 30, 45), ForeColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
+			Label lblVueltoModal = new Label { Text = "Vuelto: $0.00", Location = new Point(200, 230), AutoSize = true, Font = new Font("Segoe UI", 14f, FontStyle.Bold), ForeColor = Color.Gold };
+			
+			Button btnAddPayment = new Button { Text = "+ Agregar Pago [Enter]", Location = new Point(40, 280), Width = 365, Height = 45, BackColor = Color.FromArgb(59, 130, 246), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 11f, FontStyle.Bold) };
+			btnAddPayment.FlatAppearance.BorderSize = 0;
+			
+			Label lblPagosTitle = new Label { Text = "Pagos Agregados:", Font = new Font("Segoe UI", 10f), ForeColor = Color.LightGray, AutoSize = true, Location = new Point(40, 340) };
+			ListBox lstPayments = new ListBox { Location = new Point(40, 365), Size = new Size(310, 90), Font = new Font("Segoe UI", 11f), BackColor = Color.FromArgb(30, 30, 45), ForeColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
+			Button btnRemovePayment = new Button { Text = "🗑", Location = new Point(360, 365), Size = new Size(45, 45), BackColor = Color.FromArgb(220, 53, 69), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 14f) };
+			btnRemovePayment.FlatAppearance.BorderSize = 0;
 
-			Label label = new Label
-			{
-				Text = "Paga con ($)",
-				Location = new Point(40, 185),
-				AutoSize = true
-			};
-			TextBox txtPagaCon = new TextBox
-			{
-				Text = total.ToString("0.00"),
-				Location = new Point(40, 210),
-				Width = 140,
-				Font = new Font("Segoe UI", 14f),
-				BackColor = Color.FromArgb(30, 30, 45),
-				ForeColor = Color.White,
-				BorderStyle = BorderStyle.FixedSingle
-			};
-			Label lblVueltoModal = new Label
-			{
-				Text = "Vuelto: $0.00",
-				Location = new Point(200, 210),
-				AutoSize = true,
-				Font = new Font("Segoe UI", 12f, FontStyle.Bold),
-				ForeColor = Color.Gold
-			};
-			Button button = new Button
-			{
-				Text = "✔\ufe0f CONFIRMAR [Enter]",
-				Location = new Point(40, 280),
-				Width = 300,
-				Height = 40,
-				BackColor = Color.FromArgb(16, 185, 129),
-				ForeColor = Color.White,
-				FlatStyle = FlatStyle.Flat,
-				Font = new Font("Segoe UI", 12f, FontStyle.Bold)
-			};
+			Button button = new Button { Text = "✔ CONFIRMAR VENTA [Enter]", Location = new Point(40, 475), Width = 365, Height = 55, BackColor = Color.FromArgb(16, 185, 129), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 14f, FontStyle.Bold), Enabled = false };
 			button.FlatAppearance.BorderSize = 0;
-			modal.Controls.AddRange(title, lblTotalText, lblMethod, localCmbPaymentMethod, label, txtPagaCon, lblVueltoModal, button);
-			localCmbPaymentMethod.SelectedIndexChanged += delegate
+			
+			modal.Controls.AddRange(new Control[] { title, lblTotalText, lblFaltaPagar, lblMethod, localCmbPaymentMethod, labelAmount, txtPagaCon, lblVueltoModal, btnAddPayment, lblPagosTitle, lstPayments, btnRemovePayment, button });
+			
+			decimal remainingToPay = total;
+			decimal totalPaid = 0m;
+			
+			Action updateModalUI = () =>
 			{
-				if (localCmbPaymentMethod.SelectedItem is PaymentMethod { DiscountPercentage: var num5 } paymentMethod)
+				lblFaltaPagar.Text = $"Falta Pagar: ${Math.Max(0, remainingToPay):N2}";
+				if (remainingToPay <= 0)
 				{
-					DateTime date = DateTime.Now.Date;
-					if (paymentMethod.DiscountValidFrom.HasValue && date < paymentMethod.DiscountValidFrom.Value.Date)
-					{
-						num5 = default(decimal);
-					}
-					if (paymentMethod.DiscountValidTo.HasValue && date > paymentMethod.DiscountValidTo.Value.Date)
-					{
-						num5 = default(decimal);
-					}
-					sale.PaymentDiscountAmount = total * (num5 / 100m);
-					sale.TotalAmount = total - sale.PaymentDiscountAmount;
-					lblTotalText.Text = $"Total a cobrar: ${sale.TotalAmount:N2}";
-					if (sale.PaymentDiscountAmount > 0m)
-					{
-						lblTotalText.Text += $"\n(Desc: -${sale.PaymentDiscountAmount:N2})";
-					}
-					txtPagaCon.Text = sale.TotalAmount.ToString("0.00");
+					lblFaltaPagar.ForeColor = Color.LightGray;
+					lblVueltoModal.Text = $"Vuelto: ${Math.Abs(remainingToPay):N2}";
+					lblVueltoModal.ForeColor = Color.Gold;
+					button.Enabled = true;
+					button.BackColor = Color.FromArgb(16, 185, 129);
+					txtPagaCon.Text = "0.00";
 				}
+				else
+				{
+					lblFaltaPagar.ForeColor = Color.YellowGreen;
+					lblVueltoModal.Text = "Vuelto: $0.00";
+					lblVueltoModal.ForeColor = Color.Gold;
+					button.Enabled = false;
+					button.BackColor = Color.Gray;
+					txtPagaCon.Text = remainingToPay.ToString("0.00");
+				}
+				
+				lstPayments.Items.Clear();
+				foreach (var p in sale.Payments)
+				{
+					var pm = list.FirstOrDefault(x => x.Id == p.PaymentMethodId);
+					string pmName = pm != null ? pm.Name : "Desconocido";
+					lstPayments.Items.Add($"{pmName}: ${p.Amount:N2}");
+				}
+				btnRemovePayment.Enabled = sale.Payments.Count > 0;
 			};
 			
-			txtPagaCon.TextChanged += delegate
+			btnAddPayment.Click += delegate
 			{
-				if (decimal.TryParse(txtPagaCon.Text.Replace(".", ","), out var result))
+				if (decimal.TryParse(txtPagaCon.Text.Replace(".", ","), out var inputAmount) && inputAmount > 0)
 				{
-					decimal num4 = result - sale.TotalAmount;
-					lblVueltoModal.Text = ((num4 >= 0m) ? $"Vuelto: ${num4:N2}" : $"Falta: ${Math.Abs(num4):N2}");
-					lblVueltoModal.ForeColor = ((num4 >= 0m) ? Color.Gold : Color.Tomato);
+					if (localCmbPaymentMethod.SelectedItem is PaymentMethod pm)
+					{
+						decimal discountPerc = pm.DiscountPercentage;
+						DateTime date = DateTime.Now.Date;
+						if (pm.DiscountValidFrom.HasValue && date < pm.DiscountValidFrom.Value.Date) discountPerc = 0;
+						if (pm.DiscountValidTo.HasValue && date > pm.DiscountValidTo.Value.Date) discountPerc = 0;
+						
+						decimal calculatedDiscount = inputAmount * (discountPerc / 100m);
+						decimal actualPaid = inputAmount - calculatedDiscount;
+						
+						sale.Payments.Add(new SalePayment 
+						{ 
+							PaymentMethodId = pm.Id, 
+							Amount = actualPaid,
+							TransactionReference = inputAmount.ToString(System.Globalization.CultureInfo.InvariantCulture)
+						});
+						sale.PaymentDiscountAmount += calculatedDiscount;
+						remainingToPay -= inputAmount;
+						totalPaid += actualPaid;
+						updateModalUI();
+						
+						if (remainingToPay > 0) 
+						{
+						    txtPagaCon.Focus();
+						    txtPagaCon.SelectAll();
+						}
+						else 
+						{
+						    button.Focus();
+						}
+					}
 				}
 			};
+
+			btnRemovePayment.Click += delegate
+			{
+				int idx = lstPayments.SelectedIndex;
+				if (idx >= 0 && idx < sale.Payments.Count)
+				{
+					var p = sale.Payments[idx];
+					if (decimal.TryParse(p.TransactionReference, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out decimal originalInputAmount))
+					{
+						decimal calculatedDiscount = originalInputAmount - p.Amount;
+						sale.PaymentDiscountAmount -= calculatedDiscount;
+						remainingToPay += originalInputAmount;
+						totalPaid -= p.Amount;
+						sale.Payments.RemoveAt(idx);
+						updateModalUI();
+					}
+				}
+				else
+				{
+				    MessageBox.Show("Seleccione un pago de la lista para eliminar.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+				}
+			};
+
 			button.Click += async delegate
 			{
-				sale.Payments.Add(new SalePayment
-				{
-					PaymentMethodId = ((PaymentMethod)localCmbPaymentMethod.SelectedItem).Id,
-					Amount = sale.TotalAmount
-				});
+				sale.TotalAmount = totalPaid;
 				sale.DiscountAmount += sale.PaymentDiscountAmount;
-								string configuredPrinter = "";
+				
+				string configuredPrinter = "";
 				using (LocalDbContext context = new LocalDbContext())
 				{
 					context.Sales.Add(sale);
@@ -2119,13 +2120,13 @@ System.Convert.ToDecimal(item.Cells["Price"].Value) == price && rowIsEdited == i
 					var pSetting = context.SystemSettings.FirstOrDefault(s => s.Key == "TicketPrinter");
 					if (pSetting != null) configuredPrinter = pSetting.Value;
 				}
-				// -- NUEVO FLUJO ARCA --
+				
 				string caeTextoAdicional = "";
 				if (sale.RequestElectronicInvoice)
 				{
 					try
 					{
-						await _syncWorker.PerformSyncAsync(); // Sincroniza la venta al servidor
+						await _syncWorker.PerformSyncAsync();
 						using (var httpClient = new System.Net.Http.HttpClient())
 						{
 							httpClient.Timeout = TimeSpan.FromSeconds(20);
@@ -2146,76 +2147,116 @@ System.Convert.ToDecimal(item.Cells["Price"].Value) == price && rowIsEdited == i
 										}
 										else
 										{
-											string errorMsg = root.TryGetProperty("message", out var msgProp) ? msgProp.GetString() : "Error desconocido en AFIP.";
-											MessageBox.Show("Fallo al generar factura electrónica:\n" + errorMsg, "Error Facturación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-											caeTextoAdicional = "\n** ERROR AL FACTURAR (Verifique AFIP) **";
+											string errorMsg = root.TryGetProperty("message", out var msgProp) ? msgProp.GetString() : "Error desconocido.";
+											MessageBox.Show("Fallo factura:\n" + errorMsg, "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+											caeTextoAdicional = "\n** ERROR AL FACTURAR **";
 										}
 									}
 								}
-								catch
-								{
-									caeTextoAdicional = "\n** ERROR DE RESPUESTA AFIP **";
-								}
+								catch { caeTextoAdicional = "\n** ERROR DE RESPUESTA AFIP **"; }
 							}
-							else
-							{
-								MessageBox.Show("Error del servidor al facturar. Código: " + res.StatusCode, "Error de Servidor", MessageBoxButtons.OK, MessageBoxIcon.Error);
-								caeTextoAdicional = "\n** ERROR AL FACTURAR (Error " + (int)res.StatusCode + ") **";
-							}
+							else { caeTextoAdicional = "\n** ERROR AL FACTURAR **"; }
 						}
 					}
-					catch (TaskCanceledException)
-					{
-						MessageBox.Show("Tiempo de espera agotado conectando con AFIP. La factura quedará pendiente de sincronización.", "Timeout", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-						caeTextoAdicional = "\nCAE EN TRAMITE (Offline)";
-					}
-					catch (Exception ex)
-					{
-						MessageBox.Show("Error de red o sincronización:\n" + ex.Message, "Error de Conexión", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-						caeTextoAdicional = "\nCAE EN TRAMITE (Offline)";
-					}
+					catch { caeTextoAdicional = "\nCAE EN TRAMITE (Offline)"; }
 				}
-				else
-				{
-caeTextoAdicional = "\n** DOCUMENTO NO VALIDO COMO FACTURA **";
-				}
-				// -- FIN FLUJO ARCA --
-
-				string text = localCmbPaymentMethod.Text;
-				string text2 = GenerateTicketText(sale, text) + caeTextoAdicional;
+				
+				string text2 = GenerateTicketText(sale) + caeTextoAdicional;
 				PrintTicket(text2, configuredPrinter);
-				ShowAutoCloseMessage($"Venta registrada exitosamente.\nTicket: {_posNumber:D5}-{sale.Id:D8}\n\nImprimiendo Ticket...", "Caja", 1500);
+				ShowAutoCloseMessage($"Venta registrada.\nTicket: {_posNumber:D5}-{sale.Id:D8}", "Caja", 1500);
 				gridItems.Rows.Clear();
 				UpdateArticleImage(null);
 				UpdateTotals();
 				modal.DialogResult = DialogResult.OK;
 				modal.Close();
-				
-				if (!sale.RequestElectronicInvoice) {
-					Task.Run(async delegate
-					{
-						try { await _syncWorker.PerformSyncAsync(); } catch { }
-					});
-				}
+				if (!sale.RequestElectronicInvoice) { Task.Run(async delegate { try { await _syncWorker.PerformSyncAsync(); } catch { } }); }
 			};
-			modal.AcceptButton = button;
-			modal.Shown += delegate
+			
+			// === GLOBAL KEYBOARD NAVIGATION ===
+			modal.KeyPreview = true;
+			modal.KeyDown += (s, ev) => 
 			{
-				txtPagaCon.Focus();
-				txtPagaCon.SelectAll();
+			    if (ev.KeyCode == Keys.Escape) 
+			    {
+			        modal.Close();
+			        ev.Handled = true;
+			    }
+			    else if (ev.KeyCode == Keys.Enter)
+			    {
+			        if (modal.ActiveControl == txtPagaCon) 
+			        {
+			            if (remainingToPay > 0) btnAddPayment.PerformClick();
+			            else if (button.Enabled) button.PerformClick();
+			            ev.Handled = true;
+			            ev.SuppressKeyPress = true;
+			        }
+			        else if (modal.ActiveControl == localCmbPaymentMethod)
+			        {
+			            txtPagaCon.Focus();
+			            txtPagaCon.SelectAll();
+			            ev.Handled = true;
+			            ev.SuppressKeyPress = true;
+			        }
+			        else if (modal.ActiveControl == button)
+			        {
+			            button.PerformClick();
+			            ev.Handled = true;
+			            ev.SuppressKeyPress = true;
+			        }
+			        else if (modal.ActiveControl == lstPayments)
+			        {
+			            txtPagaCon.Focus();
+			            txtPagaCon.SelectAll();
+			            ev.Handled = true;
+			            ev.SuppressKeyPress = true;
+			        }
+			        else if (button.Enabled)
+			        {
+			            button.PerformClick();
+			            ev.Handled = true;
+			            ev.SuppressKeyPress = true;
+			        }
+			    }
+			    else if (ev.KeyCode == Keys.Up)
+			    {
+			        if (modal.ActiveControl == txtPagaCon)
+			        {
+			            localCmbPaymentMethod.Focus();
+			            ev.Handled = true;
+			        }
+			        else if (modal.ActiveControl == button)
+			        {
+			            txtPagaCon.Focus();
+			            txtPagaCon.SelectAll();
+			            ev.Handled = true;
+			        }
+			    }
+			    else if (ev.KeyCode == Keys.Down)
+			    {
+			        if (modal.ActiveControl == txtPagaCon)
+			        {
+			            if (button.Enabled) button.Focus();
+			            ev.Handled = true;
+			        }
+			    }
+			    else if (ev.KeyCode == Keys.Delete || ev.KeyCode == Keys.Back)
+			    {
+			        if (modal.ActiveControl == lstPayments)
+			        {
+			            btnRemovePayment.PerformClick();
+			            ev.Handled = true;
+			        }
+			    }
 			};
-			modal.FormClosed += delegate
-			{
-				txtBarcode.Focus();
-			};
+			
+			// Quitar el modal.AcceptButton para manejar el Enter manualmente arriba.
+			modal.Shown += delegate { txtPagaCon.Focus(); txtPagaCon.SelectAll(); updateModalUI(); };
+			modal.FormClosed += delegate { txtBarcode.Focus(); };
 			modal.ShowDialog();
 		}
 		finally
 		{
-			if (modal != null)
-			{
-				((IDisposable)modal).Dispose();
-			}
+			if (modal != null) { ((IDisposable)modal).Dispose(); }
 			txtBarcode.Focus();
 		}
 	}
@@ -2405,125 +2446,65 @@ caeTextoAdicional = "\n** DOCUMENTO NO VALIDO COMO FACTURA **";
 		form.ShowDialog(this);
 	}
 
-	private string GenerateTicketText(Sale sale, string paymentMethodName)
+	private string GenerateTicketText(Sale sale)
 	{
-		StringBuilder stringBuilder = new StringBuilder();
-		stringBuilder.AppendLine("         TICKET DE VENTA");
-		stringBuilder.AppendLine("=================================");
-		StringBuilder stringBuilder2 = stringBuilder;
-		StringBuilder stringBuilder3 = stringBuilder2;
-		StringBuilder.AppendInterpolatedStringHandler handler = new StringBuilder.AppendInterpolatedStringHandler(7, 1, stringBuilder2);
-		handler.AppendLiteral("Fecha: ");
-		handler.AppendFormatted(sale.Date, "dd/MM/yyyy HH:mm");
-		stringBuilder3.AppendLine(ref handler);
-		stringBuilder2 = stringBuilder;
-		StringBuilder stringBuilder4 = stringBuilder2;
-		handler = new StringBuilder.AppendInterpolatedStringHandler(9, 2, stringBuilder2);
-		handler.AppendLiteral("Ticket: ");
-		handler.AppendFormatted(_posNumber, "D5");
-		handler.AppendLiteral("-");
-		handler.AppendFormatted(sale.Id, "D8");
-		stringBuilder4.AppendLine(ref handler);
+		System.Text.StringBuilder sb = new System.Text.StringBuilder();
+		sb.AppendLine("         TICKET DE VENTA");
+		sb.AppendLine("=================================");
+		sb.AppendLine($"Fecha: {sale.Date:dd/MM/yyyy HH:mm}");
+		sb.AppendLine($"Ticket: {_posNumber:D5}-{sale.Id:D8}");
 		string value = "Cajero";
 		if (!string.IsNullOrEmpty(Text) && Text.Contains("Cajero: "))
 		{
 			int num = Text.IndexOf("Cajero: ") + 8;
 			int num2 = Text.IndexOf(" -", num);
-			if (num2 > num)
-			{
-				value = Text.Substring(num, num2 - num);
-			}
+			if (num2 > num) value = Text.Substring(num, num2 - num);
 		}
-		stringBuilder2 = stringBuilder;
-		StringBuilder stringBuilder5 = stringBuilder2;
-		handler = new StringBuilder.AppendInterpolatedStringHandler(8, 1, stringBuilder2);
-		handler.AppendLiteral("Cajero: ");
-		handler.AppendFormatted(value);
-		stringBuilder5.AppendLine(ref handler);
-		stringBuilder.AppendLine("---------------------------------");
-		stringBuilder.AppendLine("Cant  Descripcion         Importe");
-		foreach (SaleItem item2 in sale.Items)
+		sb.AppendLine($"Cajero: {value}");
+		sb.AppendLine("---------------------------------");
+		sb.AppendLine("Cant  Descripcion         Importe");
+		foreach (SaleItem item in sale.Items)
 		{
-			SaleItem item = item2;
-			using LocalDbContext localDbContext = new LocalDbContext();
-			Product product = localDbContext.Products.FirstOrDefault((Product p) => p.Id == item.ProductId);
-			string text = ((product != null) ? product.Name : "Producto");
-			if (text.Length > 18)
-			{
-				text = text.Substring(0, 18);
-			}
-			stringBuilder2 = stringBuilder;
-			StringBuilder stringBuilder6 = stringBuilder2;
-			handler = new StringBuilder.AppendInterpolatedStringHandler(3, 3, stringBuilder2);
-			handler.AppendFormatted(item.Quantity, 4);
-			handler.AppendLiteral(" ");
-			handler.AppendFormatted<string>(text, -18);
-			handler.AppendLiteral(" $");
-			handler.AppendFormatted(item.Quantity * item.UnitPrice, 7, "0.00");
-			stringBuilder6.AppendLine(ref handler);
+			using LocalDbContext db = new LocalDbContext();
+			Product p = db.Products.FirstOrDefault(x => x.Id == item.ProductId);
+			string text = (p != null) ? p.Name : "Producto";
+			if (text.Length > 18) text = text.Substring(0, 18);
+			sb.AppendLine($"{item.Quantity,4} {text,-18} ${item.Quantity * item.UnitPrice,7:0.00}");
 		}
-		stringBuilder.AppendLine("---------------------------------");
+		sb.AppendLine("---------------------------------");
 		if (sale.PaymentDiscountAmount > 0m)
 		{
-			stringBuilder2 = stringBuilder;
-			StringBuilder stringBuilder7 = stringBuilder2;
-			handler = new StringBuilder.AppendInterpolatedStringHandler(25, 1, stringBuilder2);
-			handler.AppendLiteral("SUBTOTAL:               $");
-			handler.AppendFormatted(sale.SubTotal, 7, "0.00");
-			stringBuilder7.AppendLine(ref handler);
-			stringBuilder2 = stringBuilder;
-			StringBuilder stringBuilder8 = stringBuilder2;
-			handler = new StringBuilder.AppendInterpolatedStringHandler(25, 1, stringBuilder2);
-			handler.AppendLiteral("DESC. PAGO:            -$");
-			handler.AppendFormatted(sale.PaymentDiscountAmount, 7, "0.00");
-			stringBuilder8.AppendLine(ref handler);
-			stringBuilder2 = stringBuilder;
-			StringBuilder stringBuilder9 = stringBuilder2;
-			handler = new StringBuilder.AppendInterpolatedStringHandler(25, 1, stringBuilder2);
-			handler.AppendLiteral("TOTAL:                  $");
-			handler.AppendFormatted(sale.TotalAmount, 7, "0.00");
-			stringBuilder9.AppendLine(ref handler);
+			sb.AppendLine($"SUBTOTAL:               ${sale.SubTotal,7:0.00}");
+			sb.AppendLine($"DESC. PAGO:            -${sale.PaymentDiscountAmount,7:0.00}");
+			sb.AppendLine($"TOTAL:                  ${sale.TotalAmount,7:0.00}");
 		}
 		else if (sale.DiscountAmount > 0m)
 		{
-			stringBuilder2 = stringBuilder;
-			StringBuilder stringBuilder10 = stringBuilder2;
-			handler = new StringBuilder.AppendInterpolatedStringHandler(25, 1, stringBuilder2);
-			handler.AppendLiteral("SUBTOTAL:               $");
-			handler.AppendFormatted(sale.SubTotal, 7, "0.00");
-			stringBuilder10.AppendLine(ref handler);
-			stringBuilder2 = stringBuilder;
-			StringBuilder stringBuilder11 = stringBuilder2;
-			handler = new StringBuilder.AppendInterpolatedStringHandler(25, 1, stringBuilder2);
-			handler.AppendLiteral("DESCUENTO:             -$");
-			handler.AppendFormatted(sale.DiscountAmount, 7, "0.00");
-			stringBuilder11.AppendLine(ref handler);
-			stringBuilder2 = stringBuilder;
-			StringBuilder stringBuilder12 = stringBuilder2;
-			handler = new StringBuilder.AppendInterpolatedStringHandler(25, 1, stringBuilder2);
-			handler.AppendLiteral("TOTAL:                  $");
-			handler.AppendFormatted(sale.TotalAmount, 7, "0.00");
-			stringBuilder12.AppendLine(ref handler);
+			sb.AppendLine($"SUBTOTAL:               ${sale.SubTotal,7:0.00}");
+			sb.AppendLine($"DESCUENTO:             -${sale.DiscountAmount,7:0.00}");
+			sb.AppendLine($"TOTAL:                  ${sale.TotalAmount,7:0.00}");
 		}
 		else
 		{
-			stringBuilder2 = stringBuilder;
-			StringBuilder stringBuilder13 = stringBuilder2;
-			handler = new StringBuilder.AppendInterpolatedStringHandler(25, 1, stringBuilder2);
-			handler.AppendLiteral("TOTAL:                  $");
-			handler.AppendFormatted(sale.TotalAmount, 7, "0.00");
-			stringBuilder13.AppendLine(ref handler);
+			sb.AppendLine($"TOTAL:                  ${sale.TotalAmount,7:0.00}");
 		}
-		stringBuilder2 = stringBuilder;
-		StringBuilder stringBuilder14 = stringBuilder2;
-		handler = new StringBuilder.AppendInterpolatedStringHandler(15, 1, stringBuilder2);
-		handler.AppendLiteral("Medio de Pago: ");
-		handler.AppendFormatted(paymentMethodName);
-		stringBuilder14.AppendLine(ref handler);
-		stringBuilder.AppendLine("=================================");
-		stringBuilder.AppendLine("      GRACIAS POR SU COMPRA");
-		stringBuilder.AppendLine("\n\n\n\n\n\n");
-		return stringBuilder.ToString();
+		
+		sb.AppendLine("Pagos:");
+		using (LocalDbContext db = new LocalDbContext())
+		{
+			foreach (var payment in sale.Payments)
+			{
+				var pm = db.PaymentMethods.FirstOrDefault(p => p.Id == payment.PaymentMethodId);
+				string pName = pm != null ? pm.Name : "Desconocido";
+				if (pName.Length > 15) pName = pName.Substring(0, 15);
+				sb.AppendLine($" - {pName,-15} ${payment.Amount,7:0.00}");
+			}
+		}
+		
+		sb.AppendLine("=================================");
+		sb.AppendLine("      GRACIAS POR SU COMPRA");
+		sb.AppendLine("\n\n\n\n\n\n");
+		return sb.ToString();
 	}
 
 	protected override void OnFormClosing(FormClosingEventArgs e)
@@ -2532,6 +2513,9 @@ caeTextoAdicional = "\n** DOCUMENTO NO VALIDO COMO FACTURA **";
 		base.OnFormClosing(e);
 	}
 }
+
+
+
 
 
 

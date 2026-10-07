@@ -347,6 +347,7 @@ namespace GestionQ.Web.Controllers.Api
                     Items = saleDto.Items.Select(i => new SaleItem
                     {
                         ProductId = i.ProductId,
+                        PresentationId = i.PresentationId,
                         Quantity = i.Quantity,
                         UnitPrice = i.UnitPrice,
                         DiscountAmount = i.DiscountAmount

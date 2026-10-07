@@ -49,6 +49,9 @@ namespace GestionQ.Domain.Entities
         public int ProductId { get; set; }
         public Product? Product { get; set; }
 
+        public int? PresentationId { get; set; }
+        public ProductPresentation? Presentation { get; set; }
+
         public decimal Quantity { get; set; }
         public decimal UnitPrice { get; set; }
         public decimal DiscountAmount { get; set; } = 0;

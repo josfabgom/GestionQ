@@ -1,4 +1,4 @@
-@model GestionQ.Web.Models.StatisticsViewModel
+﻿@model GestionQ.Web.Models.StatisticsViewModel
 @{
     ViewData["Title"] = "Ventas Diarias por Producto";
 }
@@ -112,9 +112,20 @@
                     @foreach (var item in Model.SalesByProduct)
                     {
                         <tr>
-                            <td>@item.ProductName</td>
-                            <td style="text-align: right; font-weight: bold;">@item.TotalQuantity.ToString("N2") un.</td>
-                            <td style="text-align: right; font-weight: bold; color: #10b981;">@item.TotalAmount.ToString("C")</td>
+                            <td style="vertical-align: top;">
+                                <strong>@item.ProductName</strong>
+                                @if (item.Presentations != null && item.Presentations.Count > 0)
+                                {
+                                    <ul style="margin: 0.5rem 0 0 0; padding-left: 1.2rem; font-size: 0.85rem; color: #94a3b8; list-style-type: square;">
+                                        @foreach (var p in item.Presentations)
+                                        {
+                                            <li>@p.PresentationName: @(p.TotalPackages > 0 ? $"{p.TotalPackages:0.##} Bulto/s ({p.TotalUnits:0.##} un. base)" : $"{p.TotalUnits:0.##} un.")</li>
+                                        }
+                                    </ul>
+                                }
+                            </td>
+                            <td style="text-align: right; font-weight: bold; vertical-align: top;">@item.TotalQuantity.ToString("0.##") un.</td>
+                            <td style="text-align: right; font-weight: bold; color: #10b981; vertical-align: top;">@item.TotalAmount.ToString("C")</td>
                         </tr>
                     }
                 </tbody>
