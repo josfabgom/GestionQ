@@ -1,4 +1,4 @@
-@model GestionQ.Web.Models.ProductViewModel
+﻿@model GestionQ.Web.Models.ProductViewModel
 
 @{
     ViewData["Title"] = "Editar Producto";
@@ -39,28 +39,28 @@
                         </div>
                         <span asp-validation-for="Barcode" class="text-danger"></span>
                         
-                        <button type="button" class="btn-secondary" style="margin-top: 0.5rem; width: 100%; display: flex; justify-content: center; align-items: center; gap: 0.5rem;" onclick="openPresentacionesModal()">
-                            <i class="fas fa-box-open"></i> Presentaciones / Bultos
-                        </button>
+                        
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label asp-for="Name" class="control-label"></label>
-                    <input asp-for="Name" class="form-control" />
-                    <span asp-validation-for="Name" class="text-danger"></span>
-                </div>
-
-                <div class="form-group">
-                    <label asp-for="ShortDescriptionScale" class="control-label"></label>
-                    <div style="display: flex; gap: 0.5rem;">
-                        <input asp-for="ShortDescriptionScale" class="form-control" maxlength="24" placeholder="Si se deja vacío, se utilizará el nombre principal en la balanza" />
-                        <button type="button" class="btn btn-secondary" onclick="generateShortName()" title="Generar Nombre Corto">
-                            <i class="fas fa-magic"></i>
-                        </button>
+                                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label asp-for="Name" class="control-label"></label>
+                        <input asp-for="Name" class="form-control" />
+                        <span asp-validation-for="Name" class="text-danger"></span>
                     </div>
-                    <span asp-validation-for="ShortDescriptionScale" class="text-danger"></span>
-                    <small class="form-text text-muted" style="opacity: 0.7; font-size: 0.8rem;">Máx 24 caracteres. Para imprimir en etiquetas y exportar a balanza.</small>
+
+                    <div class="form-group">
+                        <label asp-for="ShortDescriptionScale" class="control-label"></label>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <input asp-for="ShortDescriptionScale" class="form-control" maxlength="24" placeholder="Opcional para balanza" />
+                            <button type="button" class="btn btn-secondary" onclick="generateShortName()" title="Generar Nombre Corto">
+                                <i class="fas fa-magic"></i>
+                            </button>
+                        </div>
+                        <span asp-validation-for="ShortDescriptionScale" class="text-danger"></span>
+                        <small class="form-text text-muted" style="opacity: 0.7; font-size: 0.75rem;">Máx 24 caract.</small>
+                    </div>
                 </div>
 
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem;">
@@ -135,27 +135,26 @@
                     </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem;">
-                    <div class="form-group">
+                                <div style="display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 1rem; align-items: end;">
+                    <div class="form-group" style="margin-bottom: 0;">
                         <label asp-for="Stock" class="control-label"></label>
-                        <input asp-for="Stock" type="number" class="form-control" />
+                        <input asp-for="Stock" type="number" class="form-control" style="height: 44px;" />
                     </div>
-                    <div class="form-group">
+                    <div class="form-group" style="margin-bottom: 0;">
                         <label asp-for="MinimumStock" class="control-label"></label>
-                        <input asp-for="MinimumStock" type="number" class="form-control" />
+                        <input asp-for="MinimumStock" type="number" class="form-control" style="height: 44px;" />
                         <span asp-validation-for="MinimumStock" class="text-danger"></span>
                     </div>
-                </div>
-
-                <div class="form-group">
-                    <label asp-for="Price" class="control-label">Precio de Venta Final ($)</label>
-                    <div style="display: flex; gap: 0.5rem; align-items: stretch;">
-                        <input asp-for="Price" type="number" class="form-control" id="Price" style="background: rgba(96, 165, 250, 0.15); border-color: var(--accent); font-weight: 700; font-size: 1.5rem; color: #fff; flex: 1;" step="0.01" oninput="calculateMarginFromPrice()" />
-                        <button type="button" class="btn-secondary" onclick="openPriceWizard()" style="padding: 0 1rem; white-space: nowrap;" title="Calcular desde Costos">
-                            ⚙️ Estructura
-                        </button>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label asp-for="Price" class="control-label">Precio de Venta Final ($)</label>
+                        <div style="display: flex; gap: 0.5rem; align-items: stretch;">
+                            <input asp-for="Price" type="number" class="form-control" id="Price" style="background: rgba(96, 165, 250, 0.15); border-color: var(--accent); font-weight: 700; font-size: 1.25rem; color: #fff; flex: 1; height: 44px;" step="0.01" oninput="calculateMarginFromPrice()" />
+                            <button type="button" class="btn-secondary" onclick="openPriceWizard()" style="padding: 0 1rem; white-space: nowrap; height: 44px;" title="Calcular desde Costos">
+                                ⚙️ Estructura
+                            </button>
+                        </div>
+                        <span asp-validation-for="Price" class="text-danger"></span>
                     </div>
-                    <span asp-validation-for="Price" class="text-danger"></span>
                 </div>
 
                 <!-- Hidden inputs to preserve model binding -->
@@ -190,17 +189,70 @@
             </div>
         </div>
 
-        <div id="presentationsModal" class="modal-overlay" style="display: none;">
-            <div class="glass-panel modal-content" style="max-width: 900px; width: 95%;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                    <h2 class="page-title" style="margin: 0;"><i class="fas fa-box-open"></i> Presentaciones / Bultos</h2>
-                    <button type="button" style="background: transparent; border: none; font-size: 1.5rem; color: var(--text-muted); cursor: pointer;" onclick="closePresentacionesModal()">&times;</button>
+                <!-- Price Structure Wizard Modal (Integrated) -->
+        <div id="priceWizard" class="modal-overlay" style="display: none;">
+            <div class="glass-panel modal-content" style="max-width: 1200px; width: 95%;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <h2 class="page-title" style="margin: 0;">Estructura de Precio</h2>
+                    <button type="button" style="background: transparent; border: none; font-size: 1.5rem; color: var(--text-muted); cursor: pointer;" onclick="closePriceWizard()">&times;</button>
                 </div>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                    <p style="opacity: 0.7; margin: 0;">Configura las presentaciones para venta por bulto.</p>
-                    <button type="button" class="btn-secondary" onclick="addPresentation()">+ Agregar Presentaci&oacute;n</button>
-                </div>
-                <div class="table-container" style="overflow-x: auto; max-height: 60vh; overflow-y: auto;">
+                
+                                <div>
+                    <!-- Top Section: Price Structure -->
+                    <h3 class="page-title" style="margin-top: 0; font-size: 1.1rem; color: var(--text-muted); margin-bottom: 0.2rem;"><i class="fas fa-tag"></i> Precio Unitario Base</h3>
+                    <p style="opacity: 0.7; margin-top: 0; margin-bottom: 1rem; font-size: 0.85rem;">Configure los costos y márgenes para calcular el precio final automáticamente.</p>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; align-items: end; background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 2rem;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="control-label" style="font-size: 0.8rem; opacity: 0.8;">Alícuota IVA</label>
+                            <select id="WizardVatRateId" class="form-control" onchange="calculateWizard()">
+                                <option value="" data-rate="0">Seleccione...</option>
+                                @foreach (var v in ViewBag.VatRates as IEnumerable<GestionQ.Domain.Entities.VatRate>)
+                                {
+                                    <option value="@v.Id" data-rate="@v.Rate">@v.Name (@v.Rate%)</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="control-label" style="font-size: 0.8rem; opacity: 0.8;">Costo Base ($)</label>
+                            <input type="number" id="WizardBaseCost" class="form-control" step="0.01" value="0.00" oninput="calculateWizard()" />
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="control-label" style="font-size: 0.8rem; opacity: 0.8;">Margen de Ganancia (%)</label>
+                            <input type="number" id="WizardProfitMargin" class="form-control" step="0.1" value="0.0" oninput="calculateWizard()" />
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="control-label" style="font-size: 0.8rem; opacity: 0.8;">Impuesto Interno Fijo ($)</label>
+                            <input type="number" id="WizardInternalTax" class="form-control" step="0.01" value="0.00" oninput="calculateWizard()" />
+                        </div>
+
+                        <div style="background: rgba(96, 165, 250, 0.1); border: 1px solid var(--accent); padding: 0.5rem 1rem; border-radius: 8px; display: flex; flex-direction: column; justify-content: center; min-width: 180px;">
+                            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; opacity: 0.8; line-height: 1;">
+                                <span>Subtotal (Costo + IVA)</span>
+                                <span id="wizardSubtotal">$0,00</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 1.1rem; color: var(--accent); margin-top: 0.4rem; line-height: 1;">
+                                <span>Precio Calculado</span>
+                                <span id="wizardFinal">$0,00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bottom Section: Presentations -->
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <div style="display: flex; flex-direction: column;">
+                                <h3 class="page-title" style="margin: 0; font-size: 1.25rem;">
+                                    <i class="fas fa-box-open" style="color: var(--accent); margin-right: 0.5rem;"></i> Presentaciones / Bultos
+                                </h3>
+                                <p style="opacity: 0.7; margin: 0; font-size: 0.85rem; margin-top: 0.2rem;">Configura las presentaciones para venta por bulto.</p>
+                            </div>
+                            <button type="button" class="btn-secondary" onclick="addPresentation()" style="padding: 0.4rem 1rem; font-size: 0.85rem; height: fit-content;">+ Agregar Presentación</button>
+                        </div>
+                        
+<div class="table-container" style="overflow-x: auto; max-height: 60vh; overflow-y: auto; background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem; border: 1px solid rgba(255,255,255,0.05);">
                     <div class="table-responsive">
                       <table class="data-table presentations-table" id="presentationsTable" style="font-size: 0.85rem;">
                           <thead>
@@ -249,8 +301,11 @@
                           </tbody>
                       </table></div>
                 </div>
-                <div style="display: flex; justify-content: flex-end; margin-top: 1.5rem;">
-                    <button type="button" class="btn-primary" onclick="closePresentacionesModal()">Aceptar</button>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1.5rem;">
+                    <button type="button" class="btn-secondary" onclick="closePriceWizard()" style="min-width: 120px;">Cancelar</button>
+                    <button type="button" class="btn-primary" onclick="applyWizard()" style="min-width: 150px;">Aplicar Precio</button>
                 </div>
             </div>
         </div>
@@ -262,57 +317,10 @@
     </form>
 </div>
 
-<!-- Price Structure Wizard Modal -->
-<div id="priceWizard" class="modal-overlay" style="display: none;">
-    <div class="glass-panel modal-content" style="max-width: 500px; width: 90%;">
-        <h2 class="page-title">Estructura de Precio</h2>
-        <p style="opacity: 0.7; margin-bottom: 2rem;">Configure los costos y márgenes para calcular el precio final automáticamente.</p>
-        
-        <div class="form-group">
-            <label class="control-label">Alícuota IVA</label>
-            <select id="WizardVatRateId" class="form-control" onchange="calculateWizard()">
-                <option value="" data-rate="0">Seleccione...</option>
-                @foreach (var v in ViewBag.VatRates as IEnumerable<GestionQ.Domain.Entities.VatRate>)
-                {
-                    <option value="@v.Id" data-rate="@v.Rate">@v.Name (@v.Rate%)</option>
-                }
-            </select>
-        </div>
-
-        <div class="form-group">
-            <label class="control-label">Costo Base ($)</label>
-            <input type="number" id="WizardBaseCost" class="form-control" step="0.01" value="0.00" oninput="calculateWizard()" />
-        </div>
-
-        <div class="form-group">
-            <label class="control-label">Margen de Ganancia (%)</label>
-            <input type="number" id="WizardProfitMargin" class="form-control" step="0.1" value="0.0" oninput="calculateWizard()" />
-        </div>
-
-        <div class="form-group">
-            <label class="control-label">Impuesto Interno Fijo ($)</label>
-            <input type="number" id="WizardInternalTax" class="form-control" step="0.01" value="0.00" oninput="calculateWizard()" />
-        </div>
-
-        <div style="background: rgba(96, 165, 250, 0.1); border: 1px solid var(--accent); padding: 1rem; border-radius: 8px; margin: 2rem 0;">
-            <div style="display: flex; justify-content: space-between; font-size: 0.9rem; opacity: 0.8;">
-                <span>Subtotal (Costo + IVA)</span>
-                <span id="wizardSubtotal">$0,00</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 1.2rem; margin-top: 0.5rem; color: var(--accent);">
-                <span>Precio Calculado</span>
-                <span id="wizardFinal">$0,00</span>
-            </div>
-        </div>
-
-        <div style="display: flex; gap: 1rem;">
-            <button type="button" class="btn-secondary" onclick="closePriceWizard()" style="flex: 1;">Cancelar</button>
-            <button type="button" class="btn-primary" onclick="applyWizard()" style="flex: 1;">Aplicar Precio</button>
-        </div>
-    </div>
-</div>
-
 <style>
+    .form-group {
+        margin-bottom: 0.75rem;
+    }
     .modal-overlay {
         position: fixed; top: 0; left: 0; right: 0; bottom: 0;
         background: rgba(0,0,0,0.8); backdrop-filter: blur(10px);
@@ -374,14 +382,6 @@
 
         function closePriceWizard() {
             document.getElementById('priceWizard').style.display = 'none';
-        }
-
-        function openPresentacionesModal() {
-            document.getElementById('presentationsModal').style.display = 'flex';
-        }
-
-        function closePresentacionesModal() {
-            document.getElementById('presentationsModal').style.display = 'none';
         }
 
         function calculateWizard() {
@@ -640,3 +640,13 @@
         window.addEventListener('DOMContentLoaded', () => { setTimeout(calculateAllPresRows, 500); });
 </script>
 }
+
+
+
+
+
+
+
+
+
+
