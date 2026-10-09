@@ -380,7 +380,12 @@
             document.getElementById('priceWizard').style.display = 'flex';
         }
 
-        function closePriceWizard() {
+                function closePriceWizard() {
+            document.getElementById('WizardVatRateId').value = document.getElementById('VatRateId').value || "";
+            document.getElementById('WizardBaseCost').value = document.getElementById('BaseCost').value || "0.00";
+            document.getElementById('WizardProfitMargin').value = document.getElementById('ProfitMargin').value || "0.0";
+            document.getElementById('WizardInternalTax').value = document.getElementById('InternalTax').value || "0.00";
+            calculateWizard();
             document.getElementById('priceWizard').style.display = 'none';
         }
 
@@ -398,6 +403,7 @@
 
             document.getElementById('wizardSubtotal').innerText = '$' + costWithIva.toLocaleString('es-AR', { minimumFractionDigits: 2 });
             document.getElementById('wizardFinal').innerText = '$' + finalPrice.toLocaleString('es-AR', { minimumFractionDigits: 2 });
+            calculateAllPresRows();
             
             return finalPrice;
         }
@@ -420,7 +426,7 @@
             const tax = parseFloat(document.getElementById('InternalTax').value) || 0;
             const finalPrice = parseFloat(document.getElementById('Price').value) || 0;
             
-            const vatRateId = document.getElementById('VatRateId').value;
+            const vatRateId = document.getElementById('WizardVatRateId').value;
             const vatSelect = document.getElementById('WizardVatRateId');
             let vatRate = 0;
             
@@ -582,8 +588,8 @@
         function calculatePresRow(elem) {
             const row = elem.closest('tr');
             if (!row) return;
-            const unitCost = parseFloat(document.getElementById('BaseCost').value) || 0;
-            const vatRateId = document.getElementById('VatRateId').value;
+            const unitCost = parseFloat(document.getElementById('WizardBaseCost').value) || 0;
+            const vatRateId = document.getElementById('WizardVatRateId').value;
             const vatSelect = document.getElementById('WizardVatRateId');
             let unitVatRate = 0;
             if (vatSelect && vatRateId) {
@@ -637,9 +643,18 @@
         }
         document.getElementById('BaseCost').addEventListener('input', calculateAllPresRows);
         document.getElementById('VatRateId').addEventListener('change', calculateAllPresRows);
-        window.addEventListener('DOMContentLoaded', () => { setTimeout(calculateAllPresRows, 500); });
+                window.addEventListener('DOMContentLoaded', () => { 
+            document.getElementById('WizardVatRateId').value = document.getElementById('VatRateId').value || "";
+            document.getElementById('WizardBaseCost').value = document.getElementById('BaseCost').value || "0.00";
+            document.getElementById('WizardProfitMargin').value = document.getElementById('ProfitMargin').value || "0.0";
+            document.getElementById('WizardInternalTax').value = document.getElementById('InternalTax').value || "0.00";
+            calculateWizard();
+            setTimeout(calculateAllPresRows, 500); 
+        });
 </script>
 }
+
+
 
 
 
