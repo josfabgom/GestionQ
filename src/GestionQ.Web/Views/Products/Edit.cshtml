@@ -643,7 +643,20 @@
         }
         document.getElementById('BaseCost').addEventListener('input', calculateAllPresRows);
         document.getElementById('VatRateId').addEventListener('change', calculateAllPresRows);
-                window.addEventListener('DOMContentLoaded', () => { 
+                window.addEventListener('DOMContentLoaded', () => {
+        // Intercept Enter key in price wizard to move to next input instead of submitting
+        document.getElementById('priceWizard').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                // Find all focusable inputs in the wizard
+                const focusable = Array.from(this.querySelectorAll('input, select, button:not([style*="display: none"])'))
+                                       .filter(el => !el.disabled && el.tabIndex !== -1);
+                const index = focusable.indexOf(document.activeElement);
+                if (index > -1 && index < focusable.length - 1) {
+                    focusable[index + 1].focus();
+                }
+            }
+        }); 
             document.getElementById('WizardVatRateId').value = document.getElementById('VatRateId').value || "";
             document.getElementById('WizardBaseCost').value = document.getElementById('BaseCost').value || "0.00";
             document.getElementById('WizardProfitMargin').value = document.getElementById('ProfitMargin').value || "0.0";
@@ -653,6 +666,7 @@
         });
 </script>
 }
+
 
 
 
