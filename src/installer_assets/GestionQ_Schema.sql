@@ -2282,6 +2282,56 @@ BEGIN
     VALUES (N'20260923141740_AddDownloadGuidToInvoice', N'9.0.15');
 END;
 
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006234507_AddPresentationIdToSaleItem'
+)
+BEGIN
+    ALTER TABLE [SaleItems] ADD [PresentationId] int NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006234507_AddPresentationIdToSaleItem'
+)
+BEGIN
+    CREATE INDEX [IX_SaleItems_PresentationId] ON [SaleItems] ([PresentationId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006234507_AddPresentationIdToSaleItem'
+)
+BEGIN
+    ALTER TABLE [SaleItems] ADD CONSTRAINT [FK_SaleItems_ProductPresentations_PresentationId] FOREIGN KEY ([PresentationId]) REFERENCES [ProductPresentations] ([Id]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006234507_AddPresentationIdToSaleItem'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261006234507_AddPresentationIdToSaleItem', N'9.0.15');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261007172319_AddProfitMarginToPresentations'
+)
+BEGIN
+    ALTER TABLE [ProductPresentations] ADD [ProfitMargin] decimal(18,2) NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261007172319_AddProfitMarginToPresentations'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261007172319_AddProfitMarginToPresentations', N'9.0.15');
+END;
+
 COMMIT;
 GO
 

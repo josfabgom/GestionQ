@@ -9,14 +9,16 @@ taskkill /F /IM GestionQ.Web.exe /T 2> $null
 taskkill /F /IM GestionQ.ServerMonitor.exe /T 2> $null
 
 Write-Host "Compilando proyecto..."
-Set-Location "d:\Antigravity Proyectos\GestionQ"
+Set-Location $PSScriptRoot
 dotnet build "src\GestionQ.Web\GestionQ.Web.csproj"
 
 Write-Host "Iniciando servicio..."
 Start-Service -Name "GestionQ_Web_Service"
 
-Write-Host "Iniciando Monitor..."
-Start-Process "src\GestionQ.ServerMonitor\bin\Debug\net9.0-windows\GestionQ.ServerMonitor.exe"
+if (Test-Path "src\GestionQ.ServerMonitor\bin\Debug\net9.0-windows\GestionQ.ServerMonitor.exe") {
+    Write-Host "Iniciando Monitor..."
+    Start-Process "src\GestionQ.ServerMonitor\bin\Debug\net9.0-windows\GestionQ.ServerMonitor.exe"
+}
 
 Write-Host "Proceso completado. Esta ventana se cerrara en 5 segundos."
 Start-Sleep -Seconds 5

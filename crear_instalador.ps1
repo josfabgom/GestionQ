@@ -58,6 +58,8 @@ Remove-Item $PayloadTmp -Recurse -Force | Out-Null
 # 5. Copiar dependencias SQL a los recursos del instalador
 Write-Host "Copiando dependencias SQL a los recursos del WPF..." -ForegroundColor Yellow
 if (Test-Path $SqlBootstrapper) { Copy-Item $SqlBootstrapper -Destination $InstallerResources -Force }
+if (Test-Path "$AssetsFolder\GestionQ_Schema.sql") { Copy-Item "$AssetsFolder\GestionQ_Schema.sql" -Destination $InstallerResources -Force }
+if (Test-Path "$AssetsFolder\GestionQ_Datos_Basicos.sql") { Copy-Item "$AssetsFolder\GestionQ_Datos_Basicos.sql" -Destination $InstallerResources -Force }
 
 # 6. Publicar el Instalador WPF (Instalador Maestro)
 Write-Host "Compilando Instalador WPF GrÃƒÂ¡fico..." -ForegroundColor Yellow

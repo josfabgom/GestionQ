@@ -1,4 +1,4 @@
-@model GestionQ.Web.Models.StatisticsViewModel
+﻿@model GestionQ.Web.Models.StatisticsViewModel
 @{
     ViewData["Title"] = "Estadísticas Diarias";
 }
@@ -15,14 +15,14 @@
         <a asp-action="ProductChanges" class="btn-primary">
             <i class="fa-solid fa-boxes-packing"></i> Reporte Cambios
         </a>
-        <a asp-action="ExportProfitabilityExcel" asp-route-startDate="@Model.StartDate.ToString("yyyy-MM-dd")" asp-route-endDate="@Model.EndDate.ToString("yyyy-MM-dd")" class="btn-primary" style="background: #10b981;">
-            <i class="fa-solid fa-file-excel"></i> Excel (Ganancias)
+        <a asp-action="Profitability" asp-route-startDate="@Model.StartDate.ToString("yyyy-MM-dd")" asp-route-endDate="@Model.EndDate.ToString("yyyy-MM-dd")" class="btn-primary" style="background: #10b981;">
+            <i class="fa-solid fa-chart-line"></i> Reporte Ganancias
         </a>
-        <a asp-action="ExportLowStockExcel" class="btn-primary" style="background: #f59e0b;">
-            <i class="fa-solid fa-file-excel"></i> Excel (Alerta Stock)
+        <a asp-action="LowStockAlert" class="btn-primary" style="background: #f59e0b;">
+            <i class="fa-solid fa-triangle-exclamation"></i> Alerta Stock
         </a>
-        <a asp-action="ExportStagnantExcel" asp-route-days="30" class="btn-primary" style="background: #ef4444;">
-            <i class="fa-solid fa-file-excel"></i> Excel (Baja Rotación)
+        <a asp-action="StagnantStock" asp-route-days="30" class="btn-primary" style="background: #ef4444;">
+            <i class="fa-solid fa-clock-rotate-left"></i> Baja Rotación
         </a>
     </div>
 </div>

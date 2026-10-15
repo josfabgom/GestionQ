@@ -1,0 +1,239 @@
+﻿@model GestionQ.Web.Models.StagnantStockReportViewModel
+@{
+    ViewData["Title"] = "Reporte de Baja Rotación (Stock Estancado)";
+}
+
+<div class="top-bar no-print" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+    <div class="top-bar-title" style="display: flex; align-items: center; gap: 0.85rem;">
+        <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); display: flex; align-items: center; justify-content: center; font-size: 1.3rem; color: #ef4444;">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+        </div>
+        <h1 style="margin: 0; font-size: 1.7rem; font-weight: 700; color: #f8fafc;">@ViewData["Title"]</h1>
+    </div>
+    <div class="top-bar-actions">
+        <a asp-action="Index" class="btn-back">
+            <i class="fa-solid fa-arrow-left"></i>
+            <span>Volver a Estadísticas</span>
+        </a>
+    </div>
+</div>
+
+<div class="glass-panel no-print" style="margin-bottom: 1.5rem;">
+    <form asp-action="StagnantStock" method="get" style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+        <div class="form-group" style="margin: 0;">
+            <label for="days">Días sin registrar ventas:</label>
+            <input type="number" id="days" name="days" class="form-control" value="@Model.Days" min="1" max="999" style="width: 120px;" required />
+        </div>
+        <button type="submit" class="btn-primary" style="padding: 0.5rem 1rem;">
+            <i class="fa-solid fa-filter"></i> Filtrar
+        </button>
+
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <a href="?days=15" class="btn-secondary @(Model.Days == 15 ? "active" : "")" style="padding: 0.5rem;">15 Días</a>
+            <a href="?days=30" class="btn-secondary @(Model.Days == 30 ? "active" : "")" style="padding: 0.5rem;">30 Días</a>
+            <a href="?days=60" class="btn-secondary @(Model.Days == 60 ? "active" : "")" style="padding: 0.5rem;">60 Días</a>
+            <a href="?days=90" class="btn-secondary @(Model.Days == 90 ? "active" : "")" style="padding: 0.5rem;">90 Días</a>
+            <a href="?days=180" class="btn-secondary @(Model.Days == 180 ? "active" : "")" style="padding: 0.5rem;">180 Días</a>
+        </div>
+
+        <div style="margin-left: auto; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <button type="button" class="btn-primary" style="padding: 0.5rem 1rem; background: #3b82f6;" onclick="window.print()">
+                <i class="fa-solid fa-file-pdf"></i> Imprimir / PDF
+            </button>
+            <a asp-action="ExportStagnantExcel" asp-route-days="@Model.Days" class="btn-primary" style="padding: 0.5rem 1rem; background: #10b981;">
+                <i class="fa-solid fa-file-excel"></i> Descargar Excel
+            </a>
+        </div>
+    </form>
+</div>
+
+<!-- Header visible only when printing -->
+<div class="print-header" style="display: none;">
+    <h2 style="margin: 0 0 5px 0;">Reporte de Baja Rotación (Stock Estancado)</h2>
+    <p style="margin: 0 0 15px 0; color: #555;">
+        <strong>Criterio:</strong> Productos con stock sin ventas en los últimos @Model.Days días |
+        <strong>Generado:</strong> @DateTime.Now.ToString("dd/MM/yyyy HH:mm")
+    </p>
+</div>
+
+<!-- Tarjetas de Resumen KPI -->
+<div class="kpi-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+    <div class="glass-panel kpi-card" style="text-align: center; padding: 1.25rem;">
+        <div class="no-print" style="font-size: 2rem; color: #ef4444; margin-bottom: 0.25rem;">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+        </div>
+        <div style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 0.25rem;">Productos sin Movimiento</div>
+        <div style="font-size: 1.5rem; font-weight: bold; color: #ef4444;">@Model.TotalProductsCount</div>
+    </div>
+
+    <div class="glass-panel kpi-card" style="text-align: center; padding: 1.25rem;">
+        <div class="no-print" style="font-size: 2rem; color: #f59e0b; margin-bottom: 0.25rem;">
+            <i class="fa-solid fa-boxes-stacked"></i>
+        </div>
+        <div style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 0.25rem;">Unidades Inmovilizadas</div>
+        <div style="font-size: 1.5rem; font-weight: bold; color: #f59e0b;">@Model.TotalStagnantUnits.ToString("0.##") un.</div>
+    </div>
+
+    <div class="glass-panel kpi-card" style="text-align: center; padding: 1.25rem;">
+        <div class="no-print" style="font-size: 2rem; color: #e11d48; margin-bottom: 0.25rem;">
+            <i class="fa-solid fa-vault"></i>
+        </div>
+        <div style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 0.25rem;">Capital Inmovilizado Total</div>
+        <div style="font-size: 1.5rem; font-weight: bold; color: #e11d48;">@Model.TotalTiedUpCapital.ToString("C")</div>
+    </div>
+</div>
+
+<div class="glass-panel">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+        <h2 style="margin: 0; display: flex; align-items: center; gap: 0.5rem; font-size: 1.25rem;">
+            <i class="fa-solid fa-list-ul"></i> Detalle de Mercadería sin Rotación
+            <span style="font-size: 0.9rem; font-weight: normal; color: var(--text-secondary);">(Últimos @Model.Days días)</span>
+        </h2>
+        <div class="no-print" style="position: relative;">
+            <input type="text" id="stagnantStockSearch" class="form-control" placeholder="Buscar producto o código..." style="padding-left: 2rem; width: 300px;" onkeyup="filterReportTable('stagnantStockSearch', 'stagnantStockTable')" />
+            <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: var(--text-secondary); pointer-events: none;"></i>
+        </div>
+    </div>
+
+    @if (Model.Items.Any())
+    {
+        <div class="table-responsive">
+            <table class="table" id="stagnantStockTable">
+                <thead>
+                    <tr>
+                        <th style="width: 120px;">Código</th>
+                        <th>Producto</th>
+                        <th>Categoría / Rubro</th>
+                        <th style="text-align: right;">Stock Estancado</th>
+                        <th style="text-align: right;">Costo Unit.</th>
+                        <th style="text-align: right;">Capital Inmovilizado</th>
+                        <th style="text-align: right;">Precio Venta</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.Items)
+                    {
+                        <tr>
+                            <td style="font-family: monospace; font-size: 0.9rem;">
+                                @(!string.IsNullOrEmpty(item.Barcode) ? item.Barcode : item.InternalCode.ToString())
+                            </td>
+                            <td>
+                                <strong>@item.ProductName</strong>
+                            </td>
+                            <td>
+                                <span style="font-size: 0.85rem; color: var(--text-secondary);">@item.CategoryName</span>
+                            </td>
+                            <td style="text-align: right; font-weight: bold; color: #f59e0b;">
+                                @item.Stock.ToString("0.##")
+                            </td>
+                            <td style="text-align: right;">@item.UnitCost.ToString("C")</td>
+                            <td style="text-align: right; font-weight: bold; color: #ef4444;">
+                                @item.TiedUpCapital.ToString("C")
+                            </td>
+                            <td style="text-align: right; color: var(--text-secondary);">@item.Price.ToString("C")</td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr style="font-weight: bold; border-top: 2px solid var(--border-color, #475569); background: rgba(255,255,255,0.03);">
+                        <td colspan="3" style="text-align: right;">TOTALES:</td>
+                        <td style="text-align: right; color: #f59e0b;">@Model.TotalStagnantUnits.ToString("0.##") un.</td>
+                        <td></td>
+                        <td style="text-align: right; color: #ef4444;">@Model.TotalTiedUpCapital.ToString("C")</td>
+                        <td style="text-align: right;">@Model.TotalProductsCount arts.</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="empty-state">
+            <i class="fa-solid fa-circle-check" style="color: #10b981;"></i>
+            <p>¡Excelente! No hay mercadería inmovilizada en el período seleccionado.</p>
+        </div>
+    }
+</div>
+
+<script>
+    function filterReportTable(inputId, tableId) {
+        var input = document.getElementById(inputId);
+        var filter = input.value.toLowerCase();
+        var table = document.getElementById(tableId);
+        var tr = table.getElementsByTagName("tbody")[0].getElementsByTagName("tr");
+
+        for (var i = 0; i < tr.length; i++) {
+            var text = tr[i].innerText.toLowerCase();
+            tr[i].style.display = text.indexOf(filter) > -1 ? "" : "none";
+        }
+    }
+</script>
+
+<style>
+    @@media print {
+        @@page {
+            size: A4 portrait;
+            margin: 1cm;
+        }
+        * {
+            color: black !important;
+            text-shadow: none !important;
+            box-shadow: none !important;
+        }
+        body, html {
+            background: white !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        .top-bar, .no-print, .sidebar, .sidebar-toggle-btn {
+            display: none !important;
+        }
+        .print-header {
+            display: block !important;
+        }
+        .kpi-container {
+            display: flex !important;
+            justify-content: space-around !important;
+            margin-bottom: 15px !important;
+            border: 1px solid #ccc !important;
+            padding: 8px !important;
+        }
+        .kpi-card {
+            border: none !important;
+            padding: 4px !important;
+            text-align: center !important;
+        }
+        .main-content, .container, .container-fluid {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+        }
+        .glass-panel {
+            background: transparent !important;
+            border: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+        .table-responsive {
+            overflow: visible !important;
+            width: 100% !important;
+        }
+        table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+            font-size: 9pt !important;
+        }
+        th, td {
+            border: 1px solid #777 !important;
+            padding: 4px 6px !important;
+            word-wrap: break-word;
+        }
+        th {
+            background: #eee !important;
+        }
+        tr {
+            page-break-inside: avoid;
+        }
+    }
+</style>

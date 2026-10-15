@@ -1,0 +1,684 @@
+@model GestionQ.Web.Models.ProfitabilityViewModel
+@{
+    ViewData["Title"] = "Reporte de Ganancias y Rentabilidad";
+}
+
+<div class="top-bar no-print" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+    <div class="top-bar-title" style="display: flex; align-items: center; gap: 0.85rem;">
+        <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); display: flex; align-items: center; justify-content: center; font-size: 1.3rem; color: #10b981;">
+            <i class="fa-solid fa-chart-line"></i>
+        </div>
+        <h1 style="margin: 0; font-size: 1.7rem; font-weight: 700; color: #f8fafc;">@ViewData["Title"]</h1>
+    </div>
+    <div class="top-bar-actions">
+        <a asp-action="Index" asp-route-startDate="@Model.StartDate.ToString("yyyy-MM-dd")" asp-route-endDate="@Model.EndDate.ToString("yyyy-MM-dd")" class="btn-back">
+            <i class="fa-solid fa-arrow-left"></i>
+            <span>Volver a Estadísticas</span>
+        </a>
+    </div>
+</div>
+
+<div class="glass-panel no-print" style="margin-bottom: 1.5rem;">
+    <form asp-action="Profitability" method="get" style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+        <div class="form-group" style="margin: 0;">
+            <label for="startDate">Desde:</label>
+            <input type="date" id="startDate" name="startDate" class="form-control" value="@Model.StartDate.ToString("yyyy-MM-dd")" required />
+        </div>
+        <div class="form-group" style="margin: 0;">
+            <label for="endDate">Hasta:</label>
+            <input type="date" id="endDate" name="endDate" class="form-control" value="@Model.EndDate.ToString("yyyy-MM-dd")" required />
+        </div>
+        <button type="submit" class="btn-primary" style="padding: 0.5rem 1rem;">
+            <i class="fa-solid fa-filter"></i> Filtrar
+        </button>
+
+        <div style="display: flex; gap: 0.5rem;">
+            <a href="?startDate=@(DateTime.Today.ToString("yyyy-MM-dd"))&endDate=@(DateTime.Today.ToString("yyyy-MM-dd"))" class="btn-secondary" style="padding: 0.5rem;">Hoy</a>
+            <a href="?startDate=@(DateTime.Today.AddDays(-7).ToString("yyyy-MM-dd"))&endDate=@(DateTime.Today.ToString("yyyy-MM-dd"))" class="btn-secondary" style="padding: 0.5rem;">7 Días</a>
+            <a href="?startDate=@(new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1).ToString("yyyy-MM-dd"))&endDate=@(DateTime.Today.ToString("yyyy-MM-dd"))" class="btn-secondary" style="padding: 0.5rem;">Mes</a>
+        </div>
+
+        <div style="margin-left: auto; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <button type="button" class="btn-primary" style="padding: 0.5rem 1rem; background: #3b82f6;" onclick="window.print()">
+                <i class="fa-solid fa-file-pdf"></i> Imprimir / PDF
+            </button>
+            <a asp-action="ExportProfitabilityExcel" asp-route-startDate="@Model.StartDate.ToString("yyyy-MM-dd")" asp-route-endDate="@Model.EndDate.ToString("yyyy-MM-dd")" class="btn-primary" style="padding: 0.5rem 1rem; background: #10b981;">
+                <i class="fa-solid fa-file-excel"></i> Descargar Excel
+            </a>
+        </div>
+    </form>
+</div>
+
+<!-- Header visible only when printing -->
+<div class="print-header" style="display: none;">
+    <h2 style="margin: 0 0 5px 0;">Reporte de Ganancias y Rentabilidad</h2>
+    <p style="margin: 0 0 15px 0; color: #555;">
+        <strong>Período:</strong> @Model.StartDate.ToString("dd/MM/yyyy") al @Model.EndDate.ToString("dd/MM/yyyy") |
+        <strong>Generado:</strong> @DateTime.Now.ToString("dd/MM/yyyy HH:mm")
+    </p>
+</div>
+
+@if (Model.ItemsWithoutCostCount > 0)
+{
+    <div class="glass-panel no-print" style="margin-bottom: 1.5rem; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.35); padding: 1rem 1.25rem; display: flex; align-items: center; gap: 1rem; border-radius: 12px;">
+        <div style="width: 42px; height: 42px; border-radius: 10px; background: rgba(239, 68, 68, 0.2); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: #ef4444; flex-shrink: 0;">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+        <div style="flex: 1;">
+            <h4 style="margin: 0 0 0.25rem 0; color: #fca5a5; font-size: 1.05rem; font-weight: 600;">
+                Atención: @Model.ItemsWithoutCostCount @(Model.ItemsWithoutCostCount == 1 ? "artículo vendido figura" : "artículos vendidos figuran") con Costo $0.00
+            </h4>
+            <div style="color: #cbd5e1; font-size: 0.88rem; line-height: 1.4;">
+                Al no tener costo base de compra registrado, la ganancia se calcula al 100% distorsionando el margen real del negocio. Se indican en la tabla con la etiqueta <span style="background: rgba(239, 68, 68, 0.25); color: #fca5a5; padding: 2px 6px; border-radius: 4px; font-weight: 600; font-size: 0.78rem;">⚠️ Sin Costo</span>. Recomendamos cargar sus costos en el catálogo de productos.
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Selector de Modo de Visualización -->
+<div class="no-print" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 1rem;">
+    <div style="background: rgba(30, 41, 59, 0.75); border: 1px solid rgba(255, 255, 255, 0.12); padding: 5px; border-radius: 12px; display: inline-flex; gap: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+        <button type="button" id="btnModeReal" class="btn-mode active" onclick="switchReportMode('real')">
+            <i class="fa-solid fa-scale-balanced"></i>
+            <span>Modo Contable / Real (Libre de Impuestos)</span>
+        </button>
+        <button type="button" id="btnModeGross" class="btn-mode" onclick="switchReportMode('gross')">
+            <i class="fa-solid fa-cash-register"></i>
+            <span>Modo Mostrador / Caja (Con Impuestos)</span>
+        </button>
+    </div>
+
+    <div style="color: var(--text-secondary); font-size: 0.88rem; display: flex; align-items: center; gap: 0.5rem; background: rgba(15, 23, 42, 0.4); padding: 0.4rem 0.85rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06);">
+        <i class="fa-solid fa-circle-info" style="color: #60a5fa;"></i>
+        <span id="modeDescription">Mostrando ventas netas gravadas y ganancia pura descontando IVA e Impuestos Internos.</span>
+    </div>
+</div>
+
+<!-- Tarjetas KPI: MODO REAL (LIBRE DE IMPUESTOS) -->
+<div id="kpi-real" class="kpi-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+    <div class="glass-panel kpi-card" style="text-align: center; padding: 1.25rem; border-top: 3px solid #38bdf8;">
+        <div class="no-print" style="font-size: 2rem; color: #38bdf8; margin-bottom: 0.25rem;">
+            <i class="fa-solid fa-receipt"></i>
+        </div>
+        <div style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.25rem;">Venta Neta Gravada</div>
+        <div style="font-size: 1.45rem; font-weight: bold; color: #38bdf8;">@Model.TotalNetSalesAmount.ToString("C")</div>
+        <div class="no-print" style="font-size: 0.72rem; color: var(--text-secondary); margin-top: 2px;">Libre de IVA e Internos</div>
+    </div>
+
+    <div class="glass-panel kpi-card" style="text-align: center; padding: 1.25rem; border-top: 3px solid #60a5fa;">
+        <div class="no-print" style="font-size: 2rem; color: #60a5fa; margin-bottom: 0.25rem;">
+            <i class="fa-solid fa-boxes-packing"></i>
+        </div>
+        <div style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.25rem;">Costo Neto Mercadería</div>
+        <div style="font-size: 1.45rem; font-weight: bold; color: #60a5fa;">@Model.TotalCostAmount.ToString("C")</div>
+        <div class="no-print" style="font-size: 0.72rem; color: var(--text-secondary); margin-top: 2px;">Costo Base Histórico</div>
+    </div>
+
+    <div class="glass-panel kpi-card" style="text-align: center; padding: 1.25rem; border-top: 3px solid #10b981;">
+        <div class="no-print" style="font-size: 2rem; color: #10b981; margin-bottom: 0.25rem;">
+            <i class="fa-solid fa-sack-dollar"></i>
+        </div>
+        <div style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.25rem;">Ganancia Neta Real</div>
+        <div style="font-size: 1.45rem; font-weight: bold; color: #34d399;">@Model.TotalRealNetProfit.ToString("C")</div>
+        <div class="no-print" style="font-size: 0.72rem; color: #34d399; margin-top: 2px; font-weight: 500;">Utilidad Genuina</div>
+    </div>
+
+    <div class="glass-panel kpi-card" style="text-align: center; padding: 1.25rem; border-top: 3px solid #f59e0b;">
+        <div class="no-print" style="font-size: 2rem; color: #f59e0b; margin-bottom: 0.25rem;">
+            <i class="fa-solid fa-percent"></i>
+        </div>
+        <div style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.25rem;">Margen Real Promedio</div>
+        <div style="font-size: 1.45rem; font-weight: bold; color: #f59e0b;">@Model.RealNetMarginPercentage.ToString("N2")%</div>
+        <div class="no-print" style="font-size: 0.72rem; color: var(--text-secondary); margin-top: 2px;">s/ Venta Neta</div>
+    </div>
+
+    <div class="glass-panel kpi-card" style="text-align: center; padding: 1.25rem; border-top: 3px solid #a855f7;">
+        <div class="no-print" style="font-size: 2rem; color: #a855f7; margin-bottom: 0.25rem;">
+            <i class="fa-solid fa-arrow-trend-up"></i>
+        </div>
+        <div style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.25rem;">Markup Real Promedio</div>
+        <div style="font-size: 1.45rem; font-weight: bold; color: #a855f7;">@Model.RealNetMarkupPercentage.ToString("N2")%</div>
+        <div class="no-print" style="font-size: 0.72rem; color: var(--text-secondary); margin-top: 2px;">s/ Costo Neto</div>
+    </div>
+</div>
+
+<!-- Tarjetas KPI: MODO MOSTRADOR (CON IMPUESTOS) -->
+<div id="kpi-gross" class="kpi-container" style="display: none; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+    <div class="glass-panel kpi-card" style="text-align: center; padding: 1.25rem; border-top: 3px solid #10b981;">
+        <div class="no-print" style="font-size: 2rem; color: #10b981; margin-bottom: 0.25rem;">
+            <i class="fa-solid fa-money-bill-wave"></i>
+        </div>
+        <div style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.25rem;">Total Recaudado (PVP)</div>
+        <div style="font-size: 1.45rem; font-weight: bold; color: #10b981;">@Model.TotalSalesAmount.ToString("C")</div>
+        <div class="no-print" style="font-size: 0.72rem; color: var(--text-secondary); margin-top: 2px;">Cobrado en Mostrador</div>
+    </div>
+
+    <div class="glass-panel kpi-card" style="text-align: center; padding: 1.25rem; border-top: 3px solid #60a5fa;">
+        <div class="no-print" style="font-size: 2rem; color: #60a5fa; margin-bottom: 0.25rem;">
+            <i class="fa-solid fa-receipt"></i>
+        </div>
+        <div style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.25rem;">Costo Mercadería</div>
+        <div style="font-size: 1.45rem; font-weight: bold; color: #60a5fa;">@Model.TotalCostAmount.ToString("C")</div>
+        <div class="no-print" style="font-size: 0.72rem; color: var(--text-secondary); margin-top: 2px;">Costo Base Histórico</div>
+    </div>
+
+    <div class="glass-panel kpi-card" style="text-align: center; padding: 1.25rem; border-top: 3px solid #34d399;">
+        <div class="no-print" style="font-size: 2rem; color: #34d399; margin-bottom: 0.25rem;">
+            <i class="fa-solid fa-sack-dollar"></i>
+        </div>
+        <div style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.25rem;">Ganancia Mostrador</div>
+        <div style="font-size: 1.45rem; font-weight: bold; color: #34d399;">@Model.TotalProfitAmount.ToString("C")</div>
+        <div class="no-print" style="font-size: 0.72rem; color: var(--text-secondary); margin-top: 2px;">Recaudación - Costo</div>
+    </div>
+
+    <div class="glass-panel kpi-card" style="text-align: center; padding: 1.25rem; border-top: 3px solid #f59e0b;">
+        <div class="no-print" style="font-size: 2rem; color: #f59e0b; margin-bottom: 0.25rem;">
+            <i class="fa-solid fa-percent"></i>
+        </div>
+        <div style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.25rem;">Margen Mostrador</div>
+        <div style="font-size: 1.45rem; font-weight: bold; color: #f59e0b;">@Model.ProfitMarginPercentage.ToString("N2")%</div>
+        <div class="no-print" style="font-size: 0.72rem; color: var(--text-secondary); margin-top: 2px;">s/ Recaudación Mostrador</div>
+    </div>
+
+    <div class="glass-panel kpi-card" style="text-align: center; padding: 1.25rem; border-top: 3px solid #a855f7;">
+        <div class="no-print" style="font-size: 2rem; color: #a855f7; margin-bottom: 0.25rem;">
+            <i class="fa-solid fa-arrow-trend-up"></i>
+        </div>
+        <div style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.25rem;">Markup Mostrador</div>
+        <div style="font-size: 1.45rem; font-weight: bold; color: #a855f7;">@Model.ProfitMarkupPercentage.ToString("N2")%</div>
+        <div class="no-print" style="font-size: 0.72rem; color: var(--text-secondary); margin-top: 2px;">s/ Costo Base</div>
+    </div>
+</div>
+
+<!-- Panel de Posición Fiscal e Impuestos del Período -->
+<div class="glass-panel no-print" style="margin-bottom: 1.5rem; background: rgba(15, 23, 42, 0.55); border: 1px solid rgba(59, 130, 246, 0.22); border-radius: 14px; padding: 1.1rem 1.35rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; flex-wrap: wrap; gap: 0.5rem;">
+        <div style="display: flex; align-items: center; gap: 0.6rem; font-weight: 600; color: #93c5fd; font-size: 0.98rem;">
+            <i class="fa-solid fa-file-invoice-dollar" style="font-size: 1.15rem; color: #3b82f6;"></i>
+            <span>Resumen Impositivo y Posición Fiscal Estimada (AFIP / ARCA)</span>
+        </div>
+        <span style="font-size: 0.78rem; color: #94a3b8; background: rgba(255,255,255,0.05); padding: 3px 8px; border-radius: 6px;">
+            Período: @Model.StartDate.ToString("dd/MM/yyyy") - @Model.EndDate.ToString("dd/MM/yyyy")
+        </span>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1rem;">
+        <div style="background: rgba(30, 41, 59, 0.6); padding: 0.75rem 1rem; border-radius: 10px; border-left: 3px solid #3b82f6;">
+            <div style="font-size: 0.78rem; color: #94a3b8; margin-bottom: 2px;">IVA Débito Fiscal (Ventas)</div>
+            <div style="font-size: 1.25rem; font-weight: bold; color: #93c5fd;">@Model.TotalVatAmount.ToString("C")</div>
+            <div style="font-size: 0.72rem; color: #64748b; margin-top: 2px;">Cobrado a clientes en ventas</div>
+        </div>
+
+        <div style="background: rgba(30, 41, 59, 0.6); padding: 0.75rem 1rem; border-radius: 10px; border-left: 3px solid #10b981;">
+            <div style="font-size: 0.78rem; color: #94a3b8; margin-bottom: 2px;">IVA Crédito Fiscal (Compras)</div>
+            <div style="font-size: 1.25rem; font-weight: bold; color: #34d399;">@Model.TotalPurchaseVatCredit.ToString("C")</div>
+            <div style="font-size: 0.72rem; color: #64748b; margin-top: 2px;">De @Model.TotalPurchasesAmount.ToString("C") compras reg.</div>
+        </div>
+
+        <div style="background: rgba(30, 41, 59, 0.6); padding: 0.75rem 1rem; border-radius: 10px; border-left: 3px solid @(Model.EstimatedVatBalance >= 0 ? "#f59e0b" : "#10b981");">
+            <div style="font-size: 0.78rem; color: #94a3b8; margin-bottom: 2px;">Posición IVA Estimada</div>
+            <div style="font-size: 1.25rem; font-weight: bold; color: @(Model.EstimatedVatBalance >= 0 ? "#fbbf24" : "#34d399");">
+                @Model.EstimatedVatBalance.ToString("C")
+            </div>
+            <div style="font-size: 0.72rem; color: @(Model.EstimatedVatBalance >= 0 ? "#fca5a5" : "#86efac"); font-weight: 500; margin-top: 2px;">
+                @(Model.EstimatedVatBalance >= 0 ? "A Pagar Estimado (Débito > Crédito)" : "Saldo a Favor Estimado (Crédito > Débito)")
+            </div>
+        </div>
+
+        <div style="background: rgba(30, 41, 59, 0.6); padding: 0.75rem 1rem; border-radius: 10px; border-left: 3px solid #a855f7;">
+            <div style="font-size: 0.78rem; color: #94a3b8; margin-bottom: 2px;">Impuestos Internos</div>
+            <div style="font-size: 1.25rem; font-weight: bold; color: #c084fc;">@Model.TotalInternalTaxAmount.ToString("C")</div>
+            <div style="font-size: 0.72rem; color: #64748b; margin-top: 2px;">Recaudado por rubro (cigarrillos/bebidas)</div>
+        </div>
+    </div>
+</div>
+
+<div class="glass-panel">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+        <h2 style="margin: 0; display: flex; align-items: center; gap: 0.5rem; font-size: 1.25rem;">
+            <i class="fa-solid fa-table-list"></i> Detalle por Producto y Presentación
+            <span style="font-size: 0.9rem; font-weight: normal; color: var(--text-secondary);">(@Model.Items.Count artículos vendidos)</span>
+        </h2>
+        <div class="no-print" style="position: relative;">
+            <input type="text" id="profitabilitySearch" class="form-control" placeholder="Buscar producto o código..." style="padding-left: 2rem; width: 280px;" onkeyup="filterReportTable('profitabilitySearch', 'profitabilityTable')" />
+            <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: var(--text-secondary); pointer-events: none;"></i>
+        </div>
+    </div>
+
+    @if (Model.Items.Any())
+    {
+        <div class="table-responsive">
+            <table class="table" id="profitabilityTable">
+                <thead>
+                    <tr>
+                        <th style="width: 110px;">Código</th>
+                        <th>Producto / Presentación</th>
+                        <th>Categoría</th>
+                        <th style="text-align: right;">Cant. Vendida</th>
+                        <th style="text-align: right;">Costo Unit. Neto</th>
+                        <th style="text-align: right;">Costo Total Neto</th>
+                        
+                        <!-- Columnas Modo Real -->
+                        <th style="text-align: right;" class="col-mode-real" title="Venta Neta Gravada = Recaudación sin IVA ni Imp. Internos">Venta Neta</th>
+                        <th style="text-align: right;" class="col-mode-real" title="IVA Débito Fiscal cobrado">IVA Débito</th>
+                        <th style="text-align: right;" class="col-mode-real" title="Impuestos Internos">Imp. Internos</th>
+                        <th style="text-align: right;" class="col-mode-real" title="Ganancia Neta Real = Venta Neta - Costo Neto">Ganancia Real</th>
+                        <th style="text-align: right;" class="col-mode-real" title="Margen Real = (Ganancia Real / Venta Neta) * 100">Margen Real %</th>
+                        <th style="text-align: right;" class="col-mode-real" title="Markup Real = (Ganancia Real / Costo Neto) * 100">Markup Real %</th>
+                        <th style="text-align: right;" class="col-mode-real" title="Aporte a la Ganancia Neta Real">% Aporte</th>
+
+                        <!-- Columnas Modo Mostrador -->
+                        <th style="text-align: right; display: none;" class="col-mode-gross">Recaudación (PVP)</th>
+                        <th style="text-align: right; display: none;" class="col-mode-gross">Ganancia Mostrador</th>
+                        <th style="text-align: right; display: none;" class="col-mode-gross">Margen Mostrador %</th>
+                        <th style="text-align: right; display: none;" class="col-mode-gross">Markup Mostrador %</th>
+                        <th style="text-align: right; display: none;" class="col-mode-gross">% Aporte Mostrador</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.Items)
+                    {
+                        <tr class="product-main-row @(item.HasPresentations ? "has-subitems" : "")" style="@(item.HasPresentations ? "border-bottom: 1px dashed rgba(255,255,255,0.1);" : "")">
+                            <td style="font-family: monospace; font-size: 0.9rem; vertical-align: middle;">
+                                @(!string.IsNullOrEmpty(item.Barcode) ? item.Barcode : item.InternalCode.ToString())
+                            </td>
+                            <td style="vertical-align: middle;">
+                                <strong>@item.ProductName</strong>
+                                @if (item.HasZeroCost)
+                                {
+                                    <span class="badge" style="background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.4); font-size: 0.72rem; padding: 2px 6px; border-radius: 4px; margin-left: 6px; font-weight: normal;">
+                                        <i class="fa-solid fa-triangle-exclamation"></i> Sin Costo
+                                    </span>
+                                }
+                                @if (item.HasPresentations)
+                                {
+                                    <span class="badge" style="background: rgba(59, 130, 246, 0.2); color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.3); font-size: 0.72rem; padding: 2px 6px; border-radius: 4px; margin-left: 6px; font-weight: normal;">
+                                        <i class="fa-solid fa-boxes-stacked"></i> Incluye Bultos
+                                    </span>
+                                }
+                            </td>
+                            <td style="vertical-align: middle;">
+                                <span style="font-size: 0.85rem; color: var(--text-secondary);">@item.CategoryName</span>
+                            </td>
+                            <td style="text-align: right; vertical-align: middle; font-weight: 500;">
+                                @item.QuantitySold.ToString("0.##")
+                            </td>
+                            <td style="text-align: right; vertical-align: middle; @(item.HasZeroCost ? "color: #ef4444; font-weight: bold;" : "")">
+                                @item.UnitCost.ToString("C")
+                            </td>
+                            <td style="text-align: right; vertical-align: middle; @(item.HasZeroCost ? "color: #ef4444;" : "")">
+                                @item.TotalCost.ToString("C")
+                            </td>
+
+                            <!-- Columnas Modo Real -->
+                            <td style="text-align: right; vertical-align: middle; font-weight: bold; color: #38bdf8;" class="col-mode-real">
+                                @item.NetSales.ToString("C")
+                            </td>
+                            <td style="text-align: right; vertical-align: middle; color: #94a3b8;" class="col-mode-real">
+                                @item.VatAmount.ToString("C")
+                                <div style="font-size: 0.68rem; color: #64748b;">(@item.VatRatePercentage.ToString("0.##")%)</div>
+                            </td>
+                            <td style="text-align: right; vertical-align: middle; color: #94a3b8;" class="col-mode-real">
+                                @item.InternalTaxAmount.ToString("C")
+                            </td>
+                            <td style="text-align: right; vertical-align: middle; font-weight: bold; color: @(item.RealNetProfit >= 0 ? "#34d399" : "#ef4444");" class="col-mode-real">
+                                @item.RealNetProfit.ToString("C")
+                            </td>
+                            <td style="text-align: right; vertical-align: middle; font-weight: bold; color: @(item.RealMarginPercentage >= 0 ? "#f59e0b" : "#ef4444");" class="col-mode-real">
+                                @item.RealMarginPercentage.ToString("N1")%
+                            </td>
+                            <td style="text-align: right; vertical-align: middle; font-weight: bold; color: @(item.RealMarkupPercentage >= 0 ? "#a855f7" : "#ef4444");" class="col-mode-real">
+                                @(item.HasZeroCost ? "-" : $"{item.RealMarkupPercentage:N1}%")
+                            </td>
+                            <td style="text-align: right; vertical-align: middle;" class="col-mode-real">
+                                <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); font-weight: 600; padding: 2px 7px; border-radius: 4px; font-size: 0.78rem;">
+                                    @item.SharePercentage.ToString("N1")%
+                                </span>
+                            </td>
+
+                            <!-- Columnas Modo Mostrador -->
+                            <td style="text-align: right; vertical-align: middle; font-weight: bold; color: #10b981; display: none;" class="col-mode-gross">
+                                @item.TotalRevenue.ToString("C")
+                            </td>
+                            <td style="text-align: right; vertical-align: middle; font-weight: bold; color: @(item.NetProfit >= 0 ? "#34d399" : "#ef4444"); display: none;" class="col-mode-gross">
+                                @item.NetProfit.ToString("C")
+                            </td>
+                            <td style="text-align: right; vertical-align: middle; font-weight: bold; color: @(item.MarginPercentage >= 0 ? "#f59e0b" : "#ef4444"); display: none;" class="col-mode-gross">
+                                @item.MarginPercentage.ToString("N1")%
+                            </td>
+                            <td style="text-align: right; vertical-align: middle; font-weight: bold; color: @(item.MarkupPercentage >= 0 ? "#a855f7" : "#ef4444"); display: none;" class="col-mode-gross">
+                                @(item.HasZeroCost ? "-" : $"{item.MarkupPercentage:N1}%")
+                            </td>
+                            <td style="text-align: right; vertical-align: middle; display: none;" class="col-mode-gross">
+                                <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); font-weight: 600; padding: 2px 7px; border-radius: 4px; font-size: 0.78rem;">
+                                    @item.SharePercentage.ToString("N1")%
+                                </span>
+                            </td>
+                        </tr>
+
+                        @if (item.HasPresentations)
+                        {
+                            @foreach (var sub in item.Presentations)
+                            {
+                                <tr class="sub-item-row" style="background: rgba(15, 23, 42, 0.45); font-size: 0.88rem; border-bottom: 1px solid rgba(255,255,255,0.04);">
+                                    <td style="font-family: monospace; font-size: 0.8rem; color: #94a3b8; padding-left: 1rem; vertical-align: middle;">
+                                        @sub.Barcode
+                                    </td>
+                                    <td style="padding-left: 1.75rem; vertical-align: middle;">
+                                        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                                            <i class="fa-solid fa-arrow-turn-up fa-rotate-90" style="color: #64748b; font-size: 0.85rem;"></i>
+                                            @if (sub.PresentationId == null)
+                                            {
+                                                <span style="color: #cbd5e1;">
+                                                    <i class="fa-regular fa-circle-dot" style="margin-right: 4px; color: #94a3b8;"></i> Venta Unitaria (Suelto)
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <strong style="color: #60a5fa;">
+                                                    <i class="fa-solid fa-box-open" style="margin-right: 4px;"></i> @sub.PresentationName
+                                                </strong>
+                                                @if (sub.TotalPackages > 0)
+                                                {
+                                                    <span class="badge" style="background: rgba(59, 130, 246, 0.2); color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.3); font-size: 0.72rem; padding: 1px 6px; border-radius: 4px;">
+                                                        @sub.TotalPackages.ToString("0.##") bultos
+                                                    </span>
+                                                }
+                                            }
+                                            @if (sub.HasZeroCost)
+                                            {
+                                                <span class="badge" style="background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.4); font-size: 0.68rem; padding: 1px 4px; border-radius: 3px;">
+                                                    Sin Costo
+                                                </span>
+                                            }
+                                        </div>
+                                    </td>
+                                    <td style="vertical-align: middle;">
+                                        <span style="font-size: 0.8rem; color: #94a3b8;">
+                                            @(sub.PresentationId == null ? "Unidad" : $"Bulto x{sub.PackageQuantity:0.##}")
+                                        </span>
+                                    </td>
+                                    <td style="text-align: right; vertical-align: middle; color: #cbd5e1;">
+                                        @sub.TotalUnits.ToString("0.##") un.
+                                    </td>
+                                    <td style="text-align: right; vertical-align: middle; color: @(sub.HasZeroCost ? "#ef4444" : "#94a3b8");">
+                                        @sub.UnitCost.ToString("C")
+                                    </td>
+                                    <td style="text-align: right; vertical-align: middle; color: @(sub.HasZeroCost ? "#ef4444" : "#94a3b8");">
+                                        @sub.TotalCost.ToString("C")
+                                    </td>
+
+                                    <!-- Columnas Modo Real -->
+                                    <td style="text-align: right; vertical-align: middle; color: #38bdf8; font-weight: 500;" class="col-mode-real">
+                                        @sub.NetSales.ToString("C")
+                                    </td>
+                                    <td style="text-align: right; vertical-align: middle; color: #94a3b8;" class="col-mode-real">
+                                        @sub.VatAmount.ToString("C")
+                                    </td>
+                                    <td style="text-align: right; vertical-align: middle; color: #94a3b8;" class="col-mode-real">
+                                        @sub.InternalTaxAmount.ToString("C")
+                                    </td>
+                                    <td style="text-align: right; vertical-align: middle; font-weight: 600; color: @(sub.RealNetProfit >= 0 ? "#34d399" : "#ef4444");" class="col-mode-real">
+                                        @sub.RealNetProfit.ToString("C")
+                                    </td>
+                                    <td style="text-align: right; vertical-align: middle; font-weight: 600; color: @(sub.RealMarginPercentage >= 0 ? "#f59e0b" : "#ef4444");" class="col-mode-real">
+                                        @sub.RealMarginPercentage.ToString("N1")%
+                                    </td>
+                                    <td style="text-align: right; vertical-align: middle; font-weight: 600; color: @(sub.RealMarkupPercentage >= 0 ? "#a855f7" : "#ef4444");" class="col-mode-real">
+                                        @(sub.HasZeroCost ? "-" : $"{sub.RealMarkupPercentage:N1}%")
+                                    </td>
+                                    <td style="text-align: right; vertical-align: middle; color: #94a3b8; font-size: 0.82rem;" class="col-mode-real">
+                                        @sub.SharePercentage.ToString("N1")%
+                                    </td>
+
+                                    <!-- Columnas Modo Mostrador -->
+                                    <td style="text-align: right; vertical-align: middle; color: #10b981; font-weight: 500; display: none;" class="col-mode-gross">
+                                        @sub.TotalRevenue.ToString("C")
+                                    </td>
+                                    <td style="text-align: right; vertical-align: middle; font-weight: 600; color: @(sub.NetProfit >= 0 ? "#34d399" : "#ef4444"); display: none;" class="col-mode-gross">
+                                        @sub.NetProfit.ToString("C")
+                                    </td>
+                                    <td style="text-align: right; vertical-align: middle; font-weight: 600; color: @(sub.MarginPercentage >= 0 ? "#f59e0b" : "#ef4444"); display: none;" class="col-mode-gross">
+                                        @sub.MarginPercentage.ToString("N1")%
+                                    </td>
+                                    <td style="text-align: right; vertical-align: middle; font-weight: 600; color: @(sub.MarkupPercentage >= 0 ? "#a855f7" : "#ef4444"); display: none;" class="col-mode-gross">
+                                        @(sub.HasZeroCost ? "-" : $"{sub.MarkupPercentage:N1}%")
+                                    </td>
+                                    <td style="text-align: right; vertical-align: middle; color: #94a3b8; font-size: 0.82rem; display: none;" class="col-mode-gross">
+                                        @sub.SharePercentage.ToString("N1")%
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    }
+                </tbody>
+                <tfoot>
+                    <tr style="font-weight: bold; border-top: 2px solid var(--border-color, #475569); background: rgba(255,255,255,0.03);">
+                        <td colspan="3" style="text-align: right;">TOTALES:</td>
+                        <td style="text-align: right;">@Model.Items.Sum(i => i.QuantitySold).ToString("0.##")</td>
+                        <td></td>
+                        <td style="text-align: right; color: #60a5fa;">@Model.TotalCostAmount.ToString("C")</td>
+
+                        <!-- Totales Modo Real -->
+                        <td style="text-align: right; color: #38bdf8;" class="col-mode-real">@Model.TotalNetSalesAmount.ToString("C")</td>
+                        <td style="text-align: right; color: #94a3b8;" class="col-mode-real">@Model.TotalVatAmount.ToString("C")</td>
+                        <td style="text-align: right; color: #94a3b8;" class="col-mode-real">@Model.TotalInternalTaxAmount.ToString("C")</td>
+                        <td style="text-align: right; color: #34d399;" class="col-mode-real">@Model.TotalRealNetProfit.ToString("C")</td>
+                        <td style="text-align: right; color: #f59e0b;" class="col-mode-real">@Model.RealNetMarginPercentage.ToString("N1")%</td>
+                        <td style="text-align: right; color: #a855f7;" class="col-mode-real">@Model.RealNetMarkupPercentage.ToString("N1")%</td>
+                        <td style="text-align: right; color: #34d399;" class="col-mode-real">100.0%</td>
+
+                        <!-- Totales Modo Mostrador -->
+                        <td style="text-align: right; color: #10b981; display: none;" class="col-mode-gross">@Model.TotalSalesAmount.ToString("C")</td>
+                        <td style="text-align: right; color: #34d399; display: none;" class="col-mode-gross">@Model.TotalProfitAmount.ToString("C")</td>
+                        <td style="text-align: right; color: #f59e0b; display: none;" class="col-mode-gross">@Model.ProfitMarginPercentage.ToString("N1")%</td>
+                        <td style="text-align: right; color: #a855f7; display: none;" class="col-mode-gross">@Model.ProfitMarkupPercentage.ToString("N1")%</td>
+                        <td style="text-align: right; color: #34d399; display: none;" class="col-mode-gross">100.0%</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="empty-state">
+            <i class="fa-solid fa-chart-line"></i>
+            <p>No se registraron ventas en el período seleccionado.</p>
+        </div>
+    }
+</div>
+
+<script>
+    function filterReportTable(inputId, tableId) {
+        var input = document.getElementById(inputId);
+        var filter = input.value.toLowerCase();
+        var table = document.getElementById(tableId);
+        var rows = table.getElementsByTagName("tbody")[0].getElementsByTagName("tr");
+
+        for (var i = 0; i < rows.length; i++) {
+            var row = rows[i];
+            if (row.classList.contains("sub-item-row")) continue;
+
+            var text = row.innerText.toLowerCase();
+            var next = row.nextElementSibling;
+            var subMatches = false;
+            var subRows = [];
+
+            while (next && next.classList.contains("sub-item-row")) {
+                subRows.push(next);
+                if (next.innerText.toLowerCase().indexOf(filter) > -1) {
+                    subMatches = true;
+                }
+                next = next.nextElementSibling;
+            }
+
+            var isMatch = text.indexOf(filter) > -1 || subMatches;
+            row.style.display = isMatch ? "" : "none";
+            for (var s = 0; s < subRows.length; s++) {
+                subRows[s].style.display = isMatch ? "" : "none";
+            }
+        }
+    }
+
+    function switchReportMode(mode) {
+        var isReal = mode === 'real';
+        var btnReal = document.getElementById('btnModeReal');
+        var btnGross = document.getElementById('btnModeGross');
+        if (btnReal) btnReal.classList.toggle('active', isReal);
+        if (btnGross) btnGross.classList.toggle('active', !isReal);
+
+        // Toggle KPI cards
+        var kpiReal = document.getElementById('kpi-real');
+        var kpiGross = document.getElementById('kpi-gross');
+        if (kpiReal) kpiReal.style.display = isReal ? 'grid' : 'none';
+        if (kpiGross) kpiGross.style.display = isReal ? 'none' : 'grid';
+
+        // Toggle Table Columns
+        var realCols = document.querySelectorAll('.col-mode-real');
+        var grossCols = document.querySelectorAll('.col-mode-gross');
+        realCols.forEach(function(el) { el.style.display = isReal ? '' : 'none'; });
+        grossCols.forEach(function(el) { el.style.display = isReal ? 'none' : ''; });
+
+        var desc = document.getElementById('modeDescription');
+        if (desc) {
+            desc.innerText = isReal 
+                ? "Mostrando ventas netas gravadas y ganancia pura descontando IVA e Impuestos Internos."
+                : "Mostrando valores brutos facturados/cobrados en mostrador (PVP con IVA e impuestos incluidos).";
+        }
+    }
+</script>
+
+<style>
+    .btn-mode {
+        border: none;
+        outline: none;
+        padding: 0.5rem 1.05rem;
+        border-radius: 8px;
+        background: transparent;
+        color: #94a3b8;
+        font-size: 0.88rem;
+        font-weight: 500;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.2s ease;
+    }
+    .btn-mode:hover {
+        color: #f1f5f9;
+        background: rgba(255, 255, 255, 0.05);
+    }
+    .btn-mode.active {
+        background: #3b82f6;
+        color: #ffffff;
+        font-weight: 600;
+        box-shadow: 0 2px 10px rgba(59, 130, 246, 0.4);
+    }
+    .btn-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.55rem 1.2rem;
+        border-radius: 10px;
+        background: rgba(30, 41, 59, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        color: #f1f5f9;
+        font-weight: 500;
+        font-size: 0.95rem;
+        text-decoration: none;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
+        backdrop-filter: blur(10px);
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .btn-back:hover {
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(139, 92, 246, 0.25));
+        border-color: rgba(96, 165, 250, 0.5);
+        color: #60a5fa;
+        transform: translateX(-3px);
+        box-shadow: 0 6px 20px rgba(59, 130, 246, 0.3);
+    }
+    .btn-back i {
+        font-size: 0.95rem;
+        transition: transform 0.2s ease;
+    }
+    .btn-back:hover i {
+        transform: translateX(-4px);
+    }
+
+    .sub-item-row td { border-top: none !important; }
+
+    @@media print {
+        @@page {
+            size: A4 landscape;
+            margin: 0.8cm;
+        }
+        * {
+            color: black !important;
+            text-shadow: none !important;
+            box-shadow: none !important;
+        }
+        body, html {
+            background: white !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        .top-bar, .no-print, .sidebar, .sidebar-toggle-btn {
+            display: none !important;
+        }
+        .print-header {
+            display: block !important;
+        }
+        .kpi-container {
+            display: flex !important;
+            justify-content: space-between !important;
+            margin-bottom: 12px !important;
+            border: 1px solid #ccc !important;
+            padding: 6px !important;
+        }
+        .kpi-card {
+            border: none !important;
+            padding: 3px !important;
+            text-align: center !important;
+        }
+        .main-content, .container, .container-fluid {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+        }
+        .glass-panel {
+            background: transparent !important;
+            border: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+        .table-responsive {
+            overflow: visible !important;
+            width: 100% !important;
+        }
+        table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+            font-size: 7.5pt !important;
+        }
+        th, td {
+            border: 1px solid #777 !important;
+            padding: 2px 4px !important;
+            word-wrap: break-word;
+        }
+        th {
+            background: #eee !important;
+        }
+        tr {
+            page-break-inside: avoid;
+        }
+        .sub-item-row {
+            background: #f8fafc !important;
+            font-style: italic;
+        }
+        .sub-item-row td {
+            padding-left: 12px !important;
+            border-top: 1px dashed #ccc !important;
+        }
+    }
+</style>
