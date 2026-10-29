@@ -2013,9 +2013,15 @@ System.Convert.ToDecimal(item.Cells["Price"].Value) == price && rowIsEdited == i
 			decimal remainingToPay = total;
 			decimal totalPaid = 0m;
 			var paymentMeta = new List<(decimal InputAmount, decimal TenderedAmount, decimal Discount)>();
+			Func<PaymentMethod?, bool> isCashMethod = (pm) => pm != null && pm.Name != null && pm.Name.Trim().Equals("Efectivo", StringComparison.OrdinalIgnoreCase);
 			
 			Action updateModalUI = () =>
 			{
+				bool currentSelectedIsCash = isCashMethod(localCmbPaymentMethod.SelectedItem as PaymentMethod);
+				bool anyAddedIsCash = sale.Payments.Any(p => isCashMethod(list.FirstOrDefault(x => x.Id == p.PaymentMethodId)));
+				labelAmount.Text = currentSelectedIsCash ? "Monto con el que abona ($)" : "Monto que cubre ($)";
+				lblVueltoModal.Visible = currentSelectedIsCash || anyAddedIsCash || remainingToPay < 0;
+
 				lblFaltaPagar.Text = $"Falta Pagar: ${Math.Max(0, remainingToPay):N2}";
 				if (remainingToPay <= 0)
 				{
@@ -2047,6 +2053,33 @@ System.Convert.ToDecimal(item.Cells["Price"].Value) == price && rowIsEdited == i
 				}
 				btnRemovePayment.Enabled = sale.Payments.Count > 0;
 			};
+
+			localCmbPaymentMethod.SelectedIndexChanged += delegate
+			{
+				bool currentSelectedIsCash = isCashMethod(localCmbPaymentMethod.SelectedItem as PaymentMethod);
+				bool anyAddedIsCash = sale.Payments.Any(p => isCashMethod(list.FirstOrDefault(x => x.Id == p.PaymentMethodId)));
+				labelAmount.Text = currentSelectedIsCash ? "Monto con el que abona ($)" : "Monto que cubre ($)";
+				lblVueltoModal.Visible = currentSelectedIsCash || anyAddedIsCash || remainingToPay < 0;
+				if (!currentSelectedIsCash && remainingToPay > 0)
+				{
+					lblVueltoModal.Text = "Vuelto: $0.00";
+				}
+			};
+
+			txtPagaCon.TextChanged += delegate
+			{
+				if (remainingToPay > 0 && isCashMethod(localCmbPaymentMethod.SelectedItem as PaymentMethod))
+				{
+					if (decimal.TryParse(txtPagaCon.Text.Replace(',', '.'), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var typedAmount) && typedAmount > remainingToPay)
+					{
+						lblVueltoModal.Text = $"Vuelto: ${(typedAmount - remainingToPay):N2}";
+					}
+					else
+					{
+						lblVueltoModal.Text = "Vuelto: $0.00";
+					}
+				}
+			};
 			
 			btnAddPayment.Click += delegate
 			{
@@ -2054,6 +2087,19 @@ System.Convert.ToDecimal(item.Cells["Price"].Value) == price && rowIsEdited == i
 				{
 					if (localCmbPaymentMethod.SelectedItem is PaymentMethod pm)
 					{
+						if (!isCashMethod(pm) && Math.Round(inputAmount, 2) > Math.Round(Math.Max(0m, remainingToPay), 2))
+						{
+							MessageBox.Show(
+								$"El monto ingresado (${inputAmount:N2}) no puede superar lo que falta pagar (${Math.Max(0m, remainingToPay):N2}) para '{pm.Name}'.\n\nSolo el medio de pago Efectivo permite vuelto.",
+								"Monto no permitido",
+								MessageBoxButtons.OK,
+								MessageBoxIcon.Warning);
+							txtPagaCon.Text = Math.Max(0m, remainingToPay).ToString("0.00");
+							txtPagaCon.Focus();
+							txtPagaCon.SelectAll();
+							return;
+						}
+
 						decimal discountPerc = pm.DiscountPercentage;
 						DateTime date = DateTime.Now.Date;
 						if (pm.DiscountValidFrom.HasValue && date < pm.DiscountValidFrom.Value.Date) discountPerc = 0;
@@ -2548,10 +2594,15 @@ System.Convert.ToDecimal(item.Cells["Price"].Value) == price && rowIsEdited == i
 
 		sb.AppendLine("Pagos:");
 		decimal totalTendered = 0m;
+		bool hasCashPayment = false;
 		foreach (var payment in sale.Payments)
 		{
 			var pm = db.PaymentMethods.FirstOrDefault(p => p.Id == payment.PaymentMethodId);
 			string pName = pm != null ? pm.Name : "Desconocido";
+			if (pName.Trim().Equals("Efectivo", StringComparison.OrdinalIgnoreCase))
+			{
+				hasCashPayment = true;
+			}
 			decimal paidAmount = payment.Amount;
 			if (!string.IsNullOrWhiteSpace(payment.TransactionReference) &&
 				decimal.TryParse(payment.TransactionReference, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out decimal refAmount) &&
@@ -2564,7 +2615,10 @@ System.Convert.ToDecimal(item.Cells["Price"].Value) == price && rowIsEdited == i
 		}
 
 		decimal vuelto = Math.Max(0m, totalTendered - sale.TotalAmount);
-		sb.AppendLine(FormatTicketLine("SU VUELTO:", $"${vuelto:N2}", ticketWidth));
+		if (hasCashPayment || vuelto > 0m)
+		{
+			sb.AppendLine(FormatTicketLine("SU VUELTO:", $"${vuelto:N2}", ticketWidth));
+		}
 
 		if (!string.IsNullOrWhiteSpace(caeTextoAdicional))
 		{

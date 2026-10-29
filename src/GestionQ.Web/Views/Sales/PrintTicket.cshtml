@@ -128,8 +128,13 @@
     ticketText.AppendLine();
     ticketText.AppendLine("PAGOS:");
     decimal totalPaymentsText = 0m;
+    bool hasCashPaymentText = false;
     foreach (var p in Model.Payments)
     {
+        if (p.PaymentMethod?.Name != null && p.PaymentMethod.Name.Trim().Equals("Efectivo", StringComparison.OrdinalIgnoreCase))
+        {
+            hasCashPaymentText = true;
+        }
         decimal paidAmt = p.Amount;
         bool isMp = p.PaymentMethod != null && (p.PaymentMethod.Name.Contains("Mercado Pago", StringComparison.OrdinalIgnoreCase) || p.PaymentMethod.Name.Contains("MercadoPago", StringComparison.OrdinalIgnoreCase));
         if (!isMp && !string.IsNullOrWhiteSpace(p.TransactionReference) &&
@@ -143,7 +148,10 @@
     }
     
     decimal vueltoText = Math.Max(0m, totalPaymentsText - Model.TotalAmount);
-    ticketText.AppendLine(FormatLine("SU VUELTO:", $"${vueltoText.ToString("N2")}", 35));
+    if (hasCashPaymentText || vueltoText > 0m)
+    {
+        ticketText.AppendLine(FormatLine("SU VUELTO:", $"${vueltoText.ToString("N2")}", 35));
+    }
 
     ticketText.AppendLine(new string('-', 35));
     ticketText.AppendLine(CenterText("DOCUMENTO NO VALIDO COMO FACTURA", 35));
@@ -413,9 +421,14 @@
             </div>
             @{
                 decimal totalPaymentsHtml = 0m;
+                bool hasCashPaymentHtml = false;
             }
             @foreach (var p in Model.Payments)
             {
+                if (p.PaymentMethod?.Name != null && p.PaymentMethod.Name.Trim().Equals("Efectivo", StringComparison.OrdinalIgnoreCase))
+                {
+                    hasCashPaymentHtml = true;
+                }
                 decimal paidAmt = p.Amount;
                 bool isMp = p.PaymentMethod != null && (p.PaymentMethod.Name.Contains("Mercado Pago", StringComparison.OrdinalIgnoreCase) || p.PaymentMethod.Name.Contains("MercadoPago", StringComparison.OrdinalIgnoreCase));
                 if (!isMp && !string.IsNullOrWhiteSpace(p.TransactionReference) &&
@@ -432,10 +445,13 @@
             }
             @{
                 decimal vueltoHtml = Math.Max(0m, totalPaymentsHtml - Model.TotalAmount);
-                <div style="margin-top: 1mm; font-weight: bold;">
-                    <span>SU VUELTO:</span>
-                    <span>$@vueltoHtml.ToString("N2")</span>
-                </div>
+                if (hasCashPaymentHtml || vueltoHtml > 0m)
+                {
+                    <div style="margin-top: 1mm; font-weight: bold;">
+                        <span>SU VUELTO:</span>
+                        <span>$@vueltoHtml.ToString("N2")</span>
+                    </div>
+                }
             }
         </div>
 
