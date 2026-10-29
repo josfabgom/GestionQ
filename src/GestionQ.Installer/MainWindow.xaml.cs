@@ -47,9 +47,15 @@ namespace GestionQ.Installer
         {
             // Auto-detect existing installation
             string defaultPath = @"C:\GestionQ";
-            if (File.Exists(Path.Combine(defaultPath, "app", "GestionQ.Web.exe")) || File.Exists(Path.Combine(defaultPath, "app_cliente", "GestionQ.Desktop.exe")))
+            bool hasWeb = File.Exists(Path.Combine(defaultPath, "app", "GestionQ.Web.exe"));
+            bool hasClient = File.Exists(Path.Combine(defaultPath, "app_cliente", "GestionQ.Desktop.exe")) || File.Exists(Path.Combine(defaultPath, "app_cajapos", "GestionQ.CajaPOS.exe"));
+            if (hasWeb || hasClient)
             {
                 isUpdating = true;
+                if (!hasWeb && hasClient)
+                {
+                    RbClientOnly.IsChecked = true;
+                }
                 TxtHeader.Text = "Actualización de GestionQ";
                 TxtInstallPath.Text = defaultPath;
                 TxtInstallPath.IsEnabled = false; // Lock path for update

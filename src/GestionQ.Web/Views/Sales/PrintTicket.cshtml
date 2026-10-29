@@ -124,19 +124,26 @@
         ticketText.AppendLine(new string('-', 35));
     }
     
-    ticketText.AppendLine(FormatLine("TOTAL NETO:", $"${Model.TotalAmount.ToString("N2")}", 35));
+    ticketText.AppendLine(FormatLine("TOTAL DE COMPRA:", $"${Model.TotalAmount.ToString("N2")}", 35));
     ticketText.AppendLine();
     ticketText.AppendLine("PAGOS:");
+    decimal totalPaymentsText = 0m;
     foreach (var p in Model.Payments)
     {
-        ticketText.AppendLine(FormatLine($" - {p.PaymentMethod?.Name ?? "Otro"}:", $"${p.Amount.ToString("N2")}", 35));
+        decimal paidAmt = p.Amount;
+        bool isMp = p.PaymentMethod != null && (p.PaymentMethod.Name.Contains("Mercado Pago", StringComparison.OrdinalIgnoreCase) || p.PaymentMethod.Name.Contains("MercadoPago", StringComparison.OrdinalIgnoreCase));
+        if (!isMp && !string.IsNullOrWhiteSpace(p.TransactionReference) &&
+            decimal.TryParse(p.TransactionReference, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out decimal refAmt) &&
+            refAmt >= p.Amount)
+        {
+            paidAmt = refAmt;
+        }
+        totalPaymentsText += paidAmt;
+        ticketText.AppendLine(FormatLine($" - {p.PaymentMethod?.Name ?? "Otro"}:", $"${paidAmt.ToString("N2")}", 35));
     }
     
-    decimal totalPaymentsText = Model.Payments.Sum(p => p.Amount);
-    if (totalPaymentsText > Model.TotalAmount)
-    {
-        ticketText.AppendLine(FormatLine("VUELTO:", $"${(totalPaymentsText - Model.TotalAmount).ToString("N2")}", 35));
-    }
+    decimal vueltoText = Math.Max(0m, totalPaymentsText - Model.TotalAmount);
+    ticketText.AppendLine(FormatLine("SU VUELTO:", $"${vueltoText.ToString("N2")}", 35));
 
     ticketText.AppendLine(new string('-', 35));
     ticketText.AppendLine(CenterText("DOCUMENTO NO VALIDO COMO FACTURA", 35));
@@ -398,28 +405,37 @@
                 }
             }
             <div class="total-row" style="margin-top: 1mm; border-top: 1px solid #000; padding-top: 1mm;">
-                <span>TOTAL NETO:</span>
+                <span>TOTAL DE COMPRA:</span>
                 <span>$@Model.TotalAmount.ToString("N2")</span>
             </div>
             <div style="margin-top: 2mm; font-weight: bold;">
                 <span>PAGOS:</span>
             </div>
+            @{
+                decimal totalPaymentsHtml = 0m;
+            }
             @foreach (var p in Model.Payments)
             {
+                decimal paidAmt = p.Amount;
+                bool isMp = p.PaymentMethod != null && (p.PaymentMethod.Name.Contains("Mercado Pago", StringComparison.OrdinalIgnoreCase) || p.PaymentMethod.Name.Contains("MercadoPago", StringComparison.OrdinalIgnoreCase));
+                if (!isMp && !string.IsNullOrWhiteSpace(p.TransactionReference) &&
+                    decimal.TryParse(p.TransactionReference, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out decimal refAmt) &&
+                    refAmt >= p.Amount)
+                {
+                    paidAmt = refAmt;
+                }
+                totalPaymentsHtml += paidAmt;
                 <div>
                     <span> - @p.PaymentMethod?.Name:</span>
-                    <span>$@p.Amount.ToString("N2")</span>
+                    <span>$@paidAmt.ToString("N2")</span>
                 </div>
             }
             @{
-                decimal totalPaymentsHtml = Model.Payments.Sum(p => p.Amount);
-                if (totalPaymentsHtml > Model.TotalAmount)
-                {
-                    <div style="margin-top: 1mm; font-weight: bold;">
-                        <span>VUELTO:</span>
-                        <span>$@((totalPaymentsHtml - Model.TotalAmount).ToString("N2"))</span>
-                    </div>
-                }
+                decimal vueltoHtml = Math.Max(0m, totalPaymentsHtml - Model.TotalAmount);
+                <div style="margin-top: 1mm; font-weight: bold;">
+                    <span>SU VUELTO:</span>
+                    <span>$@vueltoHtml.ToString("N2")</span>
+                </div>
             }
         </div>
 

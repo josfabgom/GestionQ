@@ -195,12 +195,22 @@ namespace GestionQ.Installer
                     {
                         if (string.IsNullOrEmpty(entry.Name)) continue; // It's a directory
 
-                        if (isUpdate && entry.Name.Equals("appsettings.json", StringComparison.OrdinalIgnoreCase))
+                        string destPath = Path.GetFullPath(Path.Combine(targetDir, entry.FullName));
+
+                        bool isProtectedFile =
+                            entry.Name.Equals("appsettings.json", StringComparison.OrdinalIgnoreCase) ||
+                            entry.Name.Equals("appsettings.Development.json", StringComparison.OrdinalIgnoreCase) ||
+                            entry.Name.Equals("update_history.json", StringComparison.OrdinalIgnoreCase) ||
+                            entry.Name.EndsWith(".db", StringComparison.OrdinalIgnoreCase) ||
+                            entry.Name.EndsWith(".db-shm", StringComparison.OrdinalIgnoreCase) ||
+                            entry.Name.EndsWith(".db-wal", StringComparison.OrdinalIgnoreCase) ||
+                            entry.Name.EndsWith(".sqlite", StringComparison.OrdinalIgnoreCase);
+
+                        if ((isUpdate || isProtectedFile) && isProtectedFile && File.Exists(destPath))
                         {
-                            continue; // Skip overriding config on update
+                            continue; // Never overwrite existing database or config files
                         }
 
-                        string destPath = Path.GetFullPath(Path.Combine(targetDir, entry.FullName));
                         Directory.CreateDirectory(Path.GetDirectoryName(destPath)!);
                         entry.ExtractToFile(destPath, overwrite: true);
                     }

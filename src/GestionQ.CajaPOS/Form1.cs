@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Drawing;
@@ -1937,14 +1937,17 @@ System.Convert.ToDecimal(item.Cells["Price"].Value) == price && rowIsEdited == i
 		};
 		foreach (System.Windows.Forms.DataGridViewRow item in (System.Collections.IEnumerable)gridItems.Rows)
 		{
+			bool isEdited = item.Cells["IsPriceEdited"].Value != null && (bool)item.Cells["IsPriceEdited"].Value;
 			int productId = Convert.ToInt32(item.Cells["Id"].Value);
 			decimal num2 = Convert.ToDecimal(item.Cells["Price"].Value);
 			decimal num3 = Convert.ToDecimal(item.Cells["Quantity"].Value);
+			decimal itemSub = CalculateSubTotal(productId, num2, num3, isEdited);
+			decimal itemDisc = (num2 * num3) - itemSub;
 			num += num2 * num3;
-			total += CalculateSubTotal(productId, num2, num3);
+			total += itemSub;
 			int? presId = null;
 			if (item.Cells["PresentationId"].Value != null) presId = (int)item.Cells["PresentationId"].Value;
-			sale.Items.Add(new SaleItem { ProductId = productId, UnitPrice = num2, Quantity = num3, PresentationId = presId });
+			sale.Items.Add(new SaleItem { ProductId = productId, UnitPrice = num2, Quantity = num3, DiscountAmount = itemDisc, PresentationId = presId });
 		}
 		sale.SubTotal = num;
 		sale.DiscountAmount = num - total;
@@ -2009,6 +2012,7 @@ System.Convert.ToDecimal(item.Cells["Price"].Value) == price && rowIsEdited == i
 			
 			decimal remainingToPay = total;
 			decimal totalPaid = 0m;
+			var paymentMeta = new List<(decimal InputAmount, decimal TenderedAmount, decimal Discount)>();
 			
 			Action updateModalUI = () =>
 			{
@@ -2033,18 +2037,20 @@ System.Convert.ToDecimal(item.Cells["Price"].Value) == price && rowIsEdited == i
 				}
 				
 				lstPayments.Items.Clear();
-				foreach (var p in sale.Payments)
+				for (int i = 0; i < sale.Payments.Count; i++)
 				{
+					var p = sale.Payments[i];
 					var pm = list.FirstOrDefault(x => x.Id == p.PaymentMethodId);
 					string pmName = pm != null ? pm.Name : "Desconocido";
-					lstPayments.Items.Add($"{pmName}: ${p.Amount:N2}");
+					decimal displayAmount = i < paymentMeta.Count ? paymentMeta[i].TenderedAmount : p.Amount;
+					lstPayments.Items.Add($"{pmName}: ${displayAmount:N2}");
 				}
 				btnRemovePayment.Enabled = sale.Payments.Count > 0;
 			};
 			
 			btnAddPayment.Click += delegate
 			{
-				if (decimal.TryParse(txtPagaCon.Text.Replace(".", ","), out var inputAmount) && inputAmount > 0)
+				if (decimal.TryParse(txtPagaCon.Text.Replace(',', '.'), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var inputAmount) && inputAmount > 0)
 				{
 					if (localCmbPaymentMethod.SelectedItem is PaymentMethod pm)
 					{
@@ -2053,18 +2059,21 @@ System.Convert.ToDecimal(item.Cells["Price"].Value) == price && rowIsEdited == i
 						if (pm.DiscountValidFrom.HasValue && date < pm.DiscountValidFrom.Value.Date) discountPerc = 0;
 						if (pm.DiscountValidTo.HasValue && date > pm.DiscountValidTo.Value.Date) discountPerc = 0;
 						
-						decimal calculatedDiscount = inputAmount * (discountPerc / 100m);
-						decimal actualPaid = inputAmount - calculatedDiscount;
+						decimal amountCovered = Math.Min(inputAmount, Math.Max(0m, remainingToPay));
+						decimal calculatedDiscount = amountCovered * (discountPerc / 100m);
+						decimal netCovered = amountCovered - calculatedDiscount;
+						decimal tenderedAmount = inputAmount - calculatedDiscount;
 						
 						sale.Payments.Add(new SalePayment 
 						{ 
 							PaymentMethodId = pm.Id, 
-							Amount = actualPaid,
-							TransactionReference = inputAmount.ToString(System.Globalization.CultureInfo.InvariantCulture)
+							Amount = netCovered,
+							TransactionReference = tenderedAmount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)
 						});
+						paymentMeta.Add((inputAmount, tenderedAmount, calculatedDiscount));
 						sale.PaymentDiscountAmount += calculatedDiscount;
 						remainingToPay -= inputAmount;
-						totalPaid += actualPaid;
+						totalPaid += tenderedAmount;
 						updateModalUI();
 						
 						if (remainingToPay > 0) 
@@ -2085,16 +2094,13 @@ System.Convert.ToDecimal(item.Cells["Price"].Value) == price && rowIsEdited == i
 				int idx = lstPayments.SelectedIndex;
 				if (idx >= 0 && idx < sale.Payments.Count)
 				{
-					var p = sale.Payments[idx];
-					if (decimal.TryParse(p.TransactionReference, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out decimal originalInputAmount))
-					{
-						decimal calculatedDiscount = originalInputAmount - p.Amount;
-						sale.PaymentDiscountAmount -= calculatedDiscount;
-						remainingToPay += originalInputAmount;
-						totalPaid -= p.Amount;
-						sale.Payments.RemoveAt(idx);
-						updateModalUI();
-					}
+					var meta = paymentMeta[idx];
+					sale.PaymentDiscountAmount -= meta.Discount;
+					remainingToPay += meta.InputAmount;
+					totalPaid -= meta.TenderedAmount;
+					sale.Payments.RemoveAt(idx);
+					paymentMeta.RemoveAt(idx);
+					updateModalUI();
 				}
 				else
 				{
@@ -2104,8 +2110,8 @@ System.Convert.ToDecimal(item.Cells["Price"].Value) == price && rowIsEdited == i
 
 			button.Click += async delegate
 			{
-				sale.TotalAmount = totalPaid;
-				sale.DiscountAmount += sale.PaymentDiscountAmount;
+				sale.TotalAmount = Math.Max(0m, total - sale.PaymentDiscountAmount);
+				sale.DiscountAmount = (num - total) + sale.PaymentDiscountAmount;
 				
 				string configuredPrinter = "";
 				using (LocalDbContext context = new LocalDbContext())
@@ -2156,7 +2162,7 @@ System.Convert.ToDecimal(item.Cells["Price"].Value) == price && rowIsEdited == i
 					catch { caeTextoAdicional = "\nCAE EN TRAMITE (Offline)"; }
 				}
 				
-				string text2 = GenerateTicketText(sale) + caeTextoAdicional;
+				string text2 = GenerateTicketText(sale, caeTextoAdicional);
 				PrintTicket(text2, configuredPrinter);
 				ShowAutoCloseMessage($"Venta registrada.\nTicket: {_posNumber:D5}-{sale.Id:D8}", "Caja", 1500);
 				gridItems.Rows.Clear();
@@ -2441,64 +2447,134 @@ System.Convert.ToDecimal(item.Cells["Price"].Value) == price && rowIsEdited == i
 		form.ShowDialog(this);
 	}
 
-	private string GenerateTicketText(Sale sale)
+	private static string CenterTicketText(string text, int width = 33)
 	{
+		if (string.IsNullOrEmpty(text)) return "";
+		text = text.Trim();
+		if (text.Length >= width) return text.Substring(0, width);
+		int leftPadding = (width - text.Length) / 2;
+		return text.PadLeft(text.Length + leftPadding);
+	}
+
+	private static string FormatTicketLine(string left, string right, int width = 33)
+	{
+		left ??= "";
+		right ??= "";
+		int maxLeft = width - right.Length - 1;
+		if (maxLeft > 0 && left.Length > maxLeft)
+		{
+			left = left.Substring(0, maxLeft);
+		}
+		int spaces = Math.Max(1, width - left.Length - right.Length);
+		return left + new string(' ', spaces) + right;
+	}
+
+	private string GenerateTicketText(Sale sale, string caeTextoAdicional = "")
+	{
+		const int ticketWidth = 33;
+		string sepDouble = new string('=', ticketWidth);
+		string sepSingle = new string('-', ticketWidth);
+
 		System.Text.StringBuilder sb = new System.Text.StringBuilder();
-		sb.AppendLine("         TICKET DE VENTA");
-		sb.AppendLine("=================================");
-		sb.AppendLine($"Fecha: {sale.Date:dd/MM/yyyy HH:mm}");
-		sb.AppendLine($"Ticket: {_posNumber:D5}-{sale.Id:D8}");
-		string value = "Cajero";
+		using LocalDbContext db = new LocalDbContext();
+
+		var companySetting = db.SystemSettings.FirstOrDefault(s => s.Key == "CompanyName");
+		if (companySetting != null && !string.IsNullOrWhiteSpace(companySetting.Value))
+		{
+			sb.AppendLine(CenterTicketText(companySetting.Value.ToUpper(), ticketWidth));
+		}
+		sb.AppendLine(CenterTicketText("TICKET DE VENTA", ticketWidth));
+		sb.AppendLine(sepDouble);
+		sb.AppendLine($"Fecha:   {sale.Date:dd/MM/yyyy HH:mm}");
+		sb.AppendLine($"Ticket:  {_posNumber:D5}-{sale.Id:D8}");
+
+		string cajeroName = "Cajero";
 		if (!string.IsNullOrEmpty(Text) && Text.Contains("Cajero: "))
 		{
 			int num = Text.IndexOf("Cajero: ") + 8;
 			int num2 = Text.IndexOf(" -", num);
-			if (num2 > num) value = Text.Substring(num, num2 - num);
+			if (num2 > num) cajeroName = Text.Substring(num, num2 - num);
 		}
-		sb.AppendLine($"Cajero: {value}");
-		sb.AppendLine("---------------------------------");
-		sb.AppendLine("Cant  Descripcion         Importe");
-		foreach (SaleItem item in sale.Items)
+		sb.AppendLine($"Cajero:  {cajeroName}");
+
+		string customerName = "Consumidor Final";
+		if (sale.CustomerId.HasValue)
 		{
-			using LocalDbContext db = new LocalDbContext();
-			Product p = db.Products.FirstOrDefault(x => x.Id == item.ProductId);
-			string text = (p != null) ? p.Name : "Producto";
-			if (text.Length > 18) text = text.Substring(0, 18);
-			sb.AppendLine($"{item.Quantity,4} {text,-18} ${item.Quantity * item.UnitPrice,7:0.00}");
-		}
-		sb.AppendLine("---------------------------------");
-		if (sale.PaymentDiscountAmount > 0m)
-		{
-			sb.AppendLine($"SUBTOTAL:               ${sale.SubTotal,7:0.00}");
-			sb.AppendLine($"DESC. PAGO:            -${sale.PaymentDiscountAmount,7:0.00}");
-			sb.AppendLine($"TOTAL:                  ${sale.TotalAmount,7:0.00}");
-		}
-		else if (sale.DiscountAmount > 0m)
-		{
-			sb.AppendLine($"SUBTOTAL:               ${sale.SubTotal,7:0.00}");
-			sb.AppendLine($"DESCUENTO:             -${sale.DiscountAmount,7:0.00}");
-			sb.AppendLine($"TOTAL:                  ${sale.TotalAmount,7:0.00}");
-		}
-		else
-		{
-			sb.AppendLine($"TOTAL:                  ${sale.TotalAmount,7:0.00}");
-		}
-		
-		sb.AppendLine("Pagos:");
-		using (LocalDbContext db = new LocalDbContext())
-		{
-			foreach (var payment in sale.Payments)
+			var cust = db.Customers.FirstOrDefault(c => c.Id == sale.CustomerId.Value);
+			if (cust != null && !string.IsNullOrWhiteSpace(cust.Name))
 			{
-				var pm = db.PaymentMethods.FirstOrDefault(p => p.Id == payment.PaymentMethodId);
-				string pName = pm != null ? pm.Name : "Desconocido";
-				if (pName.Length > 15) pName = pName.Substring(0, 15);
-				sb.AppendLine($" - {pName,-15} ${payment.Amount,7:0.00}");
+				customerName = cust.Name;
 			}
 		}
-		
-		sb.AppendLine("=================================");
-		sb.AppendLine("      GRACIAS POR SU COMPRA");
-		sb.AppendLine("\n\n\n\n\n\n");
+		sb.AppendLine(FormatTicketLine("Cliente:", customerName, ticketWidth));
+		sb.AppendLine(sepSingle);
+		sb.AppendLine(FormatTicketLine("Cant Descripcion", "Importe", ticketWidth));
+		sb.AppendLine(sepSingle);
+
+		foreach (SaleItem item in sale.Items)
+		{
+			Product p = db.Products.FirstOrDefault(x => x.Id == item.ProductId);
+			string prodName = !string.IsNullOrWhiteSpace(item.CustomName)
+				? item.CustomName
+				: ((p != null) ? p.Name : "Producto");
+
+			string qtyStr = item.Quantity % 1 == 0 ? item.Quantity.ToString("0") : item.Quantity.ToString("0.###");
+			decimal lineGross = item.Quantity * item.UnitPrice;
+			string priceStr = $"${lineGross:N2}";
+
+			sb.AppendLine(FormatTicketLine($"{qtyStr} {prodName}", priceStr, ticketWidth));
+			if (item.Quantity != 1m)
+			{
+				sb.AppendLine($"   ({qtyStr} x ${item.UnitPrice:N2})");
+			}
+		}
+
+		sb.AppendLine(sepSingle);
+		decimal promoDiscount = Math.Max(0m, sale.DiscountAmount - sale.PaymentDiscountAmount);
+		if (promoDiscount > 0m || sale.PaymentDiscountAmount > 0m)
+		{
+			sb.AppendLine(FormatTicketLine("SUBTOTAL:", $"${sale.SubTotal:N2}", ticketWidth));
+			if (promoDiscount > 0m)
+			{
+				sb.AppendLine(FormatTicketLine("DESCUENTO:", $"-${promoDiscount:N2}", ticketWidth));
+			}
+			if (sale.PaymentDiscountAmount > 0m)
+			{
+				sb.AppendLine(FormatTicketLine("DESC. PAGO:", $"-${sale.PaymentDiscountAmount:N2}", ticketWidth));
+			}
+		}
+		sb.AppendLine(FormatTicketLine("TOTAL DE COMPRA:", $"${sale.TotalAmount:N2}", ticketWidth));
+		sb.AppendLine(sepSingle);
+
+		sb.AppendLine("Pagos:");
+		decimal totalTendered = 0m;
+		foreach (var payment in sale.Payments)
+		{
+			var pm = db.PaymentMethods.FirstOrDefault(p => p.Id == payment.PaymentMethodId);
+			string pName = pm != null ? pm.Name : "Desconocido";
+			decimal paidAmount = payment.Amount;
+			if (!string.IsNullOrWhiteSpace(payment.TransactionReference) &&
+				decimal.TryParse(payment.TransactionReference, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out decimal refAmount) &&
+				refAmount > 0m)
+			{
+				paidAmount = refAmount;
+			}
+			totalTendered += paidAmount;
+			sb.AppendLine(FormatTicketLine($" - {pName}:", $"${paidAmount:N2}", ticketWidth));
+		}
+
+		decimal vuelto = Math.Max(0m, totalTendered - sale.TotalAmount);
+		sb.AppendLine(FormatTicketLine("SU VUELTO:", $"${vuelto:N2}", ticketWidth));
+
+		if (!string.IsNullOrWhiteSpace(caeTextoAdicional))
+		{
+			sb.AppendLine(sepSingle);
+			sb.AppendLine(caeTextoAdicional.Trim());
+		}
+
+		sb.AppendLine(sepDouble);
+		sb.AppendLine(CenterTicketText("GRACIAS POR SU COMPRA", ticketWidth));
+		sb.AppendLine("\n\n\n\n\n");
 		return sb.ToString();
 	}
 
