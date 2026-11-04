@@ -1957,20 +1957,42 @@ System.Convert.ToDecimal(item.Cells["Price"].Value) == price && rowIsEdited == i
 		try
 		{
 			modal.Text = "Finalizar Venta";
-			modal.Size = new Size(460, 610);
+			modal.ClientSize = new Size(560, 670);
 			modal.StartPosition = FormStartPosition.CenterParent;
-			modal.BackColor = Color.FromArgb(20, 20, 30);
+			modal.BackColor = Color.FromArgb(17, 21, 34);
 			modal.ForeColor = Color.White;
 			modal.FormBorderStyle = FormBorderStyle.FixedDialog;
 			modal.MaximizeBox = false;
 			modal.MinimizeBox = false;
 
-			Label title = new Label { Text = "Cobro Dividido", Font = new Font("Segoe UI", 18f, FontStyle.Bold), ForeColor = Color.LightSkyBlue, AutoSize = true, Location = new Point(40, 20) };
-			Label lblTotalText = new Label { Text = $"Total Ticket: ${total:N2}", Font = new Font("Segoe UI", 14f, FontStyle.Bold), ForeColor = Color.WhiteSmoke, AutoSize = true, Location = new Point(40, 65) };
-			Label lblFaltaPagar = new Label { Text = $"Falta Pagar: ${total:N2}", Font = new Font("Segoe UI", 16f, FontStyle.Bold), ForeColor = Color.YellowGreen, AutoSize = true, Location = new Point(40, 95) };
+			Label title = new Label { Text = "Cobro Dividido", Font = new Font("Segoe UI", 15f, FontStyle.Bold), ForeColor = Color.FromArgb(56, 189, 248), AutoSize = false, Location = new Point(24, 12), Size = new Size(320, 36), TextAlign = ContentAlignment.MiddleLeft };
+			Label lblEscHint = new Label { Text = "[ESC] Cancelar", Font = new Font("Segoe UI", 9.5f, FontStyle.Regular), ForeColor = Color.FromArgb(148, 163, 184), AutoSize = false, Size = new Size(180, 36), Location = new Point(356, 12), TextAlign = ContentAlignment.MiddleRight };
+
+			// Tarjeta de resumen de importes
+			Panel pnlSummary = new Panel
+			{
+				Location = new Point(24, 54),
+				Size = new Size(512, 138),
+				BackColor = Color.FromArgb(26, 32, 48),
+				BorderStyle = BorderStyle.FixedSingle
+			};
+
+			Label lblSubTitle = new Label { Text = "Total de Compra:", Font = new Font("Segoe UI", 11f, FontStyle.Bold), ForeColor = Color.FromArgb(226, 232, 240), AutoSize = false, Location = new Point(18, 10), Size = new Size(260, 28), TextAlign = ContentAlignment.MiddleLeft };
+			Label lblTotalText = new Label { Text = $"${total:N2}", Font = new Font("Segoe UI", 13.5f, FontStyle.Bold), ForeColor = Color.White, AutoSize = false, Location = new Point(280, 10), Size = new Size(212, 28), TextAlign = ContentAlignment.MiddleRight };
+
+			Label lblDtoTitle = new Label { Text = "Descuento Medio de Pago:", Font = new Font("Segoe UI", 10.5f, FontStyle.Bold), ForeColor = Color.FromArgb(56, 189, 248), AutoSize = false, Location = new Point(18, 42), Size = new Size(280, 26), TextAlign = ContentAlignment.MiddleLeft };
+			Label lblDtoVal = new Label { Text = "$0,00", Font = new Font("Segoe UI", 12.5f, FontStyle.Bold), ForeColor = Color.FromArgb(56, 189, 248), AutoSize = false, Location = new Point(300, 42), Size = new Size(192, 26), TextAlign = ContentAlignment.MiddleRight };
+
+			Panel pnlDivider = new Panel { Location = new Point(18, 75), Size = new Size(474, 1), BackColor = Color.FromArgb(51, 65, 85) };
+
+			Label lblFaltaTitle = new Label { Text = "TOTAL A COBRAR:", Font = new Font("Segoe UI", 12.5f, FontStyle.Bold), ForeColor = Color.FromArgb(163, 230, 53), AutoSize = false, Location = new Point(18, 82), Size = new Size(225, 46), TextAlign = ContentAlignment.MiddleLeft };
+			Label lblFaltaPagar = new Label { Text = $"${total:N2}", Font = new Font("Segoe UI", 20f, FontStyle.Bold), ForeColor = Color.FromArgb(163, 230, 53), AutoSize = false, Location = new Point(245, 82), Size = new Size(247, 46), TextAlign = ContentAlignment.MiddleRight };
+
+			pnlSummary.Controls.AddRange(new Control[] { lblSubTitle, lblTotalText, lblDtoTitle, lblDtoVal, pnlDivider, lblFaltaTitle, lblFaltaPagar });
 			
-			Label lblMethod = new Label { Text = "Medio de Pago", Location = new Point(40, 135), AutoSize = true, Font = new Font("Segoe UI", 11f) };
-			ComboBox localCmbPaymentMethod = new ComboBox { Location = new Point(40, 160), Width = 365, Font = new Font("Segoe UI", 12f), DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Color.FromArgb(30, 30, 45), ForeColor = Color.White };
+			Label lblMethod = new Label { Text = "Medio de Pago", Location = new Point(24, 202), Size = new Size(200, 24), AutoSize = false, Font = new Font("Segoe UI", 10f, FontStyle.Bold), ForeColor = Color.FromArgb(203, 213, 225), TextAlign = ContentAlignment.MiddleLeft };
+			Label lblMethodBadge = new Label { Text = "", Location = new Point(226, 202), Size = new Size(310, 24), AutoSize = false, Font = new Font("Segoe UI", 9.5f, FontStyle.Bold), ForeColor = Color.FromArgb(56, 189, 248), TextAlign = ContentAlignment.MiddleRight };
+			ComboBox localCmbPaymentMethod = new ComboBox { Location = new Point(24, 230), Width = 512, Font = new Font("Segoe UI", 12f, FontStyle.Bold), DropDownStyle = ComboBoxStyle.DropDownList, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(30, 38, 56), ForeColor = Color.White };
 			
 			using LocalDbContext db = new LocalDbContext();
 			List<PaymentMethod> list = db.PaymentMethods.Where((PaymentMethod p) => p.IsActive).ToList();
@@ -1993,54 +2015,199 @@ System.Convert.ToDecimal(item.Cells["Price"].Value) == price && rowIsEdited == i
 				else localCmbPaymentMethod.SelectedIndex = 0;
 			}
 
-			Label labelAmount = new Label { Text = "Monto que cubre ($)", Location = new Point(40, 205), AutoSize = true, Font = new Font("Segoe UI", 11f) };
-			TextBox txtPagaCon = new TextBox { Text = total.ToString("0.00"), Location = new Point(40, 230), Width = 150, Font = new Font("Segoe UI", 14f), BackColor = Color.FromArgb(30, 30, 45), ForeColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
-			Label lblVueltoModal = new Label { Text = "Vuelto: $0.00", Location = new Point(200, 230), AutoSize = true, Font = new Font("Segoe UI", 14f, FontStyle.Bold), ForeColor = Color.Gold };
-			
-			Button btnAddPayment = new Button { Text = "+ Agregar Pago [Enter]", Location = new Point(40, 280), Width = 365, Height = 45, BackColor = Color.FromArgb(59, 130, 246), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 11f, FontStyle.Bold) };
+			Label labelAmount = new Label { Text = "Monto con el que abona ($)", Location = new Point(24, 276), Size = new Size(256, 24), AutoSize = false, Font = new Font("Segoe UI", 10f, FontStyle.Bold), ForeColor = Color.FromArgb(203, 213, 225), TextAlign = ContentAlignment.MiddleLeft };
+			Label lblVueltoCaption = new Label { Text = "Su Vuelto ($)", Location = new Point(288, 276), Size = new Size(248, 24), AutoSize = false, Font = new Font("Segoe UI", 10f, FontStyle.Bold), ForeColor = Color.FromArgb(251, 191, 36), TextAlign = ContentAlignment.MiddleLeft };
+
+			Panel pnlInputBox = new Panel
+			{
+				Location = new Point(24, 304),
+				Size = new Size(248, 48),
+				BackColor = Color.FromArgb(15, 20, 32),
+				BorderStyle = BorderStyle.FixedSingle
+			};
+			TextBox txtPagaCon = new TextBox { Text = total.ToString("0.00"), Location = new Point(10, 7), Width = 226, Font = new Font("Segoe UI", 15f, FontStyle.Bold), BackColor = Color.FromArgb(15, 20, 32), ForeColor = Color.White, BorderStyle = BorderStyle.None, TextAlign = HorizontalAlignment.Right };
+			pnlInputBox.Controls.Add(txtPagaCon);
+
+			Panel pnlVueltoBox = new Panel
+			{
+				Location = new Point(288, 304),
+				Size = new Size(248, 48),
+				BackColor = Color.FromArgb(38, 33, 18),
+				BorderStyle = BorderStyle.FixedSingle
+			};
+			Label lblVueltoModal = new Label { Text = "$0,00", Location = new Point(10, 4), Size = new Size(226, 38), AutoSize = false, Font = new Font("Segoe UI", 15f, FontStyle.Bold), ForeColor = Color.Gold, TextAlign = ContentAlignment.MiddleRight };
+			pnlVueltoBox.Controls.Add(lblVueltoModal);
+
+			// Botones rápidos de efectivo para agilizar el cobro
+			FlowLayoutPanel pnlQuickCash = new FlowLayoutPanel
+			{
+				Location = new Point(24, 360),
+				Size = new Size(512, 34),
+				BackColor = Color.Transparent,
+				WrapContents = false,
+				Margin = new Padding(0)
+			};
+
+			Button btnAddPayment = new Button { Text = "+ AGREGAR PAGO [Enter]", Location = new Point(24, 402), Width = 512, Height = 46, BackColor = Color.FromArgb(37, 99, 235), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 11f, FontStyle.Bold), Cursor = Cursors.Hand };
 			btnAddPayment.FlatAppearance.BorderSize = 0;
 			
-			Label lblPagosTitle = new Label { Text = "Pagos Agregados:", Font = new Font("Segoe UI", 10f), ForeColor = Color.LightGray, AutoSize = true, Location = new Point(40, 340) };
-			ListBox lstPayments = new ListBox { Location = new Point(40, 365), Size = new Size(310, 90), Font = new Font("Segoe UI", 11f), BackColor = Color.FromArgb(30, 30, 45), ForeColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
-			Button btnRemovePayment = new Button { Text = "🗑", Location = new Point(360, 365), Size = new Size(45, 45), BackColor = Color.FromArgb(220, 53, 69), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 14f) };
+			Label lblPagosTitle = new Label { Text = "Pagos Agregados:", Font = new Font("Segoe UI", 10f, FontStyle.Bold), ForeColor = Color.FromArgb(180, 190, 205), AutoSize = false, Location = new Point(24, 458), Size = new Size(512, 24), TextAlign = ContentAlignment.MiddleLeft };
+			ListBox lstPayments = new ListBox { Location = new Point(24, 486), Size = new Size(452, 88), IntegralHeight = false, Font = new Font("Segoe UI", 11f, FontStyle.Bold), BackColor = Color.FromArgb(26, 32, 48), ForeColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
+			Button btnRemovePayment = new Button { Text = "🗑", Location = new Point(484, 486), Size = new Size(52, 88), BackColor = Color.FromArgb(220, 38, 38), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 14f), Cursor = Cursors.Hand };
 			btnRemovePayment.FlatAppearance.BorderSize = 0;
 
-			Button button = new Button { Text = "✔ CONFIRMAR VENTA [Enter]", Location = new Point(40, 475), Width = 365, Height = 55, BackColor = Color.FromArgb(16, 185, 129), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 14f, FontStyle.Bold), Enabled = false };
+			Button button = new Button { Text = "✔ CONFIRMAR VENTA [Enter]", Location = new Point(24, 590), Width = 512, Height = 56, BackColor = Color.FromArgb(55, 65, 81), ForeColor = Color.FromArgb(156, 163, 175), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 13f, FontStyle.Bold), Enabled = false, Cursor = Cursors.Hand };
 			button.FlatAppearance.BorderSize = 0;
 			
-			modal.Controls.AddRange(new Control[] { title, lblTotalText, lblFaltaPagar, lblMethod, localCmbPaymentMethod, labelAmount, txtPagaCon, lblVueltoModal, btnAddPayment, lblPagosTitle, lstPayments, btnRemovePayment, button });
+			modal.Controls.AddRange(new Control[] { title, lblEscHint, pnlSummary, lblMethod, lblMethodBadge, localCmbPaymentMethod, labelAmount, lblVueltoCaption, pnlInputBox, pnlVueltoBox, pnlQuickCash, btnAddPayment, lblPagosTitle, lstPayments, btnRemovePayment, button });
 			
 			decimal remainingToPay = total;
 			decimal totalPaid = 0m;
-			var paymentMeta = new List<(decimal InputAmount, decimal TenderedAmount, decimal Discount)>();
+			decimal totalVuelto = 0m;
+			var paymentMeta = new List<(decimal BaseCovered, decimal TenderedAmount, decimal Discount, decimal VueltoAdded)>();
 			Func<PaymentMethod?, bool> isCashMethod = (pm) => pm != null && pm.Name != null && pm.Name.Trim().Equals("Efectivo", StringComparison.OrdinalIgnoreCase);
+			Func<PaymentMethod?, decimal> getDiscountPerc = (pm) =>
+			{
+				if (pm == null) return 0m;
+				decimal discountPerc = pm.DiscountPercentage;
+				DateTime date = DateTime.Now.Date;
+				if (pm.DiscountValidFrom.HasValue && date < pm.DiscountValidFrom.Value.Date) discountPerc = 0m;
+				if (pm.DiscountValidTo.HasValue && date > pm.DiscountValidTo.Value.Date) discountPerc = 0m;
+				return Math.Clamp(discountPerc, 0m, 100m);
+			};
+
+			localCmbPaymentMethod.FormattingEnabled = true;
+			localCmbPaymentMethod.Format += (s, ev) =>
+			{
+				if (ev.ListItem is PaymentMethod pmItem)
+				{
+					decimal d = getDiscountPerc(pmItem);
+					ev.Value = d > 0m ? $"{pmItem.Name}  ({d:0.##}% Dto.)" : pmItem.Name;
+				}
+			};
+
+			Action<decimal> rebuildQuickCashButtons = (netTarget) =>
+			{
+				pnlQuickCash.Controls.Clear();
+				var selectedPm = localCmbPaymentMethod.SelectedItem as PaymentMethod;
+				if (remainingToPay <= 0m || !isCashMethod(selectedPm) || netTarget <= 0m)
+				{
+					pnlQuickCash.Visible = false;
+					return;
+				}
+				pnlQuickCash.Visible = true;
+				var amounts = new List<(string Label, decimal Value)> { ("Exacto", netTarget) };
+				decimal[] steps = new decimal[] { 1000m, 2000m, 5000m, 10000m, 20000m, 50000m };
+				var suggestions = new List<decimal>();
+				foreach (var step in steps)
+				{
+					decimal rounded = Math.Ceiling(netTarget / step) * step;
+					if (rounded > netTarget && !suggestions.Contains(rounded))
+					{
+						suggestions.Add(rounded);
+					}
+				}
+				foreach (var bill in new decimal[] { 10000m, 20000m, 30000m, 40000m, 50000m, 100000m })
+				{
+					if (bill > netTarget && !suggestions.Contains(bill))
+					{
+						suggestions.Add(bill);
+					}
+				}
+				foreach (var sug in suggestions.OrderBy(x => x).Take(4))
+				{
+					amounts.Add(($"${sug:N0}", sug));
+				}
+
+				int btnWidth = Math.Max(84, (512 - (amounts.Count - 1) * 6) / amounts.Count);
+				for (int i = 0; i < amounts.Count; i++)
+				{
+					var item = amounts[i];
+					Button qBtn = new Button
+					{
+						Text = item.Label,
+						Size = new Size(btnWidth, 28),
+						Margin = new Padding(i == 0 ? 0 : 6, 2, 0, 2),
+						BackColor = i == 0 ? Color.FromArgb(30, 58, 95) : Color.FromArgb(30, 41, 59),
+						ForeColor = i == 0 ? Color.FromArgb(125, 211, 252) : Color.FromArgb(226, 232, 240),
+						FlatStyle = FlatStyle.Flat,
+						Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+						TabStop = false,
+						Cursor = Cursors.Hand
+					};
+					qBtn.FlatAppearance.BorderColor = Color.FromArgb(51, 65, 85);
+					qBtn.FlatAppearance.BorderSize = 1;
+					decimal valToSet = item.Value;
+					qBtn.Click += delegate
+					{
+						txtPagaCon.Text = valToSet.ToString("0.00");
+						txtPagaCon.Focus();
+						txtPagaCon.SelectAll();
+					};
+					pnlQuickCash.Controls.Add(qBtn);
+				}
+			};
 			
 			Action updateModalUI = () =>
 			{
-				bool currentSelectedIsCash = isCashMethod(localCmbPaymentMethod.SelectedItem as PaymentMethod);
+				var selectedPm = localCmbPaymentMethod.SelectedItem as PaymentMethod;
+				bool currentSelectedIsCash = isCashMethod(selectedPm);
 				bool anyAddedIsCash = sale.Payments.Any(p => isCashMethod(list.FirstOrDefault(x => x.Id == p.PaymentMethodId)));
-				labelAmount.Text = currentSelectedIsCash ? "Monto con el que abona ($)" : "Monto que cubre ($)";
-				lblVueltoModal.Visible = currentSelectedIsCash || anyAddedIsCash || remainingToPay < 0;
+				decimal discPerc = getDiscountPerc(selectedPm);
+				decimal pendingDiscount = remainingToPay > 0m ? Math.Round(remainingToPay * (discPerc / 100m), 2) : 0m;
+				decimal netRemaining = Math.Max(0m, remainingToPay - pendingDiscount);
+				decimal previewTotalDiscount = sale.PaymentDiscountAmount + pendingDiscount;
 
-				lblFaltaPagar.Text = $"Falta Pagar: ${Math.Max(0, remainingToPay):N2}";
-				if (remainingToPay <= 0)
+				lblTotalText.Text = $"${total:N2}";
+				if (previewTotalDiscount > 0m)
 				{
-					lblFaltaPagar.ForeColor = Color.LightGray;
-					lblVueltoModal.Text = $"Vuelto: ${Math.Abs(remainingToPay):N2}";
-					lblVueltoModal.ForeColor = Color.Gold;
+					lblDtoTitle.Text = discPerc > 0m && remainingToPay > 0m
+						? $"Descuento Medio de Pago ({discPerc:0.##}%):"
+						: "Descuento Medio de Pago:";
+					lblDtoVal.Text = $"-${previewTotalDiscount:N2}";
+					lblDtoTitle.ForeColor = Color.FromArgb(56, 189, 248);
+					lblDtoVal.ForeColor = Color.FromArgb(56, 189, 248);
+				}
+				else
+				{
+					lblDtoTitle.Text = "Descuento Medio de Pago:";
+					lblDtoVal.Text = "$0,00";
+					lblDtoTitle.ForeColor = Color.FromArgb(100, 116, 139);
+					lblDtoVal.ForeColor = Color.FromArgb(100, 116, 139);
+				}
+
+				lblMethodBadge.Text = discPerc > 0m ? $"★ {discPerc:0.##}% DTO. APLICADO" : "";
+				labelAmount.Text = currentSelectedIsCash ? "Monto con el que abona ($)" : "Monto que cubre ($)";
+				bool showVuelto = currentSelectedIsCash || anyAddedIsCash || totalVuelto > 0m;
+				pnlVueltoBox.Visible = showVuelto;
+				lblVueltoCaption.Visible = showVuelto;
+
+				if (remainingToPay <= 0m)
+				{
+					lblFaltaTitle.Text = "TOTAL A COBRAR:";
+					lblFaltaTitle.ForeColor = Color.FromArgb(16, 185, 129);
+					lblFaltaPagar.Text = $"${Math.Max(0m, total - sale.PaymentDiscountAmount):N2}";
+					lblFaltaPagar.ForeColor = Color.FromArgb(16, 185, 129);
+					lblVueltoModal.Text = $"${totalVuelto:N2}";
 					button.Enabled = true;
 					button.BackColor = Color.FromArgb(16, 185, 129);
+					button.ForeColor = Color.White;
 					txtPagaCon.Text = "0.00";
 				}
 				else
 				{
-					lblFaltaPagar.ForeColor = Color.YellowGreen;
-					lblVueltoModal.Text = "Vuelto: $0.00";
-					lblVueltoModal.ForeColor = Color.Gold;
+					lblFaltaTitle.Text = discPerc > 0m ? $"A PAGAR (DTO. {discPerc:0.##}%):" : "FALTA PAGAR:";
+					lblFaltaTitle.ForeColor = Color.FromArgb(163, 230, 53);
+					lblFaltaPagar.Text = $"${netRemaining:N2}";
+					lblFaltaPagar.ForeColor = Color.FromArgb(163, 230, 53);
+					lblVueltoModal.Text = $"${totalVuelto:N2}";
 					button.Enabled = false;
-					button.BackColor = Color.Gray;
-					txtPagaCon.Text = remainingToPay.ToString("0.00");
+					button.BackColor = Color.FromArgb(55, 65, 81);
+					button.ForeColor = Color.FromArgb(156, 163, 175);
+					txtPagaCon.Text = netRemaining.ToString("0.00");
 				}
+
+				rebuildQuickCashButtons(netRemaining);
 				
 				lstPayments.Items.Clear();
 				for (int i = 0; i < sale.Payments.Count; i++)
@@ -2049,66 +2216,81 @@ System.Convert.ToDecimal(item.Cells["Price"].Value) == price && rowIsEdited == i
 					var pm = list.FirstOrDefault(x => x.Id == p.PaymentMethodId);
 					string pmName = pm != null ? pm.Name : "Desconocido";
 					decimal displayAmount = i < paymentMeta.Count ? paymentMeta[i].TenderedAmount : p.Amount;
-					lstPayments.Items.Add($"{pmName}: ${displayAmount:N2}");
+					decimal dtoItem = i < paymentMeta.Count ? paymentMeta[i].Discount : 0m;
+					string dtoTag = dtoItem > 0m ? $"  (Dto: -${dtoItem:N2})" : "";
+					lstPayments.Items.Add($"✓ {pmName}: ${displayAmount:N2}{dtoTag}");
 				}
 				btnRemovePayment.Enabled = sale.Payments.Count > 0;
 			};
 
 			localCmbPaymentMethod.SelectedIndexChanged += delegate
 			{
-				bool currentSelectedIsCash = isCashMethod(localCmbPaymentMethod.SelectedItem as PaymentMethod);
-				bool anyAddedIsCash = sale.Payments.Any(p => isCashMethod(list.FirstOrDefault(x => x.Id == p.PaymentMethodId)));
-				labelAmount.Text = currentSelectedIsCash ? "Monto con el que abona ($)" : "Monto que cubre ($)";
-				lblVueltoModal.Visible = currentSelectedIsCash || anyAddedIsCash || remainingToPay < 0;
-				if (!currentSelectedIsCash && remainingToPay > 0)
-				{
-					lblVueltoModal.Text = "Vuelto: $0.00";
-				}
+				updateModalUI();
 			};
 
 			txtPagaCon.TextChanged += delegate
 			{
-				if (remainingToPay > 0 && isCashMethod(localCmbPaymentMethod.SelectedItem as PaymentMethod))
+				var selectedPm = localCmbPaymentMethod.SelectedItem as PaymentMethod;
+				if (remainingToPay > 0m && isCashMethod(selectedPm))
 				{
-					if (decimal.TryParse(txtPagaCon.Text.Replace(',', '.'), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var typedAmount) && typedAmount > remainingToPay)
+					decimal discPerc = getDiscountPerc(selectedPm);
+					decimal pendingDiscount = Math.Round(remainingToPay * (discPerc / 100m), 2);
+					decimal netRemaining = Math.Max(0m, remainingToPay - pendingDiscount);
+					if (decimal.TryParse(txtPagaCon.Text.Replace(',', '.'), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var typedAmount) && typedAmount > netRemaining)
 					{
-						lblVueltoModal.Text = $"Vuelto: ${(typedAmount - remainingToPay):N2}";
+						lblVueltoModal.Text = $"${(totalVuelto + typedAmount - netRemaining):N2}";
 					}
 					else
 					{
-						lblVueltoModal.Text = "Vuelto: $0.00";
+						lblVueltoModal.Text = $"${totalVuelto:N2}";
 					}
 				}
 			};
 			
 			btnAddPayment.Click += delegate
 			{
+				if (remainingToPay <= 0m) return;
 				if (decimal.TryParse(txtPagaCon.Text.Replace(',', '.'), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var inputAmount) && inputAmount > 0)
 				{
 					if (localCmbPaymentMethod.SelectedItem is PaymentMethod pm)
 					{
-						if (!isCashMethod(pm) && Math.Round(inputAmount, 2) > Math.Round(Math.Max(0m, remainingToPay), 2))
+						decimal discountPerc = getDiscountPerc(pm);
+						decimal pendingDiscount = Math.Round(remainingToPay * (discountPerc / 100m), 2);
+						decimal netRemaining = Math.Max(0m, remainingToPay - pendingDiscount);
+
+						if (!isCashMethod(pm) && Math.Round(inputAmount, 2) > Math.Round(netRemaining, 2))
 						{
 							MessageBox.Show(
-								$"El monto ingresado (${inputAmount:N2}) no puede superar lo que falta pagar (${Math.Max(0m, remainingToPay):N2}) para '{pm.Name}'.\n\nSolo el medio de pago Efectivo permite vuelto.",
+								$"El monto ingresado (${inputAmount:N2}) no puede superar lo que falta pagar (${netRemaining:N2}) para '{pm.Name}'.\n\nSolo el medio de pago Efectivo permite vuelto.",
 								"Monto no permitido",
 								MessageBoxButtons.OK,
 								MessageBoxIcon.Warning);
-							txtPagaCon.Text = Math.Max(0m, remainingToPay).ToString("0.00");
+							txtPagaCon.Text = netRemaining.ToString("0.00");
 							txtPagaCon.Focus();
 							txtPagaCon.SelectAll();
 							return;
 						}
 
-						decimal discountPerc = pm.DiscountPercentage;
-						DateTime date = DateTime.Now.Date;
-						if (pm.DiscountValidFrom.HasValue && date < pm.DiscountValidFrom.Value.Date) discountPerc = 0;
-						if (pm.DiscountValidTo.HasValue && date > pm.DiscountValidTo.Value.Date) discountPerc = 0;
-						
-						decimal amountCovered = Math.Min(inputAmount, Math.Max(0m, remainingToPay));
-						decimal calculatedDiscount = amountCovered * (discountPerc / 100m);
-						decimal netCovered = amountCovered - calculatedDiscount;
-						decimal tenderedAmount = inputAmount - calculatedDiscount;
+						decimal baseCovered;
+						decimal calculatedDiscount;
+						decimal netCovered;
+						decimal tenderedAmount = Math.Round(inputAmount, 2);
+						decimal vueltoAdded = 0m;
+
+						if (tenderedAmount >= Math.Round(netRemaining, 2))
+						{
+							baseCovered = remainingToPay;
+							calculatedDiscount = pendingDiscount;
+							netCovered = netRemaining;
+							vueltoAdded = Math.Max(0m, tenderedAmount - netCovered);
+						}
+						else
+						{
+							netCovered = tenderedAmount;
+							decimal factor = 1m - (discountPerc / 100m);
+							baseCovered = factor > 0m ? Math.Min(remainingToPay, Math.Round(netCovered / factor, 2)) : remainingToPay;
+							calculatedDiscount = Math.Max(0m, baseCovered - netCovered);
+						}
 						
 						sale.Payments.Add(new SalePayment 
 						{ 
@@ -2116,9 +2298,10 @@ System.Convert.ToDecimal(item.Cells["Price"].Value) == price && rowIsEdited == i
 							Amount = netCovered,
 							TransactionReference = tenderedAmount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)
 						});
-						paymentMeta.Add((inputAmount, tenderedAmount, calculatedDiscount));
+						paymentMeta.Add((baseCovered, tenderedAmount, calculatedDiscount, vueltoAdded));
 						sale.PaymentDiscountAmount += calculatedDiscount;
-						remainingToPay -= inputAmount;
+						remainingToPay = Math.Max(0m, remainingToPay - baseCovered);
+						totalVuelto += vueltoAdded;
 						totalPaid += tenderedAmount;
 						updateModalUI();
 						
@@ -2141,9 +2324,10 @@ System.Convert.ToDecimal(item.Cells["Price"].Value) == price && rowIsEdited == i
 				if (idx >= 0 && idx < sale.Payments.Count)
 				{
 					var meta = paymentMeta[idx];
-					sale.PaymentDiscountAmount -= meta.Discount;
-					remainingToPay += meta.InputAmount;
-					totalPaid -= meta.TenderedAmount;
+					sale.PaymentDiscountAmount = Math.Max(0m, sale.PaymentDiscountAmount - meta.Discount);
+					remainingToPay += meta.BaseCovered;
+					totalVuelto = Math.Max(0m, totalVuelto - meta.VueltoAdded);
+					totalPaid = Math.Max(0m, totalPaid - meta.TenderedAmount);
 					sale.Payments.RemoveAt(idx);
 					paymentMeta.RemoveAt(idx);
 					updateModalUI();
@@ -2297,7 +2481,7 @@ System.Convert.ToDecimal(item.Cells["Price"].Value) == price && rowIsEdited == i
 			};
 			
 			// Quitar el modal.AcceptButton para manejar el Enter manualmente arriba.
-			modal.Shown += delegate { txtPagaCon.Focus(); txtPagaCon.SelectAll(); updateModalUI(); };
+			modal.Shown += delegate { updateModalUI(); txtPagaCon.Focus(); txtPagaCon.SelectAll(); };
 			modal.FormClosed += delegate { txtBarcode.Focus(); };
 			modal.ShowDialog();
 		}
@@ -2431,19 +2615,43 @@ System.Convert.ToDecimal(item.Cells["Price"].Value) == price && rowIsEdited == i
 			}
 			printDocument.PrintPage += delegate(object s, PrintPageEventArgs e)
 			{
-				Font font = new Font("Courier New", 8f, FontStyle.Bold);
-				float num = 0f;
-				int num2 = 0;
-				float x = 0f;
-				float num3 = 0f;
 				if (e.Graphics != null)
 				{
+					Font font = new Font("Courier New", 8f, FontStyle.Bold);
+					Font fontTotalLabel = new Font("Courier New", 9f, FontStyle.Bold);
+					Font fontTotalPrice = new Font("Courier New", 11f, FontStyle.Bold);
+					float x = 0f;
+					float currentY = 0f;
+					float lineWidth = e.Graphics.MeasureString(new string('=', 33), font).Width;
 					string[] array = text2.Split(new string[3] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
 					foreach (string s2 in array)
 					{
-						num = num3 + (float)num2 * font.GetHeight(e.Graphics);
-						e.Graphics.DrawString(s2, font, Brushes.Black, x, num, new StringFormat());
-						num2++;
+						if (s2.TrimStart().StartsWith("TOTAL DE COMPRA:", StringComparison.OrdinalIgnoreCase))
+						{
+							string labelPart = "TOTAL DE COMPRA:";
+							string pricePart = s2.Substring(s2.IndexOf(':') + 1).Trim();
+							currentY += 2f;
+							float labelH = fontTotalLabel.GetHeight(e.Graphics);
+							float priceH = fontTotalPrice.GetHeight(e.Graphics);
+							float rowH = Math.Max(labelH, priceH);
+							float labelY = currentY + (rowH - labelH) / 2f;
+
+							// Doble pasada en X para mayor negrita en impresoras térmicas
+							e.Graphics.DrawString(labelPart, fontTotalLabel, Brushes.Black, x, labelY, new StringFormat());
+							e.Graphics.DrawString(labelPart, fontTotalLabel, Brushes.Black, x + 0.45f, labelY, new StringFormat());
+
+							float priceWidth = e.Graphics.MeasureString(pricePart, fontTotalPrice).Width;
+							float priceX = Math.Max(x + e.Graphics.MeasureString(labelPart + " ", fontTotalLabel).Width, lineWidth - priceWidth);
+							e.Graphics.DrawString(pricePart, fontTotalPrice, Brushes.Black, priceX, currentY, new StringFormat());
+							e.Graphics.DrawString(pricePart, fontTotalPrice, Brushes.Black, priceX + 0.5f, currentY, new StringFormat());
+
+							currentY += rowH + 2f;
+						}
+						else
+						{
+							e.Graphics.DrawString(s2, font, Brushes.Black, x, currentY, new StringFormat());
+							currentY += font.GetHeight(e.Graphics);
+						}
 					}
 				}
 			};
