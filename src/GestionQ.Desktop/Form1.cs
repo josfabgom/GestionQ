@@ -14,9 +14,9 @@ public partial class Form1 : Form
     private string ticketToPrint = "";
     private AppConfig config;
 
-    public Form1()
+    public Form1(AppConfig? loadedConfig = null)
     {
-        config = AppConfig.Load();
+        config = loadedConfig ?? AppConfig.Load();
         InitializeComponent();
         this.Text = "GestionQ POS";
         this.WindowState = FormWindowState.Maximized;

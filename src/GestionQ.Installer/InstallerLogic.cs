@@ -298,8 +298,34 @@ namespace GestionQ.Installer
                 throw new FileNotFoundException($"No se encontrÃ³ el ejecutable del servicio web en {exePath}");
             }
 
-            RunProcess("sc.exe", $"create {ServiceName} binPath= \"{exePath}\" start= auto DisplayName= \"{ServiceDisplayName}\"");
+            RunProcess("sc.exe", $"create {ServiceName} binPath= \"{exePath}\" start= delayed-auto DisplayName= \"{ServiceDisplayName}\"");
             RunProcess("sc.exe", $"description {ServiceName} \"{ServiceDescription}\"");
+
+            // Si SQL Server Express está instalado localmente, declarar dependencia para que arranque primero
+            try
+            {
+                bool hasSqlExpress = false;
+                foreach (var svc in ServiceController.GetServices())
+                {
+                    if (svc.ServiceName.Equals("MSSQL$SQLEXPRESS", StringComparison.OrdinalIgnoreCase))
+                    {
+                        hasSqlExpress = true;
+                        break;
+                    }
+                }
+                if (hasSqlExpress)
+                {
+                    RunProcess("sc.exe", $"config {ServiceName} depend= MSSQL$SQLEXPRESS", ignoreErrors: true);
+                }
+            }
+            catch (Exception ex)
+            {
+                LogMessage("Advertencia al configurar dependencia SQL: " + ex.Message);
+            }
+
+            // Configurar recuperación automática si el servicio falla o se detiene inesperadamente
+            RunProcess("sc.exe", $"failure {ServiceName} reset= 86400 actions= restart/5000/restart/15000/restart/30000", ignoreErrors: true);
+            RunProcess("sc.exe", $"failureflag {ServiceName} 1", ignoreErrors: true);
         }
 
         private void ConfigureFirewall()

@@ -1,37 +1,26 @@
-$ErrorActionPreference = "Stop"
+﻿$ErrorActionPreference = "SilentlyContinue"
 $Port = 5144
-$AppPath = Resolve-Path "$PSScriptRoot\..\..\src\GestionQ.Web"
 
-function Launch-WebApp {
-    param([string]$Url)
-    
-    $edgePath = "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe"
-    $chromePath = "${env:ProgramFiles}\Google\Chrome\Application\chrome.exe"
-    $chromeX86Path = "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe"
+# Buscar GestionQ.Desktop.exe en orden: producción instalada (app_cliente / app) y luego desarrollo (net10.0-windows)
+$candidatePaths = @(
+    (Join-Path $PSScriptRoot "..\..\..\app_cliente\GestionQ.Desktop.exe"),
+    (Join-Path $PSScriptRoot "..\..\GestionQ.Desktop.exe"),
+    (Join-Path $PSScriptRoot "..\..\out\app_cliente\GestionQ.Desktop.exe"),
+    (Join-Path $PSScriptRoot "..\..\src\GestionQ.Desktop\bin\Release\net10.0-windows\GestionQ.Desktop.exe"),
+    (Join-Path $PSScriptRoot "..\..\src\GestionQ.Desktop\bin\Debug\net10.0-windows\GestionQ.Desktop.exe")
+)
 
-    if (Test-Path $edgePath) {
-        Start-Process -FilePath $edgePath -ArgumentList "--app=$Url"
-    }
-    elseif (Test-Path $chromePath) {
-        Start-Process -FilePath $chromePath -ArgumentList "--app=$Url"
-    }
-    elseif (Test-Path $chromeX86Path) {
-        Start-Process -FilePath $chromeX86Path -ArgumentList "--app=$Url"
-    }
-    else {
-        Start-Process $Url
+$DesktopExe = $null
+foreach ($candidate in $candidatePaths) {
+    if (Test-Path $candidate) {
+        $DesktopExe = (Resolve-Path $candidate).Path
+        break
     }
 }
 
-# 1. Verificar si el puerto ya está ocupado (la aplicación ya está corriendo)
-$connection = Get-NetTCPConnection -LocalPort $Port -ErrorAction SilentlyContinue
-
-$ProdDesktopExe = Join-Path $AppPath "GestionQ.Desktop.exe"
-if (Test-Path $ProdDesktopExe) {
-    $DesktopExe = $ProdDesktopExe
+if ($DesktopExe) {
+    Start-Process -FilePath $DesktopExe -WorkingDirectory (Split-Path $DesktopExe -Parent)
 } else {
-    $DesktopExe = "c:\AntiGravity Proyectos\GestionQ\src\GestionQ.Desktop\bin\Debug\net9.0-windows\GestionQ.Desktop.exe"
+    # Fallback al navegador si no se encuentra la app de escritorio
+    Start-Process "http://127.0.0.1:$Port"
 }
-
-# Abrir la interfaz web (Aplicación de Escritorio)
-Start-Process $DesktopExe

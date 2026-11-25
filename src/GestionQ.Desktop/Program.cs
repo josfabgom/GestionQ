@@ -11,6 +11,16 @@ static class Program
         // To customize application configuration such as set high DPI settings or default font,
         // see https://aka.ms/applicationconfiguration.
         ApplicationConfiguration.Initialize();
-        Application.Run(new Form1());
+
+        var config = AppConfig.Load();
+        using (var splash = new SplashForm(config))
+        {
+            if (splash.ShowDialog() != DialogResult.OK)
+            {
+                return;
+            }
+        }
+
+        Application.Run(new Form1(config));
     }    
 }

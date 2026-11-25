@@ -282,6 +282,10 @@ namespace GestionQ.Web.Controllers.Api
             }
             await _context.SaveChangesAsync(); // Save so we can get IDs for sales
 
+            // Pre-cargar IDs válidos para evitar errores de Foreign Key (HTTP 500) por registros eliminados
+            var validPresentationIds = new HashSet<int>(await _context.ProductPresentations.AsNoTracking().Select(p => p.Id).ToListAsync());
+            var validRegisterIds = new HashSet<int>(await _context.CashRegisters.AsNoTracking().Select(c => c.Id).ToListAsync());
+
             // Process Sales
             _context.IgnoreStockChangesForLogging = true;
             foreach (var saleDto in request.Sales)
@@ -348,7 +352,7 @@ namespace GestionQ.Web.Controllers.Api
                     Items = saleDto.Items.Select(i => new SaleItem
                     {
                         ProductId = i.ProductId,
-                        PresentationId = i.PresentationId,
+                        PresentationId = (i.PresentationId.HasValue && validPresentationIds.Contains(i.PresentationId.Value)) ? i.PresentationId : null,
                         Quantity = i.Quantity,
                         UnitPrice = i.UnitPrice,
                         DiscountAmount = i.DiscountAmount
@@ -369,7 +373,7 @@ namespace GestionQ.Web.Controllers.Api
                         sale.CashRegisterId = targetRegister.Id;
                     }
                 }
-                else if (saleDto.CashRegisterId.HasValue && saleDto.CashRegisterId.Value > 0)
+                else if (saleDto.CashRegisterId.HasValue && validRegisterIds.Contains(saleDto.CashRegisterId.Value))
                 {
                     sale.CashRegisterId = saleDto.CashRegisterId.Value;
                 }
@@ -407,6 +411,33 @@ namespace GestionQ.Web.Controllers.Api
                 var exists = await _context.CashRegisterMovements.AnyAsync(m => m.GlobalId == movDto.GlobalId);
                 if (exists) continue;
 
+                int? resolvedRegisterId = null;
+                if (movDto.OfflineCashRegisterGlobalId.HasValue)
+                {
+                    var targetRegister = await _context.CashRegisters.FirstOrDefaultAsync(c => c.GlobalId == movDto.OfflineCashRegisterGlobalId.Value);
+                    if (targetRegister != null)
+                    {
+                        resolvedRegisterId = targetRegister.Id;
+                    }
+                }
+                else if (movDto.CashRegisterId.HasValue && validRegisterIds.Contains(movDto.CashRegisterId.Value))
+                {
+                    resolvedRegisterId = movDto.CashRegisterId.Value;
+                }
+
+                if (!resolvedRegisterId.HasValue)
+                {
+                    var fallbackRegister = await _context.CashRegisters
+                        .Where(c => c.PointOfSaleId == pos.Id)
+                        .OrderByDescending(c => c.OpeningDate)
+                        .FirstOrDefaultAsync()
+                        ?? await _context.CashRegisters.OrderByDescending(c => c.OpeningDate).FirstOrDefaultAsync();
+
+                    resolvedRegisterId = fallbackRegister?.Id;
+                }
+
+                if (!resolvedRegisterId.HasValue) continue;
+
                 var movement = new CashRegisterMovement
                 {
                     GlobalId = movDto.GlobalId,
@@ -414,23 +445,10 @@ namespace GestionQ.Web.Controllers.Api
                     Type = movDto.Type,
                     Description = movDto.Description,
                     Date = movDto.Date,
-                    CashRegisterId = 1, // Fallback, we assign below
+                    CashRegisterId = resolvedRegisterId.Value,
                     IsSynced = true,
                     SyncedAt = DateTime.Now
                 };
-
-                if (movDto.OfflineCashRegisterGlobalId.HasValue)
-                {
-                    var targetRegister = await _context.CashRegisters.FirstOrDefaultAsync(c => c.GlobalId == movDto.OfflineCashRegisterGlobalId.Value);
-                    if (targetRegister != null)
-                    {
-                        movement.CashRegisterId = targetRegister.Id;
-                    }
-                }
-                else if (movDto.CashRegisterId.HasValue && movDto.CashRegisterId.Value > 0)
-                {
-                    movement.CashRegisterId = movDto.CashRegisterId.Value;
-                }
                 
                 _context.CashRegisterMovements.Add(movement);
             }

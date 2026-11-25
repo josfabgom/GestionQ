@@ -32,8 +32,14 @@ timeout /t 2 /nobreak >nul
 
 echo.
 echo [2/4] Instalando servicio de Windows...
-sc create %SERVICE_NAME% binPath= "%EXE_PATH%" start= auto DisplayName= "%DISPLAY_NAME%"
+sc create %SERVICE_NAME% binPath= "%EXE_PATH%" start= delayed-auto DisplayName= "%DISPLAY_NAME%"
 sc description %SERVICE_NAME% "%DESCRIPTION%"
+sc query "MSSQL$SQLEXPRESS" >nul 2>&1
+if %ERRORLEVEL% equ 0 (
+    sc config %SERVICE_NAME% depend= MSSQL$SQLEXPRESS
+)
+sc failure %SERVICE_NAME% reset= 86400 actions= restart/5000/restart/15000/restart/30000
+sc failureflag %SERVICE_NAME% 1
 
 echo.
 echo [3/4] Abriendo puerto 5144 en el Firewall para acceso de PCs Clientes...

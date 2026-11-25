@@ -14,6 +14,7 @@ namespace GestionQ.CajaPOS
     {
         private readonly HttpClient _httpClient;
         private readonly string _serverUrl;
+        private readonly SemaphoreSlim _syncLock = new(1, 1);
         private CancellationTokenSource _cts = new();
         
         public event Action OnSyncCompleted;
@@ -58,6 +59,28 @@ namespace GestionQ.CajaPOS
 
         public async Task PerformSyncAsync()
         {
+            if (!await _syncLock.WaitAsync(0))
+            {
+                return; // Ya hay una sincronización en curso; evitar bloqueo de SQLite
+            }
+
+            try
+            {
+                await PerformSyncInternalAsync();
+            }
+            catch (Exception ex)
+            {
+                LogSyncError(ex.ToString());
+                throw;
+            }
+            finally
+            {
+                _syncLock.Release();
+            }
+        }
+
+        private async Task PerformSyncInternalAsync()
+        {
             bool dataChanged = false;
             using var db = new LocalDbContext();
             
@@ -96,6 +119,11 @@ namespace GestionQ.CajaPOS
                     foreach (var r in unsyncedRegisters) r.IsSynced = true;
                     foreach (var c in unsyncedCustomers) db.Entry(c).Property("IsSynced").CurrentValue = true;
                     await db.SaveChangesAsync();
+                }
+                else
+                {
+                    string body = await pushResponse.Content.ReadAsStringAsync();
+                    throw new HttpRequestException($"Error al enviar ventas/caja al servidor (HTTP {(int)pushResponse.StatusCode}): {body}");
                 }
             }
 
@@ -242,9 +270,34 @@ namespace GestionQ.CajaPOS
                     dataChanged = true;
                 }
             }
+            else
+            {
+                string body = await pullResponse.Content.ReadAsStringAsync();
+                throw new HttpRequestException($"Error al descargar datos del servidor (HTTP {(int)pullResponse.StatusCode}): {body}");
+            }
             
-            // Para simplificar, asumimos que siempre notificamos si hubo conexiÃ³n exitosa
+            // Notificar solo si tanto PUSH como PULL fueron exitosos
             OnSyncCompleted?.Invoke();
+        }
+
+        private static void LogSyncError(string message)
+        {
+            try
+            {
+                string logPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "sync_error.log");
+                System.IO.File.AppendAllText(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {message}{Environment.NewLine}");
+            }
+            catch
+            {
+                try
+                {
+                    string fallbackDir = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "GestionQ");
+                    System.IO.Directory.CreateDirectory(fallbackDir);
+                    string fallbackPath = System.IO.Path.Combine(fallbackDir, "sync_error.log");
+                    System.IO.File.AppendAllText(fallbackPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {message}{Environment.NewLine}");
+                }
+                catch { }
+            }
         }
 
         private async Task DownloadImageAsync(string relativeUrl)

@@ -51,7 +51,7 @@ namespace GestionQ.Web.Services
                     UseShellExecute = false,
                     CreateNoWindow = true
                 });
-                authProcess?.WaitForExit();
+                authProcess?.WaitForExit(5000);
 
                 // Iniciar tunel
                 _process = new Process

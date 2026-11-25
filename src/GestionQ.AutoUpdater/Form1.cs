@@ -182,7 +182,13 @@ namespace GestionQ.AutoUpdater
                     }
                 }
 
-                lblStatus.Text = "Cerrando procesos...";
+                lblStatus.Text = "Deteniendo servicio y procesos...";
+                bool hasWindowsService = RunHiddenCommand("sc.exe", "query GestionQ_Web_Service") == 0;
+                if (hasWindowsService)
+                {
+                    RunHiddenCommand("net.exe", "stop GestionQ_Web_Service");
+                }
+
                 // Cerrar procesos actuales para no bloquear archivos
                 var processes = Process.GetProcessesByName("GestionQ.Web")
                     .Concat(Process.GetProcessesByName("GestionQ.Desktop"))
@@ -239,7 +245,13 @@ namespace GestionQ.AutoUpdater
                 lblStatus.Text = "Actualización completada. Reiniciando...";
                 await Task.Delay(1500);
 
-                if (File.Exists(_mainExecutablePath))
+                if (hasWindowsService)
+                {
+                    RunHiddenCommand("net.exe", "start GestionQ_Web_Service");
+                }
+
+                bool isWebExe = Path.GetFileName(_mainExecutablePath).Equals("GestionQ.Web.exe", StringComparison.OrdinalIgnoreCase);
+                if (File.Exists(_mainExecutablePath) && !(hasWindowsService && isWebExe))
                 {
                     Process.Start(new ProcessStartInfo { FileName = _mainExecutablePath, UseShellExecute = true, WorkingDirectory = appDir });
                 }
@@ -252,6 +264,27 @@ namespace GestionQ.AutoUpdater
                 progressBar1.Style = ProgressBarStyle.Continuous;
                 btnUpdate.Text = "Cerrar";
                 btnUpdate.Enabled = true;
+            }
+        }
+
+        private static int RunHiddenCommand(string fileName, string arguments)
+        {
+            try
+            {
+                using var proc = Process.Start(new ProcessStartInfo
+                {
+                    FileName = fileName,
+                    Arguments = arguments,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                });
+                if (proc == null) return -1;
+                proc.WaitForExit(30000);
+                return proc.HasExited ? proc.ExitCode : -1;
+            }
+            catch
+            {
+                return -1;
             }
         }
     }

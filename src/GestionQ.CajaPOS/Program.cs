@@ -24,6 +24,9 @@ static class Program
             try {
                 Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions.ExecuteSqlRaw(db.Database, "ALTER TABLE ProductPresentations ADD COLUMN IsBulk INTEGER NOT NULL DEFAULT 0;");
             } catch { }
+            try {
+                Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions.ExecuteSqlRaw(db.Database, "ALTER TABLE SaleItems ADD COLUMN PresentationId INTEGER NULL;");
+            } catch { }
         }
         
         Application.Run(new Form1());

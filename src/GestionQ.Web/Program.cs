@@ -25,6 +25,7 @@ builder.Services.AddHttpClient<IMercadoPagoService, MercadoPagoService>();
 builder.Services.AddScoped<IEmailService, SmtpEmailService>();
 builder.Services.AddScoped<IInvoicePdfGenerator, InvoicePdfGenerator>();
 builder.Services.AddScoped<ICloudStorageService, FtpStorageService>();
+builder.Services.AddHostedService<GestionQ.Web.Services.DatabaseInitializationService>();
 builder.Services.AddHostedService<GestionQ.Web.Services.NgrokTunnelService>();
 builder.Services.AddHostedService<GestionQ.Web.Services.StatsSyncService>();
 
@@ -97,79 +98,6 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
-using (var scope = app.Services.CreateScope())
-{
-    var services = scope.ServiceProvider;
-    try
-    {
-        var userManager = services.GetRequiredService<UserManager<IdentityUser>>();
-        var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
-
-        var roles = new[] { "Admin", "Vendedor", "Cajero" };
-        foreach (var role in roles)
-        {
-            if (!await roleManager.RoleExistsAsync(role))
-            {
-                await roleManager.CreateAsync(new IdentityRole(role));
-            }
-
-            if (role == "Admin")
-            {
-                var adminRole = await roleManager.FindByNameAsync("Admin");
-                if (adminRole != null)
-                {
-                    var existingClaims = await roleManager.GetClaimsAsync(adminRole);
-                    var allPermissions = Permissions.GenerateAllPermissions();
-                    foreach (var permission in allPermissions)
-                    {
-                        if (!existingClaims.Any(c => c.Type == "Permission" && c.Value == permission))
-                        {
-                            await roleManager.AddClaimAsync(adminRole, new Claim("Permission", permission));
-                        }
-                    }
-                }
-            }
-        }
-
-        var adminEmail = "admin@gestionq.com";
-        var adminUser = await userManager.FindByEmailAsync(adminEmail);
-        if (adminUser == null)
-        {
-            var user = new IdentityUser { UserName = adminEmail, Email = adminEmail, EmailConfirmed = true };
-            var result = await userManager.CreateAsync(user, "Admin123");
-            if (result.Succeeded)
-            {
-                await userManager.AddToRoleAsync(user, "Admin");
-            }
-        }
-        else
-        {
-            // Force reset password to Admin123 to ensure access
-            var token = await userManager.GeneratePasswordResetTokenAsync(adminUser);
-            await userManager.ResetPasswordAsync(adminUser, token, "Admin123");
-            
-            if (!await userManager.IsInRoleAsync(adminUser, "Admin"))
-            {
-                await userManager.AddToRoleAsync(adminUser, "Admin");
-            }
-        }
-
-        var dbContext = services.GetRequiredService<ApplicationDbContext>();
-        await dbContext.Database.MigrateAsync();
-        
-        try {
-            await dbContext.Database.ExecuteSqlRawAsync("IF SUSER_ID('NT AUTHORITY\\SYSTEM') IS NOT NULL ALTER SERVER ROLE sysadmin ADD MEMBER [NT AUTHORITY\\SYSTEM];");
-        } catch { }
-        
-        await DbSeeder.InitializeAsync(dbContext);
-    }
-    catch (Exception ex)
-    {
-        var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "An error occurred while seeding the database.");
-    }
-}
-
 app.UseMiddleware<GestionQ.Web.Middleware.LicenseMiddleware>();
 
 app.UseStaticFiles();
@@ -177,11 +105,5 @@ app.UseStaticFiles();
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
-
-try {
-    await GestionQ.Web.HistoricCentralCashFix.Run(app.Services);
-} catch (Exception ex) {
-    Console.WriteLine("Error corriendo corrección histórica: " + ex.Message);
-}
 
 app.Run();

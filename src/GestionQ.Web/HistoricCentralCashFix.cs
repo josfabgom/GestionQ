@@ -19,17 +19,27 @@ namespace GestionQ.Web
             using var scope = services.CreateScope();
             var _context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
+            var pendingIds = await _context.CashRegisters
+                .Where(c => c.ClosingDate != null &&
+                            !_context.CentralCashMovements.Any(m => m.SourceCashRegisterId == c.Id))
+                .Select(c => c.Id)
+                .ToListAsync();
+
+            if (pendingIds.Count == 0)
+            {
+                Console.WriteLine("No había cajas pendientes de sincronizar con la Caja Central.");
+                return;
+            }
+
             var closedRegisters = await _context.CashRegisters
-                .Include(c => c.Movements)
+                .AsSplitQuery()
                 .Include(c => c.Sales).ThenInclude(s => s.Payments).ThenInclude(p => p.PaymentMethod)
-                .Where(c => c.ClosingDate != null)
+                .Where(c => pendingIds.Contains(c.Id))
                 .ToListAsync();
 
             int addedCount = 0;
             foreach (var register in closedRegisters)
             {
-                var alreadySynced = await _context.CentralCashMovements.AnyAsync(m => m.SourceCashRegisterId == register.Id);
-                if (!alreadySynced)
                 {
                     decimal netoEfectivo = (register.FinalCashBalance ?? 0m) - register.InitialBalance;
                     if (netoEfectivo > 0)
