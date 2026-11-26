@@ -213,14 +213,48 @@ namespace GestionQ.Web.Controllers.Api
             });
         }
 
+        private async Task<int> GetOrCreateDeletedFallbackProductIdAsync()
+        {
+            var fallback = await _context.Products.FirstOrDefaultAsync(p => p.Barcode == "DELETED-POS-SYNC");
+            if (fallback == null)
+            {
+                fallback = new Product
+                {
+                    InternalCode = 0,
+                    Barcode = "DELETED-POS-SYNC",
+                    Name = "Producto Eliminado (Sync POS)",
+                    Price = 0,
+                    Stock = 0,
+                    IsDepartment = false,
+                    IsActive = false,
+                    CreationDate = DateTime.Now,
+                    LastModified = DateTime.Now
+                };
+                _context.Products.Add(fallback);
+                await _context.SaveChangesAsync();
+            }
+            return fallback.Id;
+        }
+
         [HttpPost("push")]
         public async Task<IActionResult> Push([FromBody] SyncPushRequest request)
         {
+            try
+            {
             var pos = await GetOrCreatePosAsync(request.PosIdentifier);
             await TrackSyncAsync(pos);
 
+            var validUserIds = new HashSet<string>(await _userManager.Users.AsNoTracking().Select(u => u.Id).ToListAsync());
+            string fallbackUserId = (await _userManager.FindByEmailAsync("admin@gestionq.com"))?.Id
+                ?? validUserIds.FirstOrDefault()
+                ?? string.Empty;
+
             foreach (var regDto in request.OfflineCashRegisters)
             {
+                string safeRegUserId = (!string.IsNullOrEmpty(regDto.UserId) && validUserIds.Contains(regDto.UserId))
+                    ? regDto.UserId
+                    : fallbackUserId;
+
                 var existingRegister = await _context.CashRegisters.FirstOrDefaultAsync(c => c.GlobalId == regDto.GlobalId);
 
                 if (existingRegister == null)
@@ -242,7 +276,7 @@ namespace GestionQ.Web.Controllers.Api
                     existingRegister = new CashRegister
                     {
                         GlobalId = regDto.GlobalId,
-                        UserId = regDto.UserId,
+                        UserId = safeRegUserId,
                         PointOfSaleId = pos.Id,
                         OpeningDate = regDto.OpeningDate,
                         ClosingDate = regDto.ClosingDate,
@@ -283,8 +317,15 @@ namespace GestionQ.Web.Controllers.Api
             await _context.SaveChangesAsync(); // Save so we can get IDs for sales
 
             // Pre-cargar IDs válidos para evitar errores de Foreign Key (HTTP 500) por registros eliminados
+            var validProductIds = new HashSet<int>(await _context.Products.AsNoTracking().Select(p => p.Id).ToListAsync());
             var validPresentationIds = new HashSet<int>(await _context.ProductPresentations.AsNoTracking().Select(p => p.Id).ToListAsync());
             var validRegisterIds = new HashSet<int>(await _context.CashRegisters.AsNoTracking().Select(c => c.Id).ToListAsync());
+            var paymentMethodsList = await _context.PaymentMethods.AsNoTracking().Select(pm => new { pm.Id, pm.Name }).ToListAsync();
+            var validPaymentMethodIds = new HashSet<int>(paymentMethodsList.Select(pm => pm.Id));
+            int fallbackPaymentMethodId = paymentMethodsList.FirstOrDefault(pm => pm.Name == "Efectivo")?.Id
+                ?? paymentMethodsList.FirstOrDefault()?.Id
+                ?? 1;
+            int? deletedFallbackProductId = null;
 
             // Process Sales
             _context.IgnoreStockChangesForLogging = true;
@@ -332,6 +373,34 @@ namespace GestionQ.Web.Controllers.Api
                     if (cust != null) customerId = cust.Id;
                 }
 
+                var saleItems = new List<SaleItem>();
+                foreach (var i in saleDto.Items)
+                {
+                    int resolvedProductId = i.ProductId;
+                    string? customName = null;
+                    if (!validProductIds.Contains(resolvedProductId))
+                    {
+                        deletedFallbackProductId ??= await GetOrCreateDeletedFallbackProductIdAsync();
+                        validProductIds.Add(deletedFallbackProductId.Value);
+                        resolvedProductId = deletedFallbackProductId.Value;
+                        customName = $"Producto eliminado (ID #{i.ProductId})";
+                    }
+
+                    saleItems.Add(new SaleItem
+                    {
+                        ProductId = resolvedProductId,
+                        PresentationId = (i.PresentationId.HasValue && validPresentationIds.Contains(i.PresentationId.Value)) ? i.PresentationId : null,
+                        Quantity = i.Quantity,
+                        UnitPrice = i.UnitPrice,
+                        DiscountAmount = i.DiscountAmount,
+                        CustomName = customName
+                    });
+                }
+
+                string? safeSaleUserId = (!string.IsNullOrEmpty(saleDto.UserId) && validUserIds.Contains(saleDto.UserId))
+                    ? saleDto.UserId
+                    : (string.IsNullOrEmpty(fallbackUserId) ? null : fallbackUserId);
+
                 var sale = new Sale
                 {
                     GlobalId = saleDto.GlobalId,
@@ -340,7 +409,7 @@ namespace GestionQ.Web.Controllers.Api
                     SubTotal = saleDto.SubTotal,
                     DiscountAmount = saleDto.DiscountAmount,
                     PaymentDiscountAmount = saleDto.PaymentDiscountAmount,
-                    UserId = saleDto.UserId,
+                    UserId = safeSaleUserId,
                     CashRegisterId = null, // We will assign it below based on GlobalId
                     CustomerId = customerId,
                     PointOfSaleId = pos.Id,
@@ -349,17 +418,10 @@ namespace GestionQ.Web.Controllers.Api
                     RequestElectronicInvoice = saleDto.RequestElectronicInvoice,
                     IsCancelled = saleDto.IsCancelled,
                     CancellationDate = saleDto.CancellationDate,
-                    Items = saleDto.Items.Select(i => new SaleItem
-                    {
-                        ProductId = i.ProductId,
-                        PresentationId = (i.PresentationId.HasValue && validPresentationIds.Contains(i.PresentationId.Value)) ? i.PresentationId : null,
-                        Quantity = i.Quantity,
-                        UnitPrice = i.UnitPrice,
-                        DiscountAmount = i.DiscountAmount
-                    }).ToList(),
+                    Items = saleItems,
                     Payments = saleDto.Payments.Select(p => new SalePayment
                     {
-                        PaymentMethodId = p.PaymentMethodId,
+                        PaymentMethodId = validPaymentMethodIds.Contains(p.PaymentMethodId) ? p.PaymentMethodId : fallbackPaymentMethodId,
                         Amount = p.Amount,
                         TransactionReference = p.TransactionReference
                     }).ToList()
@@ -385,7 +447,7 @@ namespace GestionQ.Web.Controllers.Api
                     foreach (var item in saleDto.Items)
                     {
                         var product = await _context.Products.FindAsync(item.ProductId);
-                        if (product != null && !product.IsDepartment)
+                        if (product != null && !product.IsDepartment && product.Barcode != "DELETED-POS-SYNC")
                         {
                             decimal previousStock = product.Stock;
                             product.Stock -= item.Quantity;
@@ -541,6 +603,12 @@ namespace GestionQ.Web.Controllers.Api
             await _context.SaveChangesAsync();
 
             return Ok(new SyncPushResponse { Success = true });
+            }
+            catch (Exception ex)
+            {
+                var detail = ex.InnerException?.InnerException?.Message ?? ex.InnerException?.Message ?? ex.Message;
+                return StatusCode(500, new { error = detail });
+            }
         }
     }
 }
