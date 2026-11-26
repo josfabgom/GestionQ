@@ -69,13 +69,13 @@ namespace GestionQ.Web.Controllers
                         var parts = ticketClean.Split(sep);
                         if (parts.Length == 2 && int.TryParse(parts[0], out int posNumber) && int.TryParse(parts[1], out int saleId))
                         {
-                            query = query.Where(s => s.PointOfSale != null && s.PointOfSale.PosNumber == posNumber && s.Id == saleId);
+                            query = query.Where(s => s.PointOfSale != null && s.PointOfSale.PosNumber == posNumber && (s.PosTicketNumber == saleId || s.Id == saleId));
                         }
                     }
                     else if (int.TryParse(ticketClean, out int exactId))
                     {
                         // Si ingresan solo el número de comprobante sin punto de venta, buscamos coincidencia exacta o parcial
-                        query = query.Where(s => s.Id.ToString().Contains(exactId.ToString()));
+                        query = query.Where(s => s.PosTicketNumber == exactId || s.Id.ToString().Contains(exactId.ToString()));
                     }
                     else
                     {

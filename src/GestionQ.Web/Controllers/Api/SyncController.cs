@@ -430,6 +430,7 @@ namespace GestionQ.Web.Controllers.Api
                 var sale = new Sale
                 {
                     GlobalId = saleDto.GlobalId,
+                    PosTicketNumber = saleDto.PosTicketNumber,
                     Date = saleDto.Date,
                     TotalAmount = saleDto.TotalAmount,
                     SubTotal = saleDto.SubTotal,

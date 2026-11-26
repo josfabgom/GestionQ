@@ -27,7 +27,13 @@ namespace GestionQ.Domain.Entities
         public int? PointOfSaleId { get; set; }
         public PointOfSale? PointOfSale { get; set; }
 
-        public string FormattedTicketNumber => $"{(PointOfSale?.PosNumber ?? 0):D5}-{Id:D8}";
+        /// <summary>
+        /// Número de ticket correlativo emitido por la Caja POS local (SQLite).
+        /// Si es null (venta web o histórica), FormattedTicketNumber usa Id.
+        /// </summary>
+        public int? PosTicketNumber { get; set; }
+
+        public string FormattedTicketNumber => $"{(PointOfSale?.PosNumber ?? 0):D5}-{(PosTicketNumber ?? Id):D8}";
 
         public ElectronicInvoice? ElectronicInvoice { get; set; }
 

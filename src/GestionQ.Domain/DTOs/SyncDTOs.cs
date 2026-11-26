@@ -132,6 +132,7 @@ namespace GestionQ.Domain.DTOs
     public class SaleSyncDto
     {
         public Guid GlobalId { get; set; }
+        public int? PosTicketNumber { get; set; }
         public DateTime Date { get; set; }
         public decimal TotalAmount { get; set; }
         public decimal SubTotal { get; set; }

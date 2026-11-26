@@ -45,6 +45,7 @@ namespace GestionQ.CajaPOS
             // Ignore navigation properties to avoid Foreign Key constraints
             // which prevent us from easily truncating tables during sync
             modelBuilder.Entity<Sale>().Ignore(s => s.Customer);
+            modelBuilder.Entity<Sale>().Ignore(s => s.PosTicketNumber);
             modelBuilder.Entity<SaleItem>().Ignore(si => si.Product);
             modelBuilder.Entity<SalePayment>().Ignore(sp => sp.PaymentMethod);
             modelBuilder.Entity<Department>().Ignore(d => d.VirtualProduct);

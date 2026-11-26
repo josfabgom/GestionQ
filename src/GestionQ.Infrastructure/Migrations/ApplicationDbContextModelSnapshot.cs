@@ -962,6 +962,9 @@ namespace GestionQ.Infrastructure.Migrations
                     b.Property<int?>("PointOfSaleId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("PosTicketNumber")
+                        .HasColumnType("int");
+
                     b.Property<bool>("RequestElectronicInvoice")
                         .HasColumnType("bit");
 
