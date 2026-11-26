@@ -164,6 +164,33 @@ namespace GestionQ.CajaPOS
                         }
                     }
 
+                    // Guardar el Punto de Venta asignado por el servidor (PosNumber y PosName)
+                    int syncedPosNumber = result.PosNumber > 0 ? result.PosNumber : 1;
+                    var existingPosNum = db.SystemSettings.Local.FirstOrDefault(s => s.Key == "PosNumber")
+                        ?? await db.SystemSettings.FirstOrDefaultAsync(s => s.Key == "PosNumber");
+                    if (existingPosNum == null || db.Entry(existingPosNum).State == EntityState.Deleted)
+                    {
+                        db.SystemSettings.Add(new SystemSetting { Key = "PosNumber", Value = syncedPosNumber.ToString() });
+                    }
+                    else
+                    {
+                        existingPosNum.Value = syncedPosNumber.ToString();
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(result.PosName))
+                    {
+                        var existingPosName = db.SystemSettings.Local.FirstOrDefault(s => s.Key == "PosName")
+                            ?? await db.SystemSettings.FirstOrDefaultAsync(s => s.Key == "PosName");
+                        if (existingPosName == null || db.Entry(existingPosName).State == EntityState.Deleted)
+                        {
+                            db.SystemSettings.Add(new SystemSetting { Key = "PosName", Value = result.PosName });
+                        }
+                        else
+                        {
+                            existingPosName.Value = result.PosName;
+                        }
+                    }
+
                     if (result.Users != null && result.Users.Any())
                     {
                         var usersSetting = await db.SystemSettings.FirstOrDefaultAsync(s => s.Key == "PosUsers");

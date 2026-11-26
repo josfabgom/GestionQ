@@ -19,6 +19,8 @@ namespace GestionQ.Domain.DTOs
         public CompanyInfoSyncDto? CompanyInfo { get; set; }
         public List<PromotionSyncDto> ActivePromotions { get; set; } = new();
         public List<PosUserSyncDto> Users { get; set; } = new();
+        public int PosNumber { get; set; } = 1;
+        public string? PosName { get; set; }
     }
 
     public class PosUserSyncDto

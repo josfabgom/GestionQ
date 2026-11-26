@@ -29,21 +29,45 @@ namespace GestionQ.Web.Controllers.Api
         {
             if (string.IsNullOrEmpty(identifier)) identifier = "UNKNOWN-POS";
             var pos = await _context.PointsOfSale.FirstOrDefaultAsync(p => p.PosIdentifier == identifier);
-            if (pos == null)
+            if (pos != null) return pos;
+
+            // Si existe un Punto de Venta activo pre-creado en Gestión Web sin PC vinculada, vincularlo automáticamente
+            var unassignedPos = await _context.PointsOfSale
+                .Where(p => p.IsActive && string.IsNullOrEmpty(p.PosIdentifier))
+                .OrderBy(p => p.PosNumber)
+                .FirstOrDefaultAsync();
+
+            if (unassignedPos != null)
             {
-                pos = new PointOfSale
+                unassignedPos.PosIdentifier = identifier;
+                if (string.IsNullOrEmpty(unassignedPos.MachineName))
                 {
-                    Name = "Caja " + identifier,
-                    PosNumber = _context.PointsOfSale.Max(p => (int?)p.PosNumber) + 1 ?? 1,
-                    PosIdentifier = identifier,
-                    MachineName = identifier,
-                    IsActive = true,
-                    SyncOnlyWithStock = true,
-                    SyncCustomers = true
-                };
-                _context.PointsOfSale.Add(pos);
+                    unassignedPos.MachineName = identifier;
+                }
                 await _context.SaveChangesAsync();
+                return unassignedPos;
             }
+
+            // Buscar el menor número de Punto de Venta libre (1, 2, 3...) para evitar saltos por POS 99/pruebas
+            var usedNumbers = new HashSet<int>(await _context.PointsOfSale.AsNoTracking().Select(p => p.PosNumber).ToListAsync());
+            int nextPosNumber = 1;
+            while (usedNumbers.Contains(nextPosNumber))
+            {
+                nextPosNumber++;
+            }
+
+            pos = new PointOfSale
+            {
+                Name = "Caja " + identifier,
+                PosNumber = nextPosNumber,
+                PosIdentifier = identifier,
+                MachineName = identifier,
+                IsActive = true,
+                SyncOnlyWithStock = true,
+                SyncCustomers = true
+            };
+            _context.PointsOfSale.Add(pos);
+            await _context.SaveChangesAsync();
             return pos;
         }
 
@@ -209,7 +233,9 @@ namespace GestionQ.Web.Controllers.Api
                 PaymentMethods = paymentMethods,
                 CompanyInfo = companyInfo,
                 ActivePromotions = activePromosResult,
-                Users = posUsers
+                Users = posUsers,
+                PosNumber = pos.PosNumber,
+                PosName = pos.Name
             });
         }
 

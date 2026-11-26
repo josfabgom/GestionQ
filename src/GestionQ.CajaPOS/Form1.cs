@@ -178,6 +178,20 @@ public class Form1 : Form
 		{
 			Invoke((MethodInvoker)delegate
 			{
+				try
+				{
+					using var dbPos = new LocalDbContext();
+					var posNumSetting = dbPos.SystemSettings.FirstOrDefault(s => s.Key == "PosNumber");
+					if (posNumSetting != null && int.TryParse(posNumSetting.Value, out int syncedPosNum) && syncedPosNum > 0)
+					{
+						_posNumber = syncedPosNum;
+						if (!string.IsNullOrEmpty(_userName))
+						{
+							Text = $"GestionQ - Punto de Venta (Caja) - Cajero: {_userName} - Pto. Vta: {_posNumber:D5} - Caja: {_cashRegisterId}";
+						}
+					}
+				}
+				catch { }
 				LoadInitialDataAsync();
 				ReloadLogo();
 				btnSync.Text = "Sincronizado ✔\ufe0f";
