@@ -22,7 +22,7 @@
                     if (days < 0) {
                         vencimiento = "Licencia Expirada";
                     } else if (days <= 7) {
-                        vencimiento = $"Vence en {Math.Ceiling(days)} días";
+                        vencimiento = $"Vence en {Math.Ceiling(days)} dï¿½as";
                     } else {
                         vencimiento = "Vence: " + expDate.ToString("dd/MM/yyyy");
                     }
@@ -58,7 +58,7 @@
     </script>
     @if (SignInManager.IsSignedIn(User))
     {
-        <!-- Botón para Colapsar/Expandir la Barra Lateral -->
+        <!-- Botï¿½n para Colapsar/Expandir la Barra Lateral -->
         <button type="button" id="sidebarCollapseBtn" class="sidebar-toggle-btn" onclick="toggleSidebar()">
             <i id="sidebarToggleIcon" class="fa-solid fa-angle-left"></i>
         </button>
@@ -102,7 +102,7 @@
                 <form asp-controller="Account" asp-action="Logout" method="post" style="margin-top: 0.25rem;">
                     <button type="submit"
                         style="background:none; border:none; color:#ef4444; padding:0; cursor:pointer; font-size: 0.8rem; text-decoration: underline;">
-                        Cerrar Sesión
+                        Cerrar Sesiï¿½n
                     </button>
                 </form>
             </div>
@@ -146,7 +146,7 @@
                 </li>
                 <li>
                     <a asp-controller="PaymentReceipts" asp-action="Index" style="color: #ef4444; font-weight: 600;">
-                        <i class="fa-solid fa-file-invoice-dollar"></i> Órdenes de Pago
+                        <i class="fa-solid fa-file-invoice-dollar"></i> ï¿½rdenes de Pago
                     </a>
                 </li>
                 }
@@ -173,7 +173,7 @@
                     <details class="sidebar-dropdown">
                         <summary style="display: block; padding: 0.8rem 1rem; color: #10b981; font-weight: 600; text-decoration: none; border-radius: 8px; cursor: pointer; transition: background 0.2s; list-style: none;">
                             <div style="display: flex; align-items: center; justify-content: space-between;">
-                                <div><i class="fa-solid fa-scale-balanced" style="margin-right: 10px; width: 20px; text-align: center;"></i> Módulo Balanzas</div>
+                                <div><i class="fa-solid fa-scale-balanced" style="margin-right: 10px; width: 20px; text-align: center;"></i> Mï¿½dulo Balanzas</div>
                                 <i class="fa-solid fa-chevron-down" style="font-size: 0.8em; opacity: 0.7;"></i>
                             </div>
                         </summary>
@@ -187,7 +187,7 @@
                             </li>
                             <li>
                                 <a asp-controller="Labels" asp-action="ScaleLabels" style="color: #10b981; padding: 0.6rem 1rem;">
-                                    <i class="fa-solid fa-tag"></i> Impresión Manual
+                                    <i class="fa-solid fa-tag"></i> Impresiï¿½n Manual
                                 </a>
                             </li>
                             }
@@ -195,7 +195,7 @@
                             {
                             <li>
                                 <a asp-controller="Scale" asp-action="Index" style="color: #f59e0b; padding: 0.6rem 1rem;">
-                                    <i class="fa-solid fa-upload"></i> Envío a Red
+                                    <i class="fa-solid fa-upload"></i> Envï¿½o a Red
                                 </a>
                             </li>
                             }
@@ -213,7 +213,7 @@
                 {
                 <li>
                     <a asp-controller="Prices" asp-action="Index" style="color: #60a5fa;">
-                        <i class="fa-solid fa-tags"></i> Gestión de Precios
+                        <i class="fa-solid fa-tags"></i> Gestiï¿½n de Precios
                     </a>
                 </li>
                 }
@@ -237,7 +237,7 @@
                 {
                 <li>
                     <a asp-controller="Statistics" asp-action="Index" style="color: #a855f7; font-weight: 600;">
-                        <i class="fa-solid fa-chart-pie"></i> Estadísticas
+                        <i class="fa-solid fa-chart-pie"></i> Estadï¿½sticas
                     </a>
                 </li>
                 }
@@ -251,14 +251,14 @@
                 </li>
                 <li>
                     <a asp-controller="ElectronicInvoices" asp-action="Audit">
-                        <i class="fa-solid fa-shield-halved"></i> Auditoría ARCA
+                        <i class="fa-solid fa-shield-halved"></i> Auditorï¿½a ARCA
                     </a>
                 </li>
                 }
                 @if (User.IsInRole("Admin") || User.HasClaim("Permission", Permissions.Config.View))
                 {
                     <li style="margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1.5rem;">
-                        <span style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); padding-left: 1rem; margin-bottom: 0.5rem; display: block;">Configuración</span>
+                        <span style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); padding-left: 1rem; margin-bottom: 0.5rem; display: block;">Configuraciï¿½n</span>
                     </li>
                     <li>
                         <a asp-controller="Configuration" asp-action="Index" style="color: #a78bfa; font-weight: 600;">
@@ -276,6 +276,32 @@
 
         <!-- Main Content -->
         <main class="main-content">
+            @if (User.IsInRole("Admin"))
+            {
+                var arcaSvc = Context.RequestServices.GetService(typeof(GestionQ.Infrastructure.Services.IElectronicInvoicingService)) as GestionQ.Infrastructure.Services.IElectronicInvoicingService;
+                if (arcaSvc != null)
+                {
+                    var certStatus = await arcaSvc.GetCertificateStatusAsync();
+                    if (certStatus.IsConfigured && (certStatus.IsExpired || certStatus.IsExpiringSoon))
+                    {
+                        var alertCls = certStatus.IsExpired ? "alert-danger" : "alert-warning";
+                        <div class="alert @alertCls d-flex align-items-center justify-content-between mb-3 shadow-sm" role="alert">
+                            <div>
+                                <i class="fa-solid fa-certificate me-2"></i>
+                                @if (certStatus.IsExpired)
+                                {
+                                    <strong>Â¡Certificado ARCA vencido!</strong><span> VenciÃ³ el @certStatus.ExpiresAt?.ToString("dd/MM/yyyy"). No podrÃ¡s emitir facturas electrÃ³nicas hasta renovarlo.</span>
+                                }
+                                else
+                                {
+                                    <strong>Certificado ARCA prÃ³ximo a vencer:</strong><span> Vence el @certStatus.ExpiresAt?.ToString("dd/MM/yyyy") (quedan @certStatus.DaysRemaining dÃ­as).</span>
+                                }
+                            </div>
+                            <a asp-controller="AfipSettings" asp-action="Index" class="btn btn-sm btn-dark ms-3">Renovar en ConfiguraciÃ³n ARCA</a>
+                        </div>
+                    }
+                }
+            }
             @RenderBody()
         </main>
     }
@@ -291,7 +317,7 @@
         <script>
             Swal.fire({
                 icon: 'info',
-                title: 'Atención',
+                title: 'Atenciï¿½n',
                 text: '@TempData["Message"]',
                 confirmButtonColor: '#3b82f6'
             });

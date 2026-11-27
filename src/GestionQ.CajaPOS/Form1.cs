@@ -2356,6 +2356,57 @@ System.Convert.ToDecimal(item.Cells["Price"].Value) == price && rowIsEdited == i
 			{
 				sale.TotalAmount = Math.Max(0m, total - sale.PaymentDiscountAmount);
 				sale.DiscountAmount = (num - total) + sale.PaymentDiscountAmount;
+
+				// Validación automática de tope ARCA para Consumidor Final sin identificar
+				if (sale.RequestElectronicInvoice)
+				{
+					using (LocalDbContext checkDb = new LocalDbContext())
+					{
+						var thresholdSetting = checkDb.SystemSettings.FirstOrDefault(s => s.Key == "Afip_ConsumerFinalDniThreshold");
+						decimal dniThreshold = 0m;
+						if (thresholdSetting != null)
+						{
+							decimal.TryParse(thresholdSetting.Value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out dniThreshold);
+						}
+
+						if (dniThreshold > 0m && sale.TotalAmount >= dniThreshold)
+						{
+							Customer? existingCust = sale.CustomerId.HasValue
+								? checkDb.Customers.FirstOrDefault(c => c.Id == sale.CustomerId.Value)
+								: null;
+
+							bool hasDoc = existingCust != null
+								&& (!string.IsNullOrWhiteSpace(existingCust.Dni) || !string.IsNullOrWhiteSpace(existingCust.Cuit));
+
+							if (!hasDoc)
+							{
+								var docPrompt = PromptConsumerFinalDocument(sale.TotalAmount, dniThreshold);
+								if (docPrompt == null)
+								{
+									return; // El cajero canceló
+								}
+
+								string cleanDoc = docPrompt.Value.Document;
+								string custName = string.IsNullOrWhiteSpace(docPrompt.Value.Name) ? "Consumidor Final" : docPrompt.Value.Name.Trim();
+								var matchedCust = checkDb.Customers.FirstOrDefault(c => c.Dni == cleanDoc || c.Cuit == cleanDoc);
+								if (matchedCust == null)
+								{
+									matchedCust = new Customer
+									{
+										Name = custName,
+										Dni = cleanDoc.Length == 11 ? null : cleanDoc,
+										Cuit = cleanDoc.Length == 11 ? cleanDoc : null,
+										IsActive = true
+									};
+									checkDb.Customers.Add(matchedCust);
+									checkDb.Entry(matchedCust).Property("IsSynced").CurrentValue = false;
+									await checkDb.SaveChangesAsync();
+								}
+								sale.CustomerId = matchedCust.Id;
+							}
+						}
+					}
+				}
 				
 				string configuredPrinter = "";
 				using (LocalDbContext context = new LocalDbContext())
@@ -2367,6 +2418,9 @@ System.Convert.ToDecimal(item.Cells["Price"].Value) == price && rowIsEdited == i
 				}
 				
 				string caeTextoAdicional = "";
+				string fiscalVoucherNumber = "";
+				string fiscalInvoiceType = "";
+				string fiscalQrUrl = "";
 				if (sale.RequestElectronicInvoice)
 				{
 					try
@@ -2387,8 +2441,16 @@ System.Convert.ToDecimal(item.Cells["Price"].Value) == price && rowIsEdited == i
 										bool isSuccess = root.TryGetProperty("success", out var successProp) && successProp.GetBoolean();
 										if (isSuccess)
 										{
-											string cae = root.TryGetProperty("cae", out var caeProp) ? caeProp.GetString() : "";
-											caeTextoAdicional = "\nCAE: " + cae + "\nVto CAE: " + DateTime.Now.AddDays(10).ToString("dd/MM/yyyy") + "\n[QR AFIP Valido]";
+											string cae = root.TryGetProperty("cae", out var caeProp) ? (caeProp.GetString() ?? "") : "";
+											string caeExp = root.TryGetProperty("caeExpiration", out var expProp) ? (expProp.GetString() ?? "") : "";
+											if (string.IsNullOrWhiteSpace(caeExp))
+											{
+												caeExp = DateTime.Now.AddDays(10).ToString("dd/MM/yyyy");
+											}
+											fiscalVoucherNumber = root.TryGetProperty("voucherNumber", out var vProp) ? (vProp.GetString() ?? "") : "";
+											fiscalInvoiceType = root.TryGetProperty("invoiceType", out var tProp) ? (tProp.GetString() ?? "") : "";
+											fiscalQrUrl = root.TryGetProperty("qrUrl", out var qrProp) ? (qrProp.GetString() ?? "") : "";
+											caeTextoAdicional = $"\nCAE: {cae}\nVto CAE: {caeExp}\n[Comprobante Autorizado ARCA]";
 										}
 										else
 										{
@@ -2406,9 +2468,12 @@ System.Convert.ToDecimal(item.Cells["Price"].Value) == price && rowIsEdited == i
 					catch { caeTextoAdicional = "\nCAE EN TRAMITE (Offline)"; }
 				}
 				
-				string text2 = GenerateTicketText(sale, caeTextoAdicional);
-				PrintTicket(text2, configuredPrinter);
-				ShowAutoCloseMessage($"Venta registrada.\nTicket: {_posNumber:D5}-{sale.Id:D8}", "Caja", 1500);
+				string text2 = GenerateTicketText(sale, caeTextoAdicional, fiscalInvoiceType, fiscalVoucherNumber);
+				PrintTicket(text2, configuredPrinter, 1, fiscalQrUrl);
+				string confirmationMsg = !string.IsNullOrWhiteSpace(fiscalVoucherNumber)
+					? $"Venta registrada.\n{(string.IsNullOrWhiteSpace(fiscalInvoiceType) ? "Factura" : fiscalInvoiceType)}: {fiscalVoucherNumber}\nTicket: {_posNumber:D5}-{sale.Id:D8}"
+					: $"Venta registrada.\nTicket: {_posNumber:D5}-{sale.Id:D8}";
+				ShowAutoCloseMessage(confirmationMsg, "Caja", 1500);
 				gridItems.Rows.Clear();
 				UpdateArticleImage(null);
 				UpdateTotals();
@@ -2602,7 +2667,7 @@ System.Convert.ToDecimal(item.Cells["Price"].Value) == price && rowIsEdited == i
 		}
 	}
 
-	private void PrintTicket(string text, string printerName = "", int copies = 1)
+	private void PrintTicket(string text, string printerName = "", int copies = 1, string? qrUrl = null)
 	{
 		string text2 = text;
 		if (string.IsNullOrEmpty(text2))
@@ -2637,7 +2702,8 @@ System.Convert.ToDecimal(item.Cells["Price"].Value) == price && rowIsEdited == i
 					float x = 0f;
 					float currentY = 0f;
 					float lineWidth = e.Graphics.MeasureString(new string('=', 33), font).Width;
-					string[] array = text2.Split(new string[3] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+					string textToRender = !string.IsNullOrWhiteSpace(qrUrl) ? text2.TrimEnd('\r', '\n') : text2;
+					string[] array = textToRender.Split(new string[3] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
 					foreach (string s2 in array)
 					{
 						if (s2.TrimStart().StartsWith("TOTAL DE COMPRA:", StringComparison.OrdinalIgnoreCase))
@@ -2666,6 +2732,24 @@ System.Convert.ToDecimal(item.Cells["Price"].Value) == price && rowIsEdited == i
 							e.Graphics.DrawString(s2, font, Brushes.Black, x, currentY, new StringFormat());
 							currentY += font.GetHeight(e.Graphics);
 						}
+					}
+
+					if (!string.IsNullOrWhiteSpace(qrUrl))
+					{
+						try
+						{
+							using var qrGenerator = new QRCoder.QRCodeGenerator();
+							using var qrData = qrGenerator.CreateQrCode(qrUrl, QRCoder.QRCodeGenerator.ECCLevel.M);
+							using var qrCode = new QRCoder.QRCode(qrData);
+							using var qrBitmap = qrCode.GetGraphic(4);
+							float qrSize = Math.Min(120f, Math.Max(80f, lineWidth * 0.65f));
+							float qrX = x + Math.Max(0f, (lineWidth - qrSize) / 2f);
+							e.Graphics.DrawImage(qrBitmap, qrX, currentY, qrSize, qrSize);
+							currentY += qrSize + 6f;
+							e.Graphics.DrawString(CenterTicketText("QR ARCA", 33), font, Brushes.Black, x, currentY, new StringFormat());
+							currentY += font.GetHeight(e.Graphics) * 3f;
+						}
+						catch { }
 					}
 				}
 			};
@@ -2737,7 +2821,7 @@ System.Convert.ToDecimal(item.Cells["Price"].Value) == price && rowIsEdited == i
 		return left + new string(' ', spaces) + right;
 	}
 
-	private string GenerateTicketText(Sale sale, string caeTextoAdicional = "")
+	private string GenerateTicketText(Sale sale, string caeTextoAdicional = "", string fiscalInvoiceType = "", string fiscalVoucherNumber = "")
 	{
 		const int ticketWidth = 33;
 		string sepDouble = new string('=', ticketWidth);
@@ -2751,9 +2835,16 @@ System.Convert.ToDecimal(item.Cells["Price"].Value) == price && rowIsEdited == i
 		{
 			sb.AppendLine(CenterTicketText(companySetting.Value.ToUpper(), ticketWidth));
 		}
-		sb.AppendLine(CenterTicketText("TICKET DE VENTA", ticketWidth));
+		string docTitle = !string.IsNullOrWhiteSpace(fiscalVoucherNumber)
+			? (string.IsNullOrWhiteSpace(fiscalInvoiceType) ? "FACTURA ELECTRONICA" : fiscalInvoiceType.ToUpper())
+			: "TICKET DE VENTA";
+		sb.AppendLine(CenterTicketText(docTitle, ticketWidth));
 		sb.AppendLine(sepDouble);
 		sb.AppendLine($"Fecha:   {sale.Date:dd/MM/yyyy HH:mm}");
+		if (!string.IsNullOrWhiteSpace(fiscalVoucherNumber))
+		{
+			sb.AppendLine($"Comp.:   {fiscalVoucherNumber}");
+		}
 		sb.AppendLine($"Ticket:  {_posNumber:D5}-{sale.Id:D8}");
 
 		string cajeroName = "Cajero";
@@ -2852,6 +2943,77 @@ System.Convert.ToDecimal(item.Cells["Price"].Value) == price && rowIsEdited == i
 		sb.AppendLine(CenterTicketText("GRACIAS POR SU COMPRA", ticketWidth));
 		sb.AppendLine("\n\n\n\n\n");
 		return sb.ToString();
+	}
+
+	private (string Document, string Name)? PromptConsumerFinalDocument(decimal saleTotal, decimal threshold)
+	{
+		using var dlg = new Form
+		{
+			Text = "Identificación Requerida por ARCA",
+			Size = new Size(430, 260),
+			StartPosition = FormStartPosition.CenterParent,
+			FormBorderStyle = FormBorderStyle.FixedDialog,
+			MaximizeBox = false,
+			MinimizeBox = false,
+			BackColor = Color.FromArgb(24, 24, 34),
+			ForeColor = Color.White
+		};
+
+		var lblInfo = new Label
+		{
+			Text = $"El total (${saleTotal:N2}) supera el tope de ARCA (${threshold:N2}) para Consumidor Final sin identificar.\nIngrese DNI o CUIT del comprador:",
+			Location = new Point(16, 14),
+			Size = new Size(382, 54),
+			Font = new Font("Segoe UI", 9.5f)
+		};
+
+		var lblDoc = new Label { Text = "DNI / CUIT (solo números):", Location = new Point(16, 76), AutoSize = true, Font = new Font("Segoe UI", 9.5f, FontStyle.Bold) };
+		var txtDoc = new TextBox { Location = new Point(16, 98), Width = 380, Font = new Font("Segoe UI", 11f) };
+
+		var lblName = new Label { Text = "Nombre y Apellido (opcional):", Location = new Point(16, 134), AutoSize = true, Font = new Font("Segoe UI", 9.5f) };
+		var txtName = new TextBox { Location = new Point(16, 156), Width = 380, Font = new Font("Segoe UI", 10f), Text = "Consumidor Final" };
+
+		var btnOk = new Button
+		{
+			Text = "Confirmar",
+			Location = new Point(210, 192),
+			Size = new Size(90, 32),
+			BackColor = Color.FromArgb(34, 197, 94),
+			ForeColor = Color.White,
+			FlatStyle = FlatStyle.Flat
+		};
+		var btnCancel = new Button
+		{
+			Text = "Cancelar",
+			DialogResult = DialogResult.Cancel,
+			Location = new Point(306, 192),
+			Size = new Size(90, 32),
+			BackColor = Color.FromArgb(71, 85, 105),
+			ForeColor = Color.White,
+			FlatStyle = FlatStyle.Flat
+		};
+
+		string resultDoc = "";
+		btnOk.Click += (s, ev) =>
+		{
+			string digits = new string(txtDoc.Text.Where(char.IsDigit).ToArray());
+			if (digits.Length < 7 || digits.Length > 11)
+			{
+				MessageBox.Show("Ingrese un DNI (7-8 dígitos) o CUIT (11 dígitos) válido.", "Dato inválido", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+				txtDoc.Focus();
+				return;
+			}
+			resultDoc = digits;
+			dlg.DialogResult = DialogResult.OK;
+			dlg.Close();
+		};
+
+		dlg.AcceptButton = btnOk;
+		dlg.CancelButton = btnCancel;
+		dlg.Controls.AddRange(new Control[] { lblInfo, lblDoc, txtDoc, lblName, txtName, btnOk, btnCancel });
+		dlg.Shown += (s, ev) => txtDoc.Focus();
+
+		return dlg.ShowDialog(this) == DialogResult.OK ? (resultDoc, txtName.Text) : null;
 	}
 
 	protected override void OnFormClosing(FormClosingEventArgs e)

@@ -10,6 +10,20 @@ namespace GestionQ.Infrastructure.Services
         Task<int> GetLastAuthorizedVoucherAsync(int posNumber, int voucherTypeCode);
         Task<bool> CheckInfrastructureStatusAsync(); // FEDummy
         Task<ElectronicInvoiceDetails?> GetInvoiceDetailsAsync(int posNumber, int invoiceTypeCode, int invoiceNumber);
+        Task<ArcaCertificateStatus> GetCertificateStatusAsync(bool forceRefresh = false);
+        Task<string> BuildQrUrlAsync(GestionQ.Domain.Entities.ElectronicInvoice invoice);
+    }
+
+    public class ArcaCertificateStatus
+    {
+        public bool IsConfigured { get; set; }
+        public string FileName { get; set; } = string.Empty;
+        public string Subject { get; set; } = string.Empty;
+        public DateTime? ExpiresAt { get; set; }
+        public int DaysRemaining { get; set; }
+        public bool IsExpired { get; set; }
+        public bool IsExpiringSoon { get; set; } // <= 30 días
+        public string? ErrorMessage { get; set; }
     }
 
     public class ElectronicInvoiceRequest

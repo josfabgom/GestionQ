@@ -173,6 +173,7 @@ namespace GestionQ.Api.Controllers
             foreach (var saleDto in request.Sales.Where(s => s.RequestElectronicInvoice))
             {
                 var dbSale = await _context.Sales
+                    .Include(s => s.ElectronicInvoice)
                     .Include(s => s.Customer).ThenInclude(c => c.TaxCondition)
                     .Include(s => s.PointOfSale)
                     .Include(s => s.Items).ThenInclude(si => si.Product).ThenInclude(p => p.VatRate)
@@ -240,13 +241,41 @@ namespace GestionQ.Api.Controllers
             };
 
             var response = await _invoicingService.RequestCAEAsync(request);
-            var ei = new ElectronicInvoice {
-                SaleId = sale.Id, PointOfSaleId = posId, PointOfSaleNumber = posNumber, InvoiceTypeCode = defaultInvoiceTypeCode, InvoiceNumber = response.InvoiceNumber,
-                IssueDate = DateTime.Now, TotalAmount = sale.TotalAmount, NetAmount = netAmount, VatAmount = vatAmount, ExemptAmount = exemptAmount,
-                Status = response.Status, CAE = response.CAE, CAEExpirationDate = response.CAEExpirationDate != default ? response.CAEExpirationDate : DateTime.Now,
-                ErrorMessage = string.Join(" | ", response.Errors)
+            string invoiceTypeDesc = defaultInvoiceTypeCode switch
+            {
+                1 => "Factura A",
+                6 => "Factura B",
+                11 => "Factura C",
+                _ => "Factura"
             };
-            _context.ElectronicInvoices.Add(ei);
+
+            var ei = sale.ElectronicInvoice ?? new ElectronicInvoice { SaleId = sale.Id };
+            ei.PointOfSaleId = posId;
+            ei.PointOfSaleNumber = posNumber;
+            ei.InvoiceTypeCode = defaultInvoiceTypeCode;
+            ei.InvoiceTypeDesc = invoiceTypeDesc;
+            ei.InvoiceNumber = response.InvoiceNumber;
+            ei.IssueDate = DateTime.Now;
+            ei.ConceptCode = request.ConceptCode;
+            ei.DocTypeCode = request.DocTypeCode;
+            ei.DocNumber = request.DocNumber;
+            ei.CustomerName = request.CustomerName;
+            ei.CustomerTaxCondition = request.CustomerTaxCondition;
+            ei.TotalAmount = Math.Round(sale.TotalAmount, 2);
+            ei.NetAmount = Math.Round(netAmount, 2);
+            ei.VatAmount = Math.Round(vatAmount, 2);
+            ei.ExemptAmount = Math.Round(exemptAmount, 2);
+            ei.Status = response.Success ? "Approved" : response.Status;
+            ei.CAE = response.CAE;
+            ei.CAEExpirationDate = response.CAEExpirationDate != default ? response.CAEExpirationDate : DateTime.Now;
+            ei.CondicionIVAReceptorId = defaultCondicionIvaReceptor;
+            ei.ErrorMessage = string.Join(" | ", response.Errors);
+
+            if (sale.ElectronicInvoice == null)
+            {
+                _context.ElectronicInvoices.Add(ei);
+                sale.ElectronicInvoice = ei;
+            }
         }
     }
 }

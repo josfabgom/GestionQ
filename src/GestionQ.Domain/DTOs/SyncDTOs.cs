@@ -48,6 +48,7 @@ namespace GestionQ.Domain.DTOs
         public string Name { get; set; } = string.Empty;
         public string LogoUrl { get; set; } = string.Empty;
         public int? DefaultPaymentMethodId { get; set; }
+        public decimal ConsumerFinalDniThreshold { get; set; }
     }
 
     public class PaymentMethodSyncDto

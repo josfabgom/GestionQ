@@ -17,12 +17,18 @@ namespace GestionQ.Web.Controllers.Api
         private readonly ApplicationDbContext _context;
         private readonly Microsoft.Extensions.Configuration.IConfiguration _config;
         private readonly Microsoft.AspNetCore.Identity.UserManager<Microsoft.AspNetCore.Identity.IdentityUser> _userManager;
+        private readonly GestionQ.Web.Services.IArcaAutomationService _arcaAutomation;
 
-        public SyncController(ApplicationDbContext context, Microsoft.Extensions.Configuration.IConfiguration config, Microsoft.AspNetCore.Identity.UserManager<Microsoft.AspNetCore.Identity.IdentityUser> userManager)
+        public SyncController(
+            ApplicationDbContext context,
+            Microsoft.Extensions.Configuration.IConfiguration config,
+            Microsoft.AspNetCore.Identity.UserManager<Microsoft.AspNetCore.Identity.IdentityUser> userManager,
+            GestionQ.Web.Services.IArcaAutomationService arcaAutomation)
         {
             _context = context;
             _config = config;
             _userManager = userManager;
+            _arcaAutomation = arcaAutomation;
         }
 
         private async Task<PointOfSale> GetOrCreatePosAsync(string identifier)
@@ -147,11 +153,19 @@ namespace GestionQ.Web.Controllers.Api
                 defaultPmId = parsedId;
             }
 
+            var dniThresholdSetting = await _context.SystemSettings.FirstOrDefaultAsync(s => s.Key == "Afip_ConsumerFinalDniThreshold");
+            decimal dniThreshold = 0m;
+            if (dniThresholdSetting != null)
+            {
+                decimal.TryParse(dniThresholdSetting.Value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out dniThreshold);
+            }
+
             var companyInfo = new CompanyInfoSyncDto
             {
                 Name = _config["CompanyInfo:Name"] ?? "GestionQ",
                 LogoUrl = "/images/logo.png",
-                DefaultPaymentMethodId = defaultPmId
+                DefaultPaymentMethodId = defaultPmId,
+                ConsumerFinalDniThreshold = dniThreshold
             };
 
             var activePromos = await _context.PromotionRules
@@ -324,9 +338,11 @@ namespace GestionQ.Web.Controllers.Api
             // Process New Customers
             foreach (var custDto in request.NewCustomers)
             {
-                if (string.IsNullOrEmpty(custDto.Dni)) continue;
+                if (string.IsNullOrWhiteSpace(custDto.Dni) && string.IsNullOrWhiteSpace(custDto.Cuit)) continue;
                 
-                var exists = await _context.Customers.AnyAsync(c => c.Dni == custDto.Dni);
+                var exists = await _context.Customers.AnyAsync(c =>
+                    (!string.IsNullOrWhiteSpace(custDto.Dni) && c.Dni == custDto.Dni)
+                    || (!string.IsNullOrWhiteSpace(custDto.Cuit) && c.Cuit == custDto.Cuit));
                 if (!exists)
                 {
                     _context.Customers.Add(new Customer
@@ -354,10 +370,14 @@ namespace GestionQ.Web.Controllers.Api
             int? deletedFallbackProductId = null;
 
             // Process Sales
+            var cancelledSaleIdsForNc = new List<int>();
             _context.IgnoreStockChangesForLogging = true;
             foreach (var saleDto in request.Sales)
             {
-                var existingSale = await _context.Sales.Include(s => s.Items).FirstOrDefaultAsync(s => s.GlobalId == saleDto.GlobalId);
+                var existingSale = await _context.Sales
+                    .Include(s => s.Items)
+                    .Include(s => s.ElectronicInvoice)
+                    .FirstOrDefaultAsync(s => s.GlobalId == saleDto.GlobalId);
                 if (existingSale != null)
                 {
                     if (saleDto.IsCancelled && !existingSale.IsCancelled)
@@ -365,6 +385,10 @@ namespace GestionQ.Web.Controllers.Api
                         existingSale.IsCancelled = true;
                         existingSale.CancellationDate = saleDto.CancellationDate ?? DateTime.Now;
                         _context.Sales.Update(existingSale);
+                        if (existingSale.ElectronicInvoice != null)
+                        {
+                            cancelledSaleIdsForNc.Add(existingSale.Id);
+                        }
 
                         // Reverse stock
                         foreach (var item in existingSale.Items)
@@ -395,7 +419,7 @@ namespace GestionQ.Web.Controllers.Api
                 int? customerId = null;
                 if (!string.IsNullOrEmpty(saleDto.CustomerDni))
                 {
-                    var cust = await _context.Customers.FirstOrDefaultAsync(c => c.Dni == saleDto.CustomerDni);
+                    var cust = await _context.Customers.FirstOrDefaultAsync(c => c.Dni == saleDto.CustomerDni || c.Cuit == saleDto.CustomerDni);
                     if (cust != null) customerId = cust.Id;
                 }
 
@@ -628,6 +652,19 @@ namespace GestionQ.Web.Controllers.Api
                 }
             }
             await _context.SaveChangesAsync();
+
+            // Emitir Nota de Crédito automática en ARCA para ventas facturadas que fueron anuladas desde la POS
+            foreach (var cancelledSaleId in cancelledSaleIdsForNc)
+            {
+                try
+                {
+                    await _arcaAutomation.EmitCreditNoteForCancelledSaleAsync(cancelledSaleId);
+                }
+                catch
+                {
+                    // Si falla ARCA ahora, ArcaRetryBackgroundService lo reintentará automáticamente
+                }
+            }
 
             return Ok(new SyncPushResponse { Success = true });
             }

@@ -412,7 +412,7 @@ namespace GestionQ.Web.Controllers
             }
 
             // Nota de Crédito AFIP si corresponde
-            if (sale.ElectronicInvoice != null && sale.ElectronicInvoice.Status == "Aprobado")
+            if (sale.ElectronicInvoice != null && (sale.ElectronicInvoice.Status == "Approved" || sale.ElectronicInvoice.Status == "Aprobado"))
             {
                 // La Nota de Crédito tiene un comprobante distinto según la factura original
                 int ncDocTypeCode = 0;

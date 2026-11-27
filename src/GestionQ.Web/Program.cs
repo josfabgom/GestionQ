@@ -25,9 +25,11 @@ builder.Services.AddHttpClient<IMercadoPagoService, MercadoPagoService>();
 builder.Services.AddScoped<IEmailService, SmtpEmailService>();
 builder.Services.AddScoped<IInvoicePdfGenerator, InvoicePdfGenerator>();
 builder.Services.AddScoped<ICloudStorageService, FtpStorageService>();
+builder.Services.AddScoped<GestionQ.Web.Services.IArcaAutomationService, GestionQ.Web.Services.ArcaAutomationService>();
 builder.Services.AddHostedService<GestionQ.Web.Services.DatabaseInitializationService>();
 builder.Services.AddHostedService<GestionQ.Web.Services.NgrokTunnelService>();
 builder.Services.AddHostedService<GestionQ.Web.Services.StatsSyncService>();
+builder.Services.AddHostedService<GestionQ.Web.Services.ArcaRetryBackgroundService>();
 
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, AuthorizationPolicyProvider>();
 builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();

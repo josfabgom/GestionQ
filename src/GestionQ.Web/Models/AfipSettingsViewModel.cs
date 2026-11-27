@@ -22,8 +22,19 @@ namespace GestionQ.Web.Models
         [Display(Name = "Contraseña del PFX - Solo si usa .pfx")]
         public string? CertificatePassword { get; set; }
 
+        [Display(Name = "Tope Consumidor Final sin DNI ($)")]
+        public decimal ConsumerFinalDniThreshold { get; set; }
+
+        [Display(Name = "Enviar factura por Email automáticamente")]
+        public bool AutoSendEmail { get; set; }
+
         public bool HasCertificateConfigured { get; set; }
         public string? ConfiguredCertificateInfo { get; set; }
+        public System.DateTime? CertificateExpiresAt { get; set; }
+        public int CertificateDaysRemaining { get; set; }
+        public bool IsCertificateExpired { get; set; }
+        public bool IsCertificateExpiringSoon { get; set; }
+        public string? CertificateError { get; set; }
         public string? ConnectionStatus { get; set; }
         public bool IsConnectionSuccessful { get; set; }
     }

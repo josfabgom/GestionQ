@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -7,8 +8,11 @@ using System.Net.Http.Headers;
 using System.Security.Cryptography.Pkcs;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using GestionQ.Domain.Entities;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -33,6 +37,12 @@ namespace GestionQ.Infrastructure.Services
         private static string _cachedToken;
         private static string _cachedSign;
         private static DateTime _tokenExpiration = DateTime.MinValue;
+
+        // Lock por (PtoVta, CbteTipo) para evitar colisiones de FECompUltimoAutorizado + 1 en pedidos concurrentes
+        private static readonly ConcurrentDictionary<(int PosNumber, int InvoiceTypeCode), SemaphoreSlim> _voucherLocks = new();
+
+        private static ArcaCertificateStatus? _cachedCertStatus;
+        private static DateTime _certStatusCacheExpiration = DateTime.MinValue;
 
         private readonly IServiceProvider _serviceProvider;
         private readonly IConfiguration _configuration;
@@ -81,6 +91,8 @@ namespace GestionQ.Infrastructure.Services
         public async Task<ElectronicInvoiceResponse> RequestCAEAsync(ElectronicInvoiceRequest request)
         {
             var response = new ElectronicInvoiceResponse();
+            var voucherLock = _voucherLocks.GetOrAdd((request.PointOfSaleNumber, request.InvoiceTypeCode), _ => new SemaphoreSlim(1, 1));
+            await voucherLock.WaitAsync();
 
             try
             {
@@ -113,8 +125,96 @@ namespace GestionQ.Infrastructure.Services
                 response.Success = false;
                 response.Errors.Add($"Error interno de comunicación: {ex.Message}");
             }
+            finally
+            {
+                voucherLock.Release();
+            }
 
             return response;
+        }
+
+        public async Task<ArcaCertificateStatus> GetCertificateStatusAsync(bool forceRefresh = false)
+        {
+            if (!forceRefresh && _cachedCertStatus != null && DateTime.Now < _certStatusCacheExpiration)
+            {
+                return _cachedCertStatus;
+            }
+
+            var status = new ArcaCertificateStatus();
+            try
+            {
+                await LoadSettingsAsync();
+                if (string.IsNullOrWhiteSpace(_certPath) || !File.Exists(_certPath))
+                {
+                    status.IsConfigured = false;
+                }
+                else
+                {
+                    status.IsConfigured = true;
+                    status.FileName = Path.GetFileName(_certPath);
+                    X509Certificate2 cert = _certPath.EndsWith(".pfx", StringComparison.OrdinalIgnoreCase)
+                        ? new X509Certificate2(_certPath, _certPassword ?? string.Empty, X509KeyStorageFlags.EphemeralKeySet)
+                        : new X509Certificate2(_certPath);
+
+                    using (cert)
+                    {
+                        status.Subject = cert.Subject;
+                        status.ExpiresAt = cert.NotAfter;
+                        status.DaysRemaining = (int)Math.Floor((cert.NotAfter - DateTime.Now).TotalDays);
+                        status.IsExpired = DateTime.Now >= cert.NotAfter;
+                        status.IsExpiringSoon = !status.IsExpired && status.DaysRemaining <= 30;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                status.IsConfigured = !string.IsNullOrWhiteSpace(_certPath) && File.Exists(_certPath);
+                status.FileName = string.IsNullOrWhiteSpace(_certPath) ? string.Empty : Path.GetFileName(_certPath);
+                status.ErrorMessage = $"No se pudo leer la fecha de vencimiento del certificado: {ex.Message}";
+            }
+
+            _cachedCertStatus = status;
+            _certStatusCacheExpiration = DateTime.Now.AddMinutes(15);
+            return status;
+        }
+
+        public async Task<string> BuildQrUrlAsync(ElectronicInvoice invoice)
+        {
+            if (invoice == null || string.IsNullOrWhiteSpace(invoice.CAE))
+                return string.Empty;
+
+            await LoadSettingsAsync();
+            string cleanCuit = new string((_cuit ?? string.Empty).Where(char.IsDigit).ToArray());
+            if (!long.TryParse(cleanCuit, out long cuitNum) || cuitNum <= 0)
+                return string.Empty;
+
+            string cleanCae = new string(invoice.CAE.Where(char.IsDigit).ToArray());
+            if (!long.TryParse(cleanCae, out long caeNum) || caeNum <= 0)
+                return string.Empty;
+
+            string cleanDoc = new string((invoice.DocNumber ?? string.Empty).Where(char.IsDigit).ToArray());
+            long.TryParse(cleanDoc, out long docNum);
+
+            var payload = new
+            {
+                ver = 1,
+                fecha = invoice.IssueDate.ToString("yyyy-MM-dd"),
+                cuit = cuitNum,
+                ptoVta = invoice.PointOfSaleNumber,
+                tipoCmp = invoice.InvoiceTypeCode,
+                nroCmp = invoice.InvoiceNumber,
+                importe = Math.Round(invoice.TotalAmount, 2),
+                moneda = "PES",
+                ctz = 1,
+                tipoDocRec = invoice.DocTypeCode,
+                nroDocRec = docNum,
+                tipoCodAut = "E",
+                codAut = caeNum
+            };
+
+            string json = JsonSerializer.Serialize(payload);
+            string base64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(json));
+            return $"https://www.afip.gob.ar/fe/qr/?p={base64}";
         }
 
         public async Task<int> GetLastAuthorizedVoucherAsync(int posNumber, int voucherTypeCode)

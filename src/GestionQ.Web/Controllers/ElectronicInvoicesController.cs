@@ -38,6 +38,7 @@ namespace GestionQ.Web.Controllers
         public async Task<IActionResult> Create(int saleId)
         {
             var sale = await _context.Sales
+                .Include(s => s.ElectronicInvoice)
                 .Include(s => s.Customer)
                 .ThenInclude(c => c.TaxCondition)
                 .Include(s => s.PointOfSale)
@@ -803,195 +804,22 @@ namespace GestionQ.Web.Controllers
         }
 		public async Task<IActionResult> QuickInvoice(int saleId)
         {
-            var sale = await _context.Sales
-                .Include(s => s.Customer)
-                .ThenInclude(c => c.TaxCondition)
-                .Include(s => s.PointOfSale)
-                .Include(s => s.Items)
-                .ThenInclude(si => si.Product)
-                .ThenInclude(p => p.VatRate)
-                .FirstOrDefaultAsync(s => s.Id == saleId);
-
-            if (sale == null)
+            var arcaAutomation = HttpContext.RequestServices.GetRequiredService<GestionQ.Web.Services.IArcaAutomationService>();
+            var res = await arcaAutomation.EnsureInvoiceForSaleAsync(saleId);
+            if (res.Success)
             {
-                return Json(new { success = false, message = "La venta especificada no existe." });
-            }
-
-            if (sale.ElectronicInvoice != null && sale.ElectronicInvoice.Status == "Approved")
-            {
-                return Json(new { success = true, message = "Esta venta ya posee una factura electrónica autorizada.", cae = sale.ElectronicInvoice.CAE });
-            }
-
-            // Calculate amounts
-            decimal netAmount = 0;
-            decimal vatAmount = 0;
-            decimal exemptAmount = 0;
-
-            foreach (var item in sale.Items)
-            {
-                decimal itemTotal = item.Quantity * item.UnitPrice;
-                decimal vatRatePercent = item.Product?.VatRate?.Rate ?? 21.0m;
-
-                if (vatRatePercent == 0)
+                return Json(new
                 {
-                    exemptAmount += itemTotal;
-                }
-                else
-                {
-                    decimal net = itemTotal / (1 + (vatRatePercent / 100));
-                    decimal vat = itemTotal - net;
-                    netAmount += net;
-                    vatAmount += vat;
-                }
-            }
-
-            // Determine default AFIP values
-            int defaultInvoiceTypeCode = 6; // Factura B
-            int defaultCondicionIvaReceptor = 5; // Consumidor Final
-            string customerCuit = sale.Customer?.Cuit ?? string.Empty;
-            string customerDni = sale.Customer?.Dni ?? string.Empty;
-            int docTypeCode = 99; // Sin identificar
-
-            if (!string.IsNullOrWhiteSpace(customerCuit))
-            {
-                docTypeCode = 80;
-            }
-            else if (!string.IsNullOrWhiteSpace(customerDni))
-            {
-                docTypeCode = 96;
-            }
-
-            var companyTaxCondition = _config["CompanyInfo:TaxCondition"]?.ToLower() ?? "";
-            bool isMonotributista = companyTaxCondition.Contains("monotributo") || companyTaxCondition.Contains("monotributista");
-
-            if (isMonotributista)
-            {
-                defaultInvoiceTypeCode = 11; // Factura C
-                defaultCondicionIvaReceptor = 5;
-                if (sale.Customer?.TaxCondition != null)
-                {
-                    var taxConditionName = sale.Customer.TaxCondition.Name.ToLower();
-                    if (taxConditionName.Contains("inscripto")) defaultCondicionIvaReceptor = 1;
-                    else if (taxConditionName.Contains("monotributo") || taxConditionName.Contains("monotributista")) defaultCondicionIvaReceptor = 6;
-                    else if (taxConditionName.Contains("exento")) defaultCondicionIvaReceptor = 4;
-                }
-            }
-            else
-            {
-                if (sale.Customer?.TaxCondition != null)
-                {
-                    var taxConditionName = sale.Customer.TaxCondition.Name.ToLower();
-                    if (taxConditionName.Contains("inscripto"))
-                    {
-                        defaultInvoiceTypeCode = 1; // Factura A
-                        defaultCondicionIvaReceptor = 1; // Responsable Inscripto
-                    }
-                    else if (taxConditionName.Contains("monotributo") || taxConditionName.Contains("monotributista"))
-                    {
-                        defaultInvoiceTypeCode = 6;
-                        defaultCondicionIvaReceptor = 6;
-                    }
-                    else if (taxConditionName.Contains("exento"))
-                    {
-                        defaultInvoiceTypeCode = 6;
-                        defaultCondicionIvaReceptor = 4;
-                    }
-                }
-            }
-
-            var posId = sale.PointOfSaleId ?? 0;
-            var posNumber = sale.PointOfSale?.PosNumber ?? 1;
-
-            if (posId == 0)
-            {
-                var defaultPos = await _context.PointsOfSale.FirstOrDefaultAsync();
-                if (defaultPos != null)
-                {
-                    posId = defaultPos.Id;
-                    posNumber = defaultPos.PosNumber;
-                }
-            }
-
-            var request = new ElectronicInvoiceRequest
-            {
-                PointOfSaleId = posId,
-                PointOfSaleNumber = posNumber,
-                InvoiceTypeCode = defaultInvoiceTypeCode,
-                ConceptCode = 1, // Productos
-                DocTypeCode = docTypeCode,
-                DocNumber = docTypeCode == 80 ? customerCuit : (docTypeCode == 96 ? customerDni : string.Empty),
-                CustomerName = sale.Customer?.Name ?? "Consumidor Final",
-                CustomerTaxCondition = sale.Customer?.TaxCondition?.Name ?? "Consumidor Final",
-                NetAmount = Math.Round(netAmount, 2),
-                VatAmount = Math.Round(vatAmount, 2),
-                ExemptAmount = Math.Round(exemptAmount, 2),
-                TotalAmount = Math.Round(sale.TotalAmount, 2),
-                CanMisMonExt = false,
-                CondicionIVAReceptorId = defaultCondicionIvaReceptor
-            };
-
-            var serviceResponse = await _invoicingService.RequestCAEAsync(request);
-
-            if (serviceResponse.Success)
-            {
-                var invoice = new ElectronicInvoice
-                {
-                    SaleId = sale.Id,
-                    PointOfSaleId = request.PointOfSaleId,
-                    PointOfSaleNumber = request.PointOfSaleNumber,
-                    InvoiceTypeCode = request.InvoiceTypeCode,
-                    InvoiceTypeDesc = GetInvoiceTypeDesc(request.InvoiceTypeCode),
-                    InvoiceNumber = serviceResponse.InvoiceNumber,
-                    IssueDate = DateTime.Now,
-                    ConceptCode = request.ConceptCode,
-                    DocTypeCode = request.DocTypeCode,
-                    DocNumber = request.DocNumber,
-                    CustomerName = request.CustomerName,
-                    CustomerTaxCondition = request.CustomerTaxCondition,
-                    NetAmount = request.NetAmount,
-                    VatAmount = request.VatAmount,
-                    ExemptAmount = request.ExemptAmount,
-                    TotalAmount = request.TotalAmount,
-                    CAE = serviceResponse.CAE,
-                    CAEExpirationDate = serviceResponse.CAEExpirationDate,
-                    Status = "Approved",
-                    CanMisMonExt = false,
-                    CondicionIVAReceptorId = request.CondicionIVAReceptorId
-                };
-
-                _context.ElectronicInvoices.Add(invoice);
-                sale.ElectronicInvoice = invoice;
-                
-                // Automatically add a pending print job to the spool
-                var printJob = new FiscalPrintJob
-                {
-                    SaleId = sale.Id,
-                    CreatedDate = DateTime.Now,
-                    Status = "Pending",
-                    PrinterName = "Impresora Fiscal Térmica"
-                };
-                _context.FiscalPrintJobs.Add(printJob);
-
-                await _context.SaveChangesAsync();
-
-                return Json(new { 
-                    success = true, 
-                    message = $"Factura {invoice.InvoiceTypeDesc} N° {invoice.FormattedVoucherNumber} autorizada con éxito.", 
-                    cae = invoice.CAE,
-                    voucherNumber = invoice.FormattedVoucherNumber
+                    success = true,
+                    message = res.Message,
+                    cae = res.CAE,
+                    caeExpiration = res.CAEExpiration,
+                    voucherNumber = res.VoucherNumber,
+                    invoiceType = res.InvoiceType,
+                    qrUrl = res.QrUrl
                 });
             }
-            else
-            {
-                var errors = string.Join("; ", serviceResponse.Errors);
-                
-                if (errors.Contains("ORA-01034") || errors.Contains("ORA-27101") || errors.Contains("InternalServerError") || errors.Contains("/wsfev1"))
-                {
-                    return Json(new { success = false, message = "No se puede conectar con ARCA. Sus servidores están experimentando problemas técnicos. Por favor, intente facturar más tarde." });
-                }
-
-                return Json(new { success = false, message = "ARCA rechazó la solicitud: " + errors });
-            }
+            return Json(new { success = false, message = res.Message });
         }
 
         // POST: ElectronicInvoices/PrintSpoolJob

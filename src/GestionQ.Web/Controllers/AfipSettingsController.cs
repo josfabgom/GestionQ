@@ -29,20 +29,30 @@ namespace GestionQ.Web.Controllers
         public async Task<IActionResult> Index()
         {
             var settings = await _context.SystemSettings.ToDictionaryAsync(x => x.Key, x => x.Value);
-            
+
+            decimal.TryParse(
+                settings.GetValueOrDefault("Afip_ConsumerFinalDniThreshold", "0"),
+                System.Globalization.NumberStyles.Any,
+                System.Globalization.CultureInfo.InvariantCulture,
+                out decimal dniThreshold);
+
             var vm = new AfipSettingsViewModel
             {
                 Cuit = settings.GetValueOrDefault("Afip_Cuit", ""),
                 Environment = settings.GetValueOrDefault("Afip_Environment", "Homologation"),
                 CertificatePassword = settings.GetValueOrDefault("Afip_CertificatePassword", ""),
+                ConsumerFinalDniThreshold = dniThreshold,
+                AutoSendEmail = string.Equals(settings.GetValueOrDefault("Afip_AutoSendEmail", "false"), "true", System.StringComparison.OrdinalIgnoreCase)
             };
 
-            var certPath = settings.GetValueOrDefault("Afip_CertificatePath");
-            if (!string.IsNullOrEmpty(certPath) && System.IO.File.Exists(certPath))
-            {
-                vm.HasCertificateConfigured = true;
-                vm.ConfiguredCertificateInfo = Path.GetFileName(certPath);
-            }
+            var certStatus = await _afipService.GetCertificateStatusAsync(forceRefresh: true);
+            vm.HasCertificateConfigured = certStatus.IsConfigured;
+            vm.ConfiguredCertificateInfo = certStatus.FileName;
+            vm.CertificateExpiresAt = certStatus.ExpiresAt;
+            vm.CertificateDaysRemaining = certStatus.DaysRemaining;
+            vm.IsCertificateExpired = certStatus.IsExpired;
+            vm.IsCertificateExpiringSoon = certStatus.IsExpiringSoon;
+            vm.CertificateError = certStatus.ErrorMessage;
 
             return View(vm);
         }
@@ -58,6 +68,8 @@ namespace GestionQ.Web.Controllers
 
             await SaveSetting("Afip_Cuit", vm.Cuit);
             await SaveSetting("Afip_Environment", vm.Environment);
+            await SaveSetting("Afip_ConsumerFinalDniThreshold", vm.ConsumerFinalDniThreshold.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            await SaveSetting("Afip_AutoSendEmail", vm.AutoSendEmail ? "true" : "false");
             
             if (!string.IsNullOrEmpty(vm.CertificatePassword))
             {
@@ -92,6 +104,7 @@ namespace GestionQ.Web.Controllers
                 await SaveSetting("Afip_PrivateKeyPath", destPath);
             }
 
+            await _afipService.GetCertificateStatusAsync(forceRefresh: true);
             TempData["SuccessMessage"] = "Configuración de AFIP guardada correctamente.";
             return RedirectToAction(nameof(Index));
         }
